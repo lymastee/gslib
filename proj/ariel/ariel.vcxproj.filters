@@ -1,0 +1,251 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="depend">
+      <UniqueIdentifier>{832083f0-4588-478d-93c0-145b4985df3a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="entry">
+      <UniqueIdentifier>{670f51ca-4afe-415c-b022-155c9e77057b}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\code\pink\clip.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\pink\dirty.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\gslib\entrywin32.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\gslib\error.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\ariel\framesys.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\ariel\framesyswin32.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\pink\image.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\pink\imgloader.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\gslib\math.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\gslib\md5.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\pink\painter.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\ariel\polygon.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\gslib\pool.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\pink\raster.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\ariel\render.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\ariel\rendersys.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\ariel\rendersysd3d11.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\gslib\res.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\ariel\rose.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\ariel\scene.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\ariel\scenegraph.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\gslib\string.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\pink\utility.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\pink\widget.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\gslib\xml.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>entry</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\pink\type.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\ariel\delaunay.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\gslib\mtrand.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\ariel\loopblinn.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\ariel\batch.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\code\gslib\bezier.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\pink\clip.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\ariel\config.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\gslib\config.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\pink\config.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\pink\dirty.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\gslib\entrywin32.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\gslib\error.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\ariel\framesys.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\pink\image.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\pink\imgloader.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\gslib\math.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\gslib\md5.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\ariel\model.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\pink\painter.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\pink\pink.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\ariel\polygon.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\gslib\pool.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\pink\raster.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\ariel\render.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\ariel\rendersys.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\ariel\rendersysd3d11.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\gslib\res.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\ariel\rose.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\ariel\scene.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\ariel\scenegraph.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\ariel\snt.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\gslib\std.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\gslib\string.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\gslib\tree.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\gslib\type.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\ariel\type.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\gslib\typeof.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\pink\utility.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\gslib\vbitset.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\pink\widget.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\gslib\xml.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\gslib\avl.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\gslib\rtree.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\gslib\mclass.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\pink\type.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\gslib\sysop.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\ariel\delaunay.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\ariel\loopblinn.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\code\ariel\batch.h">
+      <Filter>depend</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\code\gslib\math.inl">
+      <Filter>depend</Filter>
+    </None>
+    <None Include="..\..\code\ariel\rose.hlsl">
+      <Filter>depend</Filter>
+    </None>
+  </ItemGroup>
+</Project>

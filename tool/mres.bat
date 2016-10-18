@@ -1,0 +1,1 @@
+mres.exe "mres\sample.mrx"

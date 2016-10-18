@@ -1,0 +1,42 @@
+code in:
+F:\Temp\gslib\gslib
+about "iocp"
+still need to be merged.
+
+
+1.
+remove graphic.h graphic.cpp
+use type.h type.cpp instead
+
+2015.4.24
+1.canvas -> painter
+2.painter was the original canvas, support basic image operations
+3.raster: painter, support path paint operations
+4.rose: raster.  to implement a raster on shader engine
+5.the scene design should be smart, thinks about an situation:
+	that the ui was transparent, and the scene below ui was changed, how to paint ui?
+	absolutely we won't render the ui again, what we need was actuallly 2 swapeff in the swap chain,
+	change the ui layer, then do alpha mix
+6.so the first step was not to implement or join the original canvas system, but to join the scene with	
+	the framesys. then with the rendersys. we need to draw it 
+
+
+2015.10.23
+1.cxt候选方案，利用__asm __emit完成instinct function的一些替代操作。
+
+2016.04.21
+libuuid sucks, give up.
+I will implement a uuid generator myself, doesn't seems to be hard.
+In this case, the gslib will not depend on boost anymore.
+
+2016.05.20
+1.split_patch时要拆分子多边形并分配到合适的节点下
+2.clip_result的结果顺时针逆时针
+3.clip_result转painter_path
+4.clip_pivot, 多重交点
+5.xor，需要补全or, and
+
+此外两个重要算法的实现
+1.constrained delauney triangulation
+2.loop blinn
+3.自己的make方案

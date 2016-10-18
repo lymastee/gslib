@@ -1,0 +1,4 @@
+1.contrib\masmx86\bld_ml32.bat:		enable the /safeseh option
+2.contrib\vstudio\vc11\zlibvc.def:	comment the VERSION statement
+
+After the two adaptions were done, then zlib could be built by vs2013 with safeseh options

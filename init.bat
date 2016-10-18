@@ -1,0 +1,1 @@
+gsmake -debug -compiler "vs_12" -tar "F:\Mine\github\build"

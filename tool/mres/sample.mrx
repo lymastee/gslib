@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<mres currdir="../" target="mres/smptarget.cpp">
+	<res vdir=":/smpath1/s1.png" path="mres/s1.png" />
+	<res vdir=":/smpath1/smpath2/s2.wav" path="mres/s2.wav" />
+</mres>

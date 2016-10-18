@@ -1,0 +1,61 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="depend">
+      <UniqueIdentifier>{b58d0d81-493a-4c84-91ae-8646b4f830af}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="entry">
+      <UniqueIdentifier>{6c693bb8-6b92-4a58-9dff-6a921a4654c8}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\code\gslib\error.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\gslib\math.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\gslib\mtrand.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\gslib\pool.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\gslib\res.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\gslib\string.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\pink\clip.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\pink\dirty.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\pink\raster.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\pink\type.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\pink\utility.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>entry</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\ariel\delaunay.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\pink\painter.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\pink\image.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\code\pink\imgloader.cpp">
+      <Filter>depend</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

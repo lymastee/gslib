@@ -1,0 +1,35 @@
+<html>
+
+<head>
+	<title>Debug Path</title>
+	<script type="text/javascript" src="depath.js"></script>
+	<script type="text/javascript" src="jquery-2.1.4.min.js"></script>
+	<script type="text/javascript">
+		$(document).ready(function() {
+			function proc() {
+				var dp = new DebugPath($("#canvas1")[0]);
+				dp.prepare($("#textarea1")[0].value);
+				dp.run();
+			}
+			$("#button1").click(function() {
+				proc();
+			});
+			$("#textarea1").keydown(function(event) {
+				if(event.keyCode == 13)
+					proc();
+			});
+		});
+	</script>
+</head>
+
+<body>
+	<div style="background:#FFFFFF">
+		<canvas id="canvas1" width=1024 height=800 />
+	</div>
+	<div>
+		<textarea id="textarea1"></textarea>
+		<button id="button1">Enter</button>
+	</div>
+</body>
+
+</html>

@@ -26,6 +26,7 @@
 #ifndef type_3f1a28e2_0da6_44b6_84db_29542f5a65c0_h
 #define type_3f1a28e2_0da6_44b6_84db_29542f5a65c0_h
 
+#include <assert.h>
 #include <gslib/config.h>
 
 __gslib_begin__
@@ -79,6 +80,12 @@ template<class _ty>
 inline _ty gs_min(_ty a, _ty b) { return a < b ? a : b; }
 template<class _ty>
 inline _ty gs_max(_ty a, _ty b) { return a > b ? a : b; }
+template<class _ty>
+inline _ty gs_clamp(_ty v, _ty a, _ty b)
+{
+    assert(a <= b);
+    return gs_min(b, gs_max(a, v));
+}
 
 template<class _ty>
 inline void gs_swap(_ty& a, _ty& b)

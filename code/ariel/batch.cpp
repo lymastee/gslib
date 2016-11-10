@@ -202,24 +202,93 @@ void bat_line::get_bound_rect(rectf& rc) const
     rc.bottom = max(_points[0].y, _points[1].y);
 }
 
+static void trace_clip_triangle(const bat_triangle* triangle, bat_line output[2], int c)
+{
+#ifdef _DEBUG
+    assert(triangle && output);
+    if(c <= 0)
+        return;
+    trace(_t("#clip triangle:\n"));
+    triangle->tracing();
+    for(int i = 0; i < c; i ++)
+        output[i].tracing();
+#endif
+}
+
 int bat_line::clip_triangle(bat_line output[2], const bat_triangle* triangle) const
 {
     assert(triangle);
     auto& p1 = triangle->get_point(0);
     auto& p2 = triangle->get_point(1);
     auto& p3 = triangle->get_point(2);
-    bool inside1 = pink::point_in_triangle(_points[0], p1, p2, p3);
-    bool inside2 = pink::point_in_triangle(_points[1], p1, p2, p3);
+    bool inside1 = pink::point_in_triangle(_points[0], triangle->get_reduced_point(0), triangle->get_reduced_point(1), triangle->get_reduced_point(2));
+    bool inside2 = pink::point_in_triangle(_points[1], triangle->get_reduced_point(0), triangle->get_reduced_point(1), triangle->get_reduced_point(2));
+    auto clone_line_info = [this](bat_line& line) {
+        line.set_source_joint(0, get_source_joint(0));
+        line.set_source_joint(1, get_source_joint(1));
+        line.set_zorder(get_zorder());
+        line.set_line_width(get_line_width());
+        line.set_half_line(is_half_line());
+        line.set_coef(get_coef());
+    };
+    auto test_intersection = [](vec2& p, const vec2& p1, const vec2& p2, const vec2& p3, const vec2& p4)-> bool {
+        pink::intersectp_linear_linear(p, p1, p3, vec2().sub(p2, p1), vec2().sub(p4, p3));
+        float t1 = pink::linear_reparameterize(p1, p2, p);
+        float t2 = pink::linear_reparameterize(p3, p4, p);
+        return (t1 > 0.f) && (t1 < 1.f) && (t2 > 0.f) && (t2 < 1.f);
+    };
     if(inside1 && inside2)
         return 0;
     else if(inside1) {
-
+        vec2 p;
+        bool is_intersected = test_intersection(p, _points[0], _points[1], p1, p2) ||
+            test_intersection(p, _points[0], _points[1], p2, p3) ||
+            test_intersection(p, _points[0], _points[1], p3, p1);
+        assert(is_intersected);
+        clone_line_info(output[0]);
+        output[0].set_start_point(_points[0]);
+        output[0].set_end_point(p);
+        trace_clip_triangle(triangle, output, 1);
         return 1;
     }
     else if(inside2) {
+        vec2 p;
+        bool is_intersected = test_intersection(p, _points[0], _points[1], p1, p2) ||
+            test_intersection(p, _points[0], _points[1], p2, p3) ||
+            test_intersection(p, _points[0], _points[1], p3, p1);
+        assert(is_intersected);
+        clone_line_info(output[0]);
+        output[0].set_start_point(p);
+        output[0].set_end_point(_points[1]);
+        trace_clip_triangle(triangle, output, 1);
         return 1;
     }
-    return 0;
+    vector<vec2> intps;
+    vec2 p;
+    if(test_intersection(p, _points[0], _points[1], p1, p2))
+        intps.push_back(p);
+    if(test_intersection(p, _points[0], _points[1], p2, p3))
+        intps.push_back(p);
+    if(test_intersection(p, _points[0], _points[1], p3, p1))
+        intps.push_back(p);
+    assert(intps.size() <= 2);
+    if((intps.size() == 2) && (vec2().sub(intps.front(), intps.back()).length() > 0.5f)) {
+        clone_line_info(output[0]);
+        clone_line_info(output[1]);
+        const vec2 *c1 = &intps.front(), *c2 = &intps.back();
+        float lsq1 = vec2().sub(_points[0], *c1).lengthsq();
+        float lsq2 = vec2().sub(_points[0], *c2).lengthsq();
+        if(lsq1 > lsq2)
+            gs_swap(c1, c2);
+        output[0].set_start_point(_points[0]);
+        output[0].set_end_point(*c1);
+        output[1].set_start_point(*c2);
+        output[1].set_end_point(_points[1]);
+        trace_clip_triangle(triangle, output, 2);
+        return 2;
+    }
+    output[0] = *this;
+    return 1;
 }
 
 void bat_line::tracing() const
@@ -267,26 +336,8 @@ void batch_processor::add_line(lb_joint* i, lb_joint* j, float w, int z)
 
 void batch_processor::add_aa_border(lb_joint* i, lb_joint* j, int z)
 {
-    /* offset a bit */
     assert(i && j);
     static const float aa_width = 2.f;
-//     auto offset_line = [](const vec2& p1, const vec2& p2, vec2& p3, vec2& p4, float dist) {
-//         vec2 d;
-//         d.sub(p2, p1);
-//         vec2 xd(d.y, -d.x);
-//         xd.normalize();
-//         xd.scale(dist);
-//         p3.add(p1, xd);
-//         p4.add(p2, xd);
-//     };
-//     auto& p1 = i->get_point();
-//     auto& p2 = j->get_point();
-//     vec2 s1, s2;
-//     offset_line(p1, p2, s1, s2, 5.f);
-// 
-//     trace(_t("@moveTo %f, %f;\n"), s1.x, s1.y);
-//     trace(_t("@lineTo %f, %f;\n"), s2.x, s2.y);
-
     create_half_line(i, j, i->get_point(), j->get_point(), aa_width, z);
 }
 
@@ -476,8 +527,10 @@ void batch_processor::proceed_line_batch()
         assert(line);
         bat_triangles ovltris;
         query_triangles(ovltris, line);
-        if(ovltris.empty())
+        if(ovltris.empty()) {
+            line_holdings.push_back(gs_new(bat_line, *line));
             continue;
+        }
         bat_clip_triangles(line_holdings, ovltris, ovltris.begin(), line);
     }
     if(line_holdings.empty())

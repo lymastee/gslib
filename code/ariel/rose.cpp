@@ -285,6 +285,71 @@ void rose_fill_batch_klm_cr::tracing() const
     trace(_t("@@\n"));
 }
 
+void rose_stroke_batch_coef_cr::create(bat_batch* bat)
+{
+    assert(bat);
+    auto offset_line = [](const vec2& p1, const vec2& p2, vec2& p3, vec2& p4, float dist) {
+        vec2 d;
+        d.sub(p2, p1);
+        vec2 c(d.y, -d.x);
+        c.normalize();
+        c.scale(dist);
+        p3.add(p1, c);
+        p4.add(p2, c);
+    };
+    auto& lines = static_cast<bat_stroke_batch*>(bat)->get_lines();
+    for(auto* line : lines) {
+        assert(line);
+        /* point */
+        vec2 p[4];      /* tl, tr, bl, br */
+        auto& p1 = line->get_start_point();
+        auto& p2 = line->get_end_point();
+        if(line->is_half_line()) {
+            p[0] = p1;
+            p[1] = p2;
+            offset_line(p[0], p[1], p[2], p[3], line->get_line_width());
+        }
+        else {
+            float w = line->get_line_width() * 0.5f;
+            offset_line(p1, p2, p[0], p[1], -w);
+            offset_line(p1, p2, p[2], p[3], w);
+        }
+        /* coef */
+        vec4 coef;
+        (vec3&)coef = line->get_coef();
+        coef.w = line->get_line_width() * 0.75f;    /* tune */
+        /* color */
+        auto* sj1 = line->get_source_joint(0);
+        auto* sj2 = line->get_source_joint(1);
+        assert(sj1 && sj2);
+        auto* os1 = reinterpret_cast<rose_bind_info*>(sj1->get_binding());
+        auto* os2 = reinterpret_cast<rose_bind_info*>(sj2->get_binding());
+        assert(os1 && os2);
+        float t1 = gs_clamp(pink::linear_reparameterize(sj1->get_point(), sj2->get_point(), p1), 0.f, 1.f);
+        float t2 = gs_clamp(pink::linear_reparameterize(sj1->get_point(), sj2->get_point(), p2), 0.f, 1.f);
+        vec4 cr1, cr2;
+        cr1.lerp(os1->color, os2->color, t1);
+        cr2.lerp(os1->color, os2->color, t2);
+        vertex_info_coef_cr pt[] =
+        {
+            { p[0], coef, cr1 },
+            { p[1], coef, cr2 },
+            { p[2], coef, cr1 },
+            { p[3], coef, cr2 },
+        };
+        _vertices.push_back(pt[0]);
+        _vertices.push_back(pt[2]);
+        _vertices.push_back(pt[1]);
+        _vertices.push_back(pt[1]);
+        _vertices.push_back(pt[2]);
+        _vertices.push_back(pt[3]);
+    }
+}
+
+void rose_stroke_batch_coef_cr::tracing() const
+{
+}
+
 rose::rose()
 {
     _nextz = 0;
@@ -365,35 +430,35 @@ void rose::prepare_fill(const painter_path& path, const painter_brush& brush)
         _bp.add_polygon(p, _nextz ++);
 }
 
-struct my_line_struct
-{
-    vec2 p1, p2;
-    vec3 coef;
-    void setup_coef()
-    {
-        pink::get_linear_coefficient(coef, p1, vec2().sub(p2, p1));
-        coef.normalize();
-    }
-};
-
-typedef list<my_line_struct> my_line_list;
-static my_line_list g_linelist;
+// struct my_line_struct
+// {
+//     vec2 p1, p2;
+//     vec3 coef;
+//     void setup_coef()
+//     {
+//         pink::get_linear_coefficient(coef, p1, vec2().sub(p2, p1));
+//         coef.normalize();
+//     }
+// };
+// 
+// typedef list<my_line_struct> my_line_list;
+// static my_line_list g_linelist;
 
 void rose::prepare_stroke(const painter_path& path, const painter_pen& pen)
 {
-    if(pen.get_tag() == painter_pen::null)
-        return;
-    // test
-    if(path.size() != 2)
-        return;
-    auto* p1 = path.get_node(0);
-    auto* p2 = path.get_node(1);
-    my_line_struct ls;
-    ls.p1 = p1->get_point();
-    ls.p2 = p2->get_point();
-    ls.setup_coef();
-    g_linelist.clear();
-    g_linelist.push_back(ls);
+//     if(pen.get_tag() == painter_pen::null)
+//         return;
+//     // test
+//     if(path.size() != 2)
+//         return;
+//     auto* p1 = path.get_node(0);
+//     auto* p2 = path.get_node(1);
+//     my_line_struct ls;
+//     ls.p1 = p1->get_point();
+//     ls.p2 = p2->get_point();
+//     ls.setup_coef();
+//     g_linelist.clear();
+//     g_linelist.push_back(ls);
 }
 
 rose_batch* rose::create_fill_batch_cr()
@@ -412,6 +477,16 @@ rose_batch* rose::create_fill_batch_klm_cr()
     ptr->set_vertex_shader(_vsf_klm_cr);
     ptr->set_pixel_shader(_psf_klm_cr);
     ptr->set_vertex_format(_vf_klm_cr);
+    _batches.push_back(ptr);
+    return ptr;
+}
+
+rose_batch* rose::create_stroke_batch_cr()
+{
+    auto* ptr = gs_new(rose_stroke_batch_coef_cr);
+    ptr->set_vertex_shader(_vss_coef_cr);
+    ptr->set_pixel_shader(_pss_coef_cr);
+    ptr->set_vertex_format(_vf_coef_cr);
     _batches.push_back(ptr);
     return ptr;
 }
@@ -436,9 +511,10 @@ void rose::prepare_batches()
         case bf_klm_cr:
             bat = create_fill_batch_klm_cr();
             break;
+        case bs_coef_cr:
+            bat = create_stroke_batch_cr();
+            break;
         }
-        if(!bat)
-            continue;
         assert(bat);
         bat->create(p);
         bat->buffering(_rsys);
@@ -451,65 +527,6 @@ void rose::draw_batches()
         p->draw(_rsys);
         p->tracing();
     }
-}
-
-void rose::draw_test_lines()
-{
-    if(g_linelist.size() != 1)
-        return;
-    auto& line = g_linelist.front();
-    _rsys->set_vertex_shader(_vss_coef_cr);
-    _rsys->set_pixel_shader(_pss_coef_cr);
-    _rsys->set_vertex_format(_vf_coef_cr);
-    _rsys->set_render_option(opt_primitive_topology, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-
-    auto offset_line = [](const vec2& p1, const vec2& p2, vec2& p3, vec2& p4, float dist) {
-        vec2 d;
-        d.sub(p2, p1);
-        vec2 xd(d.y, -d.x);
-        xd.normalize();
-        xd.scale(dist);
-        p3.add(p1, xd);
-        p4.add(p2, xd);
-    };
-
-    float width = 2.f;
-    vec2 p1, p2, p3, p4, p5, p6, p7, p8;
-    offset_line(line.p1, line.p2, p1, p2, width * 0.5f); // re
-    offset_line(line.p1, line.p2, p3, p4, 2.f);
-    offset_line(line.p1, line.p2, p5, p6, -width * 0.5f); // ct
-    offset_line(line.p1, line.p2, p7, p8, -2.f);
-
-    vec4 coef1(line.coef.x, line.coef.y, line.coef.z, width * 0.75f);
-    vec4 coef2(-line.coef.x, -line.coef.y, -line.coef.z, 1.4f);
-
-    vertex_info_coef_cr pt[] =
-    {
-        { p1, coef1, vec4(1.f, 0.f, 0.f, 1.f) },
-        { p2, coef1, vec4(1.f, 0.f, 0.f, 1.f) },
-        { p5, coef1, vec4(1.f, 0.f, 0.f, 1.f) },
-
-        { p5, coef1, vec4(1.f, 0.f, 0.f, 1.f) },
-        { p2, coef1, vec4(1.f, 0.f, 0.f, 1.f) },
-        { p6, coef1, vec4(1.f, 0.f, 0.f, 1.f) },
-    };
-
-//     vertex_info_coef_cr pt[] =
-//     {
-//         //{ line.p1, coef1, vec4(1.f, 0.f, 0.f, 1.f) },
-//         //{ line.p2, coef1, vec4(1.f, 0.f, 0.f, 1.f) },
-//         { p1, coef1, vec4(1.f, 0.f, 0.f, 1.f) },
-//         { p2, coef1, vec4(1.f, 0.f, 0.f, 1.f) },
-//         //{ p3, coef1, vec4(1.f, 0.f, 0.f, 1.f) },
-//         //{ p4, coef1, vec4(1.f, 0.f, 0.f, 1.f) },
-//         { p5, coef1, vec4(1.f, 0.f, 0.f, 1.f) },
-//         { p6, coef1, vec4(1.f, 0.f, 0.f, 1.f) },
-//         //{ p7, coef1, vec4(1.f, 0.f, 0.f, 1.f) },
-//         //{ p8, coef1, vec4(1.f, 0.f, 0.f, 1.f) },
-//     };
-    auto* vb = _rsys->create_vertex_buffer(sizeof(vertex_info_coef_cr), _countof(pt), false, false, D3D11_USAGE_DEFAULT, pt);
-    _rsys->set_vertex_buffer(vb, sizeof(vertex_info_coef_cr), 0);
-    _rsys->draw(_countof(pt), 0);
 }
 
 void rose_paint_brush(loop_blinn_processor& lbp, rose_bind_list& bind_cache, const painter_brush& brush)

@@ -71,6 +71,22 @@ void rose_fill_batch_klm_cr::draw(rendersys* rsys)
     rsys->draw(c, 0);
 }
 
+int rose_stroke_batch_coef_cr::buffering(rendersys* rsys)
+{
+    return template_buffering(_vertices, rsys);
+}
+
+void rose_stroke_batch_coef_cr::draw(rendersys* rsys)
+{
+    assert(rsys);
+    setup_vs_and_ps(rsys);
+    setup_vf_and_topology(rsys, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    rsys->set_vertex_buffer(_vertex_buffer, sizeof(vertex_info_coef_cr), 0);
+    int c = (int)_vertices.size();
+    assert(c % 3 == 0);
+    rsys->draw(c, 0);
+}
+
 void rose::setup(rendersys* rsys)
 {
     assert(rsys);

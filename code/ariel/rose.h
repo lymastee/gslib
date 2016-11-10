@@ -211,11 +211,10 @@ protected:
     void prepare_stroke(const painter_path& path, const painter_pen& pen);
     rose_batch* create_fill_batch_cr();
     rose_batch* create_fill_batch_klm_cr();
+    rose_batch* create_stroke_batch_cr();
     void clear_batches();
     void prepare_batches();
     void draw_batches();
-
-    void draw_test_lines();
 
 #if use_rendersys_d3d_11
 protected:

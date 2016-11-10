@@ -1,8 +1,8 @@
-/* 
+/*
  * Copyright (c) 2016 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
- * This file is part of the GSLIB project.
+ * This file is part of the gslib project.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -2953,7 +2953,7 @@ __gs_naked void* __stdcall sse2_sincos(void*, void*, void*)
     }
 }
 
-__gs_naked quatern* __stdcall sse2_quatrotateeuler(quatern* out, float yaw, float pitch, float roll)
+__gs_naked quat* __stdcall sse2_quatrotateeuler(quat* out, float yaw, float pitch, float roll)
 {
     __asm
     {
@@ -3013,7 +3013,7 @@ __gs_naked quatern* __stdcall sse2_quatrotateeuler(quatern* out, float yaw, floa
     }
 }
 
-__gs_naked quatern* __stdcall sse_quatmultiply(quatern* out, const quatern* q1, const quatern* q2)
+__gs_naked quat* __stdcall sse_quatmultiply(quat* out, const quat* q1, const quat* q2)
 {
     __asm
     {
@@ -3056,7 +3056,7 @@ __gs_naked quatern* __stdcall sse_quatmultiply(quatern* out, const quatern* q1, 
     }
 }
 
-__gs_naked quatern* __stdcall sse_quatnormalize(quatern* out, const quatern* q)
+__gs_naked quat* __stdcall sse_quatnormalize(quat* out, const quat* q)
 {
     __asm
     {
@@ -3101,7 +3101,7 @@ __gs_naked quatern* __stdcall sse_quatnormalize(quatern* out, const quatern* q)
     }
 }
 
-__gs_naked quatern* __stdcall sse2_quatinverse(quatern* out, const quatern* q)
+__gs_naked quat* __stdcall sse2_quatinverse(quat* out, const quat* q)
 {
     __asm
     {

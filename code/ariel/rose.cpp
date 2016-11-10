@@ -1,8 +1,8 @@
-/* 
+/*
  * Copyright (c) 2016 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
- * This file is part of the GSLIB project.
+ * This file is part of the gslib project.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -67,7 +67,7 @@ void rose_batch::setup_vf_and_topology(rendersys* rsys, uint topo)
 void rose_fill_batch_cr::create(bat_batch* bat)
 {
     assert(bat);
-    auto& rtr = bat->get_rtree();
+    auto& rtr = static_cast<bat_fill_batch*>(bat)->get_rtree();
     rtr.for_each([this](bat_rtree_entity* ent) {
         assert(ent);
         if(!ent->get_bind_arg())
@@ -106,7 +106,7 @@ void rose_fill_batch_cr::tracing() const
 void rose_fill_batch_klm_cr::create(bat_batch* bat)
 {
     assert(bat);
-    auto& rtr = bat->get_rtree();
+    auto& rtr = static_cast<bat_fill_batch*>(bat)->get_rtree();
     rtr.for_each([this](bat_rtree_entity* ent) {
         assert(ent);
         if(!ent->get_bind_arg())
@@ -287,6 +287,7 @@ void rose_fill_batch_klm_cr::tracing() const
 
 rose::rose()
 {
+    _nextz = 0;
     initialize();
 }
 
@@ -302,19 +303,23 @@ void rose::draw_path(const painter_path& path)
     auto& brush = ctx.get_brush();
     auto& pen = ctx.get_pen();
     prepare_fill(path, brush);
+    prepare_stroke(path, pen);
 }
 
 void rose::on_draw_begin()
 {
+    _nextz = 0;
     _bp.clear_batches();
     _bindings.clear();
 }
 
 void rose::on_draw_end()
 {
+    _bp.finish_batching();
     clear_batches();
     prepare_batches();
     draw_batches();
+    //draw_test_lines();
 }
 
 /*
@@ -345,6 +350,8 @@ void rose::setup_configs()
 
 void rose::prepare_fill(const painter_path& path, const painter_brush& brush)
 {
+    if(brush.get_tag() == painter_brush::null)
+        return;
     using namespace pink;
     painter_path cspath;
     painter_helper::transform(cspath, path,
@@ -355,7 +362,38 @@ void rose::prepare_fill(const painter_path& path, const painter_brush& brush)
     rose_paint_brush(lbp, _bindings, brush);
     auto& polys = lbp.get_polygons();
     for(auto* p : polys)
-        _bp.add_polygon(p);
+        _bp.add_polygon(p, _nextz ++);
+}
+
+struct my_line_struct
+{
+    vec2 p1, p2;
+    vec3 coef;
+    void setup_coef()
+    {
+        pink::get_linear_coefficient(coef, p1, vec2().sub(p2, p1));
+        coef.normalize();
+    }
+};
+
+typedef list<my_line_struct> my_line_list;
+static my_line_list g_linelist;
+
+void rose::prepare_stroke(const painter_path& path, const painter_pen& pen)
+{
+    if(pen.get_tag() == painter_pen::null)
+        return;
+    // test
+    if(path.size() != 2)
+        return;
+    auto* p1 = path.get_node(0);
+    auto* p2 = path.get_node(1);
+    my_line_struct ls;
+    ls.p1 = p1->get_point();
+    ls.p2 = p2->get_point();
+    ls.setup_coef();
+    g_linelist.clear();
+    g_linelist.push_back(ls);
 }
 
 rose_batch* rose::create_fill_batch_cr()
@@ -399,6 +437,8 @@ void rose::prepare_batches()
             bat = create_fill_batch_klm_cr();
             break;
         }
+        if(!bat)
+            continue;
         assert(bat);
         bat->create(p);
         bat->buffering(_rsys);
@@ -411,6 +451,65 @@ void rose::draw_batches()
         p->draw(_rsys);
         p->tracing();
     }
+}
+
+void rose::draw_test_lines()
+{
+    if(g_linelist.size() != 1)
+        return;
+    auto& line = g_linelist.front();
+    _rsys->set_vertex_shader(_vss_coef_cr);
+    _rsys->set_pixel_shader(_pss_coef_cr);
+    _rsys->set_vertex_format(_vf_coef_cr);
+    _rsys->set_render_option(opt_primitive_topology, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+
+    auto offset_line = [](const vec2& p1, const vec2& p2, vec2& p3, vec2& p4, float dist) {
+        vec2 d;
+        d.sub(p2, p1);
+        vec2 xd(d.y, -d.x);
+        xd.normalize();
+        xd.scale(dist);
+        p3.add(p1, xd);
+        p4.add(p2, xd);
+    };
+
+    float width = 2.f;
+    vec2 p1, p2, p3, p4, p5, p6, p7, p8;
+    offset_line(line.p1, line.p2, p1, p2, width * 0.5f); // re
+    offset_line(line.p1, line.p2, p3, p4, 2.f);
+    offset_line(line.p1, line.p2, p5, p6, -width * 0.5f); // ct
+    offset_line(line.p1, line.p2, p7, p8, -2.f);
+
+    vec4 coef1(line.coef.x, line.coef.y, line.coef.z, width * 0.75f);
+    vec4 coef2(-line.coef.x, -line.coef.y, -line.coef.z, 1.4f);
+
+    vertex_info_coef_cr pt[] =
+    {
+        { p1, coef1, vec4(1.f, 0.f, 0.f, 1.f) },
+        { p2, coef1, vec4(1.f, 0.f, 0.f, 1.f) },
+        { p5, coef1, vec4(1.f, 0.f, 0.f, 1.f) },
+
+        { p5, coef1, vec4(1.f, 0.f, 0.f, 1.f) },
+        { p2, coef1, vec4(1.f, 0.f, 0.f, 1.f) },
+        { p6, coef1, vec4(1.f, 0.f, 0.f, 1.f) },
+    };
+
+//     vertex_info_coef_cr pt[] =
+//     {
+//         //{ line.p1, coef1, vec4(1.f, 0.f, 0.f, 1.f) },
+//         //{ line.p2, coef1, vec4(1.f, 0.f, 0.f, 1.f) },
+//         { p1, coef1, vec4(1.f, 0.f, 0.f, 1.f) },
+//         { p2, coef1, vec4(1.f, 0.f, 0.f, 1.f) },
+//         //{ p3, coef1, vec4(1.f, 0.f, 0.f, 1.f) },
+//         //{ p4, coef1, vec4(1.f, 0.f, 0.f, 1.f) },
+//         { p5, coef1, vec4(1.f, 0.f, 0.f, 1.f) },
+//         { p6, coef1, vec4(1.f, 0.f, 0.f, 1.f) },
+//         //{ p7, coef1, vec4(1.f, 0.f, 0.f, 1.f) },
+//         //{ p8, coef1, vec4(1.f, 0.f, 0.f, 1.f) },
+//     };
+    auto* vb = _rsys->create_vertex_buffer(sizeof(vertex_info_coef_cr), _countof(pt), false, false, D3D11_USAGE_DEFAULT, pt);
+    _rsys->set_vertex_buffer(vb, sizeof(vertex_info_coef_cr), 0);
+    _rsys->draw(_countof(pt), 0);
 }
 
 void rose_paint_brush(loop_blinn_processor& lbp, rose_bind_list& bind_cache, const painter_brush& brush)

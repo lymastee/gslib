@@ -1,8 +1,8 @@
-/* 
+/*
  * Copyright (c) 2016 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
- * This file is part of the GSLIB project.
+ * This file is part of the gslib project.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -78,13 +78,19 @@ void rose::setup(rendersys* rsys)
     rendersys::vertex_format_desc descf_cr[] =
     {
         { "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-        { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT , D3D11_INPUT_PER_VERTEX_DATA, 0 }
+        { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 }
     };
     rendersys::vertex_format_desc descf_klm_cr[] =
     {
         { "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
         { "TEXCOORD", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
-        { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT , D3D11_INPUT_PER_VERTEX_DATA, 0 }
+        { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+    };
+    rendersys::vertex_format_desc descs_coef_cr[] =
+    {
+        { "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "TEXCOORD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
     };
     rendersys::create_shader_context ctx;
     /* create shader cr */
@@ -109,6 +115,17 @@ void rose::setup(rendersys* rsys)
     _psf_klm_cr = _rsys->create_pixel_shader(ctx);
     assert(_psf_klm_cr);
     _rsys->end_create_shader(ctx);
+    /* create shader coef cr */
+    _rsys->begin_create_shader(ctx, _t("rose.hlsl"), _t("rose_vss_coef_cr"), _t("vs_4_0"), 0);
+    _vss_coef_cr = _rsys->create_vertex_shader(ctx);
+    assert(_vss_coef_cr);
+    _vf_coef_cr = _rsys->create_vertex_format(ctx, descs_coef_cr, _countof(descs_coef_cr));
+    assert(_vf_coef_cr);
+    _rsys->end_create_shader(ctx);
+    _rsys->begin_create_shader(ctx, _t("rose.hlsl"), _t("rose_pss_coef_cr"), _t("ps_4_0"), 0);
+    _pss_coef_cr = _rsys->create_pixel_shader(ctx);
+    assert(_pss_coef_cr);
+    _rsys->end_create_shader(ctx);
     /* create cb_configs */
     assert(!_cb_configs);
     _cb_configs = _rsys->create_constant_buffer(pack_cb_size<rose_configs>(), false, true);
@@ -124,6 +141,9 @@ void rose::initialize()
     _psf_klm_cr = 0;
     _vf_cr = 0;
     _vf_klm_cr = 0;
+    _vss_coef_cr = 0;
+    _pss_coef_cr = 0;
+    _vf_coef_cr = 0;
     _cb_configs = 0;
     _cb_config_slot = 0;
 }
@@ -146,6 +166,9 @@ void rose::destroy_plugin()
     release_any(_vsf_klm_cr);
     release_any(_psf_cr);
     release_any(_psf_klm_cr);
+    release_any(_vss_coef_cr);
+    release_any(_pss_coef_cr);
+    release_any(_vf_coef_cr);
     _cb_configs = 0;
 }
 

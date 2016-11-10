@@ -1,8 +1,8 @@
-/* 
+/*
  * Copyright (c) 2016 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
- * This file is part of the GSLIB project.
+ * This file is part of the gslib project.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -130,7 +130,7 @@ bool rendersys_d3d11::setup(uint hwnd, const configs& cfg)
     }
     sd.BufferUsage          = DXGI_USAGE_RENDER_TARGET_OUTPUT;
     sd.OutputWindow         = (HWND)hwnd;
-    sd.SampleDesc.Count     = 4;
+    sd.SampleDesc.Count     = 1;
     sd.SampleDesc.Quality   = 0;
     sd.Windowed             = TRUE;
     if(_fullscreen)

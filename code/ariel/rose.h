@@ -1,8 +1,8 @@
-/* 
+/*
  * Copyright (c) 2016 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
- * This file is part of the GSLIB project.
+ * This file is part of the gslib project.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -79,11 +79,19 @@ struct vertex_info_klm_cr
     vec4                cr;
 };
 
+struct vertex_info_coef_cr
+{
+    vec2                pos;
+    vec4                coef;       /* float3 coef & float tune */
+    vec4                cr;
+};
+
 class rose_batch;
 typedef list<rose_bind_info> rose_bind_list;
 typedef vector<rose_batch*> rose_batch_list;
 typedef vector<vertex_info_cr> vertex_stream_cr;
 typedef vector<vertex_info_klm_cr> vertex_stream_klm_cr;
+typedef vector<vertex_info_coef_cr> vertex_stream_cf_cr;
 typedef vector<int> index_stream;
 typedef bat_type rose_batch_tag;
 
@@ -120,8 +128,6 @@ protected:
     int template_buffering(stream_type& stm, rendersys* rsys);
 };
 
-// TODO: stroke batch
-
 class rose_fill_batch_cr:
     public rose_batch
 {
@@ -148,6 +154,20 @@ public:
 
 protected:
     vertex_stream_klm_cr _vertices;
+};
+
+class rose_stroke_batch_coef_cr:
+    public rose_batch
+{
+public:
+    rose_batch_tag get_tag() const override { return bs_coef_cr; }
+    void create(bat_batch* bat) override;
+    int buffering(rendersys* rsys) override;
+    void draw(rendersys* rsys) override;
+    void tracing() const override;
+
+protected:
+    vertex_stream_cf_cr _vertices;
 };
 
 class rose_graphic:
@@ -183,15 +203,19 @@ protected:
     batch_processor     _bp;
     rose_batch_list     _batches;
     rose_bind_list      _bindings;
+    int                 _nextz;
 
 protected:
     void setup_configs();
     void prepare_fill(const painter_path& path, const painter_brush& brush);
+    void prepare_stroke(const painter_path& path, const painter_pen& pen);
     rose_batch* create_fill_batch_cr();
     rose_batch* create_fill_batch_klm_cr();
     void clear_batches();
     void prepare_batches();
     void draw_batches();
+
+    void draw_test_lines();
 
 #if use_rendersys_d3d_11
 protected:
@@ -205,6 +229,9 @@ protected:
     pixel_shader*       _psf_klm_cr;
     vertex_format*      _vf_cr;
     vertex_format*      _vf_klm_cr;
+    vertex_shader*      _vss_coef_cr;
+    pixel_shader*       _pss_coef_cr;
+    vertex_format*      _vf_coef_cr;
     constant_buffer*    _cb_configs;
     uint                _cb_config_slot;
 #endif

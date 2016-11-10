@@ -1,8 +1,8 @@
-/* 
+/*
  * Copyright (c) 2016 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
- * This file is part of the GSLIB project.
+ * This file is part of the gslib project.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -161,7 +161,11 @@ protected:
             auto& p3 = e1->get_org_point();
             if(!pink::is_concave_angle(p1, p2, p3))     /* ccw! */
                 return;
-            visit(b1, b2, b3);
+            bool b[3];
+            b[0] = e->is_boundary();
+            b[1] = e1->is_boundary();
+            b[2] = e2->is_boundary();
+            visit(b1, b2, b3, b);
             e->set_checked(true);
             e1->set_checked(true);
             e2->set_checked(true);

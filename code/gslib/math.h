@@ -1,8 +1,8 @@
-/* 
+/*
  * Copyright (c) 2016 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
- * This file is part of the GSLIB project.
+ * This file is part of the gslib project.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -102,7 +102,7 @@ class vec3;
 class vec4;
 class mat3;
 class mat4;
-class quatern;
+class quat;
 class plane;
 
 typedef vec2 point2;
@@ -163,7 +163,7 @@ matrix3* mat3rotation(matrix3* out, float angle);
 matrix3* mat3rotationpos(matrix3* out, const vec2* p, float angle);
 matrix* matidentity(matrix* out);
 bool matisidentity(const matrix* m);
-bool matdecompose(vec3* scale, quatern* rot, vec3* trans, const matrix* m);
+bool matdecompose(vec3* scale, quat* rot, vec3* trans, const matrix* m);
 matrix* mattranspose(matrix* out, const matrix* m);
 matrix* matscaling(matrix* out, float sx, float sy, float sz);
 matrix* mattranslation(matrix* out, float x, float y, float z);
@@ -171,7 +171,7 @@ matrix* matrotation_x(matrix* out, float angle);
 matrix* matrotation_y(matrix* out, float angle); 
 matrix* matrotation_z(matrix* out, float angle);
 matrix* matrotationaxis(matrix* out, const vec3* v, float angle);
-matrix* matrotationquartern(matrix* out, const quatern* q);
+matrix* matrotationquartern(matrix* out, const quat* q);
 matrix* matrotationeuler(matrix* out, float yaw, float pitch, float roll);
 matrix* matlookatlh(matrix* out, const vec3* eye, const vec3* at, const vec3* up);
 matrix* matlookatrh(matrix* out, const vec3* eye, const vec3* at, const vec3* up);
@@ -187,25 +187,25 @@ matrix* matorthooffcenterlh(matrix* out, float l, float r, float b, float t, flo
 matrix* matorthooffcenterrh(matrix* out, float l, float r, float b, float t, float zn, float zf);
 matrix* matviewportproject(matrix* out, const viewport* vp);
 matrix* matviewportunproject(matrix* out, const viewport* vp);
-matrix* mattransform(matrix* out, const vec3* scalecenter, const quatern* scalerot, const vec3* scale, const vec3* rotcenter, const quatern* rot, const vec3* trans);
+matrix* mattransform(matrix* out, const vec3* scalecenter, const quat* scalerot, const vec3* scale, const vec3* rotcenter, const quat* rot, const vec3* trans);
 matrix* mattransform2d(matrix* out, const vec2* scalecenter, float scalerot, const vec2* scale, const vec2* rotcenter, float rot, const vec2* trans);
-matrix* mataffinetransform(matrix* out, float scale, const vec3* rotcenter, const quatern* rot, const vec3* trans);
-matrix* mataffinetransform2d(matrix* out, float scale, const vec3* rotcenter, const quatern* rot, const vec3* trans);
-float quatlength(const quatern* q);
-float quatlengthsq(const quatern* q);
-float quatdot(const quatern* q1, const quatern* q2);
-quatern* quatidentity(quatern* out);
-bool quatisidenetity(const quatern* q);
-quatern* quatconjugate(quatern* out, const quatern* q);
-void quattoaxisangle(const quatern* q, vec3* axis, float* angle);
-quatern* quatrotatematrix(quatern* out, const matrix* m);
-quatern* quatrotateaxis(quatern* out, const vec3* v, float angle);
-quatern* quatln(quatern* out, const quatern* q);
-quatern* quatexp(quatern* out, const quatern* q);
-quatern* quatslerp(quatern* out, const quatern* q1, const quatern* q2, float t);
-quatern* quatsquad(quatern* out, const quatern* q, const quatern* a, const quatern* b, const quatern* c, float t);
-quatern* quatbarycentric(quatern* out, const quatern* q1, const quatern* q2, const quatern* q3, float f, float g);
-void quatsquadsetup(quatern* a, quatern* b, quatern* c, const quatern* q1, const quatern* q2, const quatern* q3, const quatern* q4);
+matrix* mataffinetransform(matrix* out, float scale, const vec3* rotcenter, const quat* rot, const vec3* trans);
+matrix* mataffinetransform2d(matrix* out, float scale, const vec3* rotcenter, const quat* rot, const vec3* trans);
+float quatlength(const quat* q);
+float quatlengthsq(const quat* q);
+float quatdot(const quat* q1, const quat* q2);
+quat* quatidentity(quat* out);
+bool quatisidenetity(const quat* q);
+quat* quatconjugate(quat* out, const quat* q);
+void quattoaxisangle(const quat* q, vec3* axis, float* angle);
+quat* quatrotatematrix(quat* out, const matrix* m);
+quat* quatrotateaxis(quat* out, const vec3* v, float angle);
+quat* quatln(quat* out, const quat* q);
+quat* quatexp(quat* out, const quat* q);
+quat* quatslerp(quat* out, const quat* q1, const quat* q2, float t);
+quat* quatsquad(quat* out, const quat* q, const quat* a, const quat* b, const quat* c, float t);
+quat* quatbarycentric(quat* out, const quat* q1, const quat* q2, const quat* q3, float f, float g);
+void quatsquadsetup(quat* a, quat* b, quat* c, const quat* q1, const quat* q2, const quat* q3, const quat* q4);
 float planedot(const plane* p, const vec4* v);
 float planedotcoord(const plane* p, const vec3* v);
 float planedotnormal(const plane* p, const vec3* v);
@@ -246,10 +246,10 @@ typedef matrix* (__stdcall *fnmatmultiplytranspose)(matrix* out, const matrix* m
 typedef matrix* (__stdcall *fnmatinverse)(matrix* out, float* determinant, const matrix* m);
 typedef matrix* (__stdcall *fnmatshadow)(matrix* out, const vec4* plight, const plane* pln);
 typedef matrix* (__stdcall *fnmatreflect)(matrix* out ,const plane* pln);
-typedef quatern* (__stdcall *fnquatrotateeuler)(quatern* out, float yaw, float pitch, float roll);
-typedef quatern* (__stdcall *fnquatmultiply)(quatern* out, const quatern* q1, const quatern* q2);
-typedef quatern* (__stdcall *fnquatnormalize)(quatern* out, const quatern* q);
-typedef quatern* (__stdcall *fnquatinverse)(quatern* out, const quatern* q);
+typedef quat* (__stdcall *fnquatrotateeuler)(quat* out, float yaw, float pitch, float roll);
+typedef quat* (__stdcall *fnquatmultiply)(quat* out, const quat* q1, const quat* q2);
+typedef quat* (__stdcall *fnquatnormalize)(quat* out, const quat* q);
+typedef quat* (__stdcall *fnquatinverse)(quat* out, const quat* q);
 typedef plane* (__stdcall *fnplanenormalize)(plane* out, const plane* p);
 typedef vec3* (__stdcall *fnplaneintersectline)(vec3* out, const plane* p, const vec3* v1, const vec3* v2);
 typedef plane* (__stdcall *fnplanefrompoints)(plane* out, const vec3* v1, const vec3* v2, const vec3* v3);
@@ -565,7 +565,7 @@ public:
 public:
     mat4& identity() { return *matidentity(this); }
     bool isidentity() const { return matisidentity(this); }
-    bool decompose(vec3& scale, quatern& rot, vec3& trans) { return matdecompose(&scale, &rot, &trans, this); }
+    bool decompose(vec3& scale, quat& rot, vec3& trans) { return matdecompose(&scale, &rot, &trans, this); }
     mat4& transpose() { return *mattranspose(this, this); }
     mat4& transpose(const mat4& m) { return *mattranspose(this, &m); }
     mat4& scaling(float sx, float sy, float sz) { return *matscaling(this, sx, sy, sz); }
@@ -574,7 +574,7 @@ public:
     mat4& rotation_y(float angle) { return *matrotation_y(this, angle); }
     mat4& rotation_z(float angle) { return *matrotation_z(this, angle); }
     mat4& rotation(const vec3& v, float angle) { return *matrotationaxis(this, &v, angle); }
-    mat4& rotation(const quatern& q) { return *matrotationquartern(this, &q); }
+    mat4& rotation(const quat& q) { return *matrotationquartern(this, &q); }
     mat4& rotation(float yaw, float pitch, float roll) { return *matrotationeuler(this, yaw, pitch, roll); }
     mat4& lookatlh(const vec3& eye, const vec3& at, const vec3& up) { return *matlookatlh(this, &eye, &at, &up); }
     mat4& lookatrh(const vec3& eye, const vec3& at, const vec3& up) { return *matlookatrh(this, &eye, &at, &up); }
@@ -590,10 +590,10 @@ public:
     mat4& orthooffcenterrh(float l, float r, float b, float t, float zn, float zf) { return *matorthooffcenterrh(this, l, r, b, t, zn, zf); }
     mat4& viewportproject(const viewport& vp) { return *matviewportproject(this, &vp); }
     mat4& viewportunproject(const viewport& vp) { return *matviewportunproject(this, &vp); }
-    mat4& transform(const vec3& scalecenter, const quatern& scalerot, const vec3& scale, const vec3& rotcenter, const quatern& rot, const vec3& trans) { return *mattransform(this, &scalecenter, &scalerot, &scale, &rotcenter, &rot, &trans); }
+    mat4& transform(const vec3& scalecenter, const quat& scalerot, const vec3& scale, const vec3& rotcenter, const quat& rot, const vec3& trans) { return *mattransform(this, &scalecenter, &scalerot, &scale, &rotcenter, &rot, &trans); }
     mat4& transform2d(const vec2& scalecenter, float scalerot, const vec2& scale, const vec2& rotcenter, float rot, const vec2& trans) { return *mattransform2d(this, &scalecenter, scalerot, &scale, &rotcenter, rot, &trans); }
-    mat4& affinetransform(float scale, const vec3& rotcenter, const quatern& rot, const vec3& trans) { return *mataffinetransform(this, scale, &rotcenter, &rot, &trans); }
-    mat4& affinetransform2d(float scale, const vec3& rotcenter, const quatern& rot, const vec3& trans);    // todo:
+    mat4& affinetransform(float scale, const vec3& rotcenter, const quat& rot, const vec3& trans) { return *mataffinetransform(this, scale, &rotcenter, &rot, &trans); }
+    mat4& affinetransform2d(float scale, const vec3& rotcenter, const quat& rot, const vec3& trans);    // todo:
     float determinant() const { return matdeterminant(this); }
     mat4& multiply(const mat4& m) { return *matmultiply(this, this, &m); }
     mat4& multiply(const mat4& m1, const mat4& m2) { return *matmultiply(this, &m1, &m2); }
@@ -604,71 +604,71 @@ public:
     mat4& reflect(const plane& pln) { return *matreflect(this, &pln); }
 };
 
-class quatern:
+class quat:
     public _quat
 {
 public:
-    quatern() {}
-    quatern(const float*);
-    quatern(float x, float y, float z, float w);
+    quat() {}
+    quat(const float*);
+    quat(float x, float y, float z, float w);
 
 public:
     operator float* ();
     operator const float* () const;
 
 public:
-    quatern& operator += (const quatern&);
-    quatern& operator -= (const quatern&);
-    quatern& operator *= (const quatern&);
-    quatern& operator *= (float);
-    quatern& operator /= (float);
+    quat& operator += (const quat&);
+    quat& operator -= (const quat&);
+    quat& operator *= (const quat&);
+    quat& operator *= (float);
+    quat& operator /= (float);
     
 public:
-    quatern operator + () const;
-    quatern operator - () const;
+    quat operator + () const;
+    quat operator - () const;
 
 public:
-    quatern operator + (const quatern&) const;
-    quatern operator - (const quatern&) const;
-    quatern operator * (const quatern&) const;
-    quatern operator * (float) const;
-    quatern operator / (float) const;
-    friend quatern operator * (float, const quatern&);
+    quat operator + (const quat&) const;
+    quat operator - (const quat&) const;
+    quat operator * (const quat&) const;
+    quat operator * (float) const;
+    quat operator / (float) const;
+    friend quat operator * (float, const quat&);
 
 public:
-    bool operator == (const quatern&) const;
-    bool operator != (const quatern&) const;
+    bool operator == (const quat&) const;
+    bool operator != (const quat&) const;
 
 public:
     float length() const { return quatlength(this); }
     float lengthsq() const { return quatlengthsq(this); }
-    float dot(const quatern& q) const { return quatdot(this, &q); }
-    quatern& identity() { return *quatidentity(this); }
+    float dot(const quat& q) const { return quatdot(this, &q); }
+    quat& identity() { return *quatidentity(this); }
     bool isidentity() const { return quatisidenetity(this); }
-    quatern& conjugate() { return *quatconjugate(this, this); }
-    quatern& conjugate(const quatern& q) { return *quatconjugate(this, &q); }
+    quat& conjugate() { return *quatconjugate(this, this); }
+    quat& conjugate(const quat& q) { return *quatconjugate(this, &q); }
     float toaxisangle(vec3& axis) const
     {
         float f;
         quattoaxisangle(this, &axis, &f);
         return f;
     }
-    quatern& rotate(const matrix& m) { return *quatrotatematrix(this, &m); }
-    quatern& rotate(const vec3& v, float angle) { return *quatrotateaxis(this, &v, angle); }
-    quatern& ln() { return *quatln(this, this); }
-    quatern& ln(const quatern& q) { return *quatln(this, &q); }
-    quatern& exp() { return *quatexp(this, this); }
-    quatern& exp(const quatern& q) { return *quatexp(this, &q); }
-    quatern& slerp(const quatern& q1, const quatern& q2, float t) { return *quatslerp(this, &q1, &q2, t); }
-    quatern& squad(const quatern& q, const quatern& a, const quatern& b, const quatern& c, float f) { return *quatsquad(this, &q, &a, &b, &c, f); }
-    quatern& squad(const quatern& a, const quatern& b, const quatern& c, float f) { return *quatsquad(this, this, &a, &b, &c, f); }
-    quatern& barycentric(const quatern& q1, const quatern& q2, const quatern& q3, float f, float g) { return *quatbarycentric(this, &q1, &q2, &q3, f, g); }
-    quatern& rotate(float yaw, float pitch, float roll) { return *quatrotateeuler(this, yaw, pitch, roll); }
-    quatern& multiply(const quatern& q1, const quatern& q2) { return *quatmultiply(this, &q1, &q2); }
-    quatern& normalize() { return *quatnormalize(this, this); }
-    quatern& normalize(const quatern& q) { return *quatnormalize(this, &q); }
-    quatern& inverse() { return *quatinverse(this, this); }
-    quatern& inverse(const quatern& q) { return *quatinverse(this, &q); }
+    quat& rotate(const matrix& m) { return *quatrotatematrix(this, &m); }
+    quat& rotate(const vec3& v, float angle) { return *quatrotateaxis(this, &v, angle); }
+    quat& ln() { return *quatln(this, this); }
+    quat& ln(const quat& q) { return *quatln(this, &q); }
+    quat& exp() { return *quatexp(this, this); }
+    quat& exp(const quat& q) { return *quatexp(this, &q); }
+    quat& slerp(const quat& q1, const quat& q2, float t) { return *quatslerp(this, &q1, &q2, t); }
+    quat& squad(const quat& q, const quat& a, const quat& b, const quat& c, float f) { return *quatsquad(this, &q, &a, &b, &c, f); }
+    quat& squad(const quat& a, const quat& b, const quat& c, float f) { return *quatsquad(this, this, &a, &b, &c, f); }
+    quat& barycentric(const quat& q1, const quat& q2, const quat& q3, float f, float g) { return *quatbarycentric(this, &q1, &q2, &q3, f, g); }
+    quat& rotate(float yaw, float pitch, float roll) { return *quatrotateeuler(this, yaw, pitch, roll); }
+    quat& multiply(const quat& q1, const quat& q2) { return *quatmultiply(this, &q1, &q2); }
+    quat& normalize() { return *quatnormalize(this, this); }
+    quat& normalize(const quat& q) { return *quatnormalize(this, &q); }
+    quat& inverse() { return *quatinverse(this, this); }
+    quat& inverse(const quat& q) { return *quatinverse(this, &q); }
 };
 
 class plane:

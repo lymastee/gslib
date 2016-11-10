@@ -1,8 +1,8 @@
-/* 
+/*
  * Copyright (c) 2016 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
- * This file is part of the GSLIB project.
+ * This file is part of the gslib project.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -699,7 +699,7 @@ inline bool mat4::operator != (const mat4& mat) const
     return memcmp(this, &mat, sizeof(mat4)) != 0;
 }
 
-inline quatern::quatern(const float* pf)
+inline quat::quat(const float* pf)
 {
     assert(pf);
     x = pf[0];
@@ -708,7 +708,7 @@ inline quatern::quatern(const float* pf)
     w = pf[3];
 }
 
-inline quatern::quatern(float fx, float fy, float fz, float fw)
+inline quat::quat(float fx, float fy, float fz, float fw)
 {
     x = fx;
     y = fy;
@@ -716,17 +716,17 @@ inline quatern::quatern(float fx, float fy, float fz, float fw)
     w = fw;
 }
 
-inline quatern::operator float* ()
+inline quat::operator float* ()
 {
     return (float*)&x;
 }
 
-inline quatern::operator const float* () const
+inline quat::operator const float* () const
 {
     return (const float*)&x;
 }
 
-inline quatern& quatern::operator += (const quatern& q)
+inline quat& quat::operator += (const quat& q)
 {
     x += q.x;
     y += q.y;
@@ -735,7 +735,7 @@ inline quatern& quatern::operator += (const quatern& q)
     return *this;
 }
 
-inline quatern& quatern::operator -= (const quatern& q)
+inline quat& quat::operator -= (const quat& q)
 {
     x -= q.x;
     y -= q.y;
@@ -744,13 +744,13 @@ inline quatern& quatern::operator -= (const quatern& q)
     return *this;
 }
 
-inline quatern& quatern::operator *= (const quatern& q)
+inline quat& quat::operator *= (const quat& q)
 {
     quatmultiply(this, this, &q);
     return *this;
 }
 
-inline quatern& quatern::operator *= (float f)
+inline quat& quat::operator *= (float f)
 {
     x *= f;
     y *= f;
@@ -759,7 +759,7 @@ inline quatern& quatern::operator *= (float f)
     return *this;
 }
 
-inline quatern& quatern::operator /= (float f)
+inline quat& quat::operator /= (float f)
 {
     float finv = 1.f / f;
     x *= finv;
@@ -769,55 +769,55 @@ inline quatern& quatern::operator /= (float f)
     return *this;
 }
 
-inline quatern quatern::operator + () const
+inline quat quat::operator + () const
 {
     return *this;
 }
 
-inline quatern quatern::operator - () const
+inline quat quat::operator - () const
 {
-    return quatern(-x, -y, -z, -w);
+    return quat(-x, -y, -z, -w);
 }
 
-inline quatern quatern::operator + (const quatern& q) const
+inline quat quat::operator + (const quat& q) const
 {
-    return quatern(x + q.x, y + q.y, z + q.z, w + q.w);
+    return quat(x + q.x, y + q.y, z + q.z, w + q.w);
 }
 
-inline quatern quatern::operator - (const quatern& q) const
+inline quat quat::operator - (const quat& q) const
 {
-    return quatern(x - q.x, y - q.y, z - q.z, w - q.w);
+    return quat(x - q.x, y - q.y, z - q.z, w - q.w);
 }
 
-inline quatern quatern::operator * (const quatern& q) const
+inline quat quat::operator * (const quat& q) const
 {
-    quatern t;
+    quat t;
     quatmultiply(&t, this, &q);
     return t;
 }
 
-inline quatern quatern::operator * (float f) const
+inline quat quat::operator * (float f) const
 {
-    return quatern(x * f, y * f, z * f, w * f);
+    return quat(x * f, y * f, z * f, w * f);
 }
 
-inline quatern quatern::operator / (float f) const
+inline quat quat::operator / (float f) const
 {
     float finv = 1.f / f;
-    return quatern(x * finv, y * finv, z * finv, w * finv);
+    return quat(x * finv, y * finv, z * finv, w * finv);
 }
 
-inline quatern operator * (float f, const quatern& q)
+inline quat operator * (float f, const quat& q)
 {
-    return quatern(f * q.x, f * q.y, f * q.z, f * q.w);
+    return quat(f * q.x, f * q.y, f * q.z, f * q.w);
 }
 
-inline bool quatern::operator == (const quatern& q) const
+inline bool quat::operator == (const quat& q) const
 {
     return x == q.x && y == q.y && z == q.z && w == q.w;
 }
 
-inline bool quatern::operator != (const quatern& q) const
+inline bool quat::operator != (const quat& q) const
 {
     return x != q.x || y != q.y || z != q.z || w != q.w;
 }
@@ -1413,7 +1413,7 @@ inline bool matisidentity(const matrix* m)
            m->m[3][0] == 0.0f && m->m[3][1] == 0.0f && m->m[3][2] == 0.0f && m->m[3][3] == 1.0f;
 }
 
-inline bool matdecompose(vec3* scale, quatern* rot, vec3* trans, const matrix* m)
+inline bool matdecompose(vec3* scale, quat* rot, vec3* trans, const matrix* m)
 {
     assert(m);
     matrix mt;
@@ -1596,7 +1596,7 @@ inline matrix* matrotationaxis(matrix* out, const vec3* v, float angle)
     return out;
 }
 
-inline matrix* matrotationquartern(matrix* out, const quatern* q)
+inline matrix* matrotationquartern(matrix* out, const quat* q)
 {
     assert(out && q);
     float x = q->x, y = q->y, z = q->z, w = q->w;
@@ -1861,35 +1861,35 @@ inline matrix* matviewportunproject(matrix* out, const viewport* vp)
     return out;
 }
 
-inline matrix* mattransform(matrix* out, const vec3* scalecenter, const quatern* scalerot, const vec3* scale, const vec3* rotcenter, const quatern* rot, const vec3* trans)
+inline matrix* mattransform(matrix* out, const vec3* scalecenter, const quat* scalerot, const vec3* scale, const vec3* rotcenter, const quat* rot, const vec3* trans)
 {
     assert(out);
     return out;
 }
 
 inline matrix* mattransform2d(matrix* out, const vec2* scalecenter, float scalerot, const vec2* scale, const vec2* rotcenter, float rot, const vec2* trans);
-inline matrix* mataffinetransform(matrix* out, float scale, const vec3* rotcenter, const quatern* rot, const vec3* trans);
-inline matrix* mataffinetransform2d(matrix* out, float scale, const vec3* rotcenter, const quatern* rot, const vec3* trans);
+inline matrix* mataffinetransform(matrix* out, float scale, const vec3* rotcenter, const quat* rot, const vec3* trans);
+inline matrix* mataffinetransform2d(matrix* out, float scale, const vec3* rotcenter, const quat* rot, const vec3* trans);
 
-inline float quatlength(const quatern* q)
+inline float quatlength(const quat* q)
 {
     assert(q);
     return sqrtf(q->x * q->x + q->y * q->y + q->z * q->z + q->w * q->w);
 }
 
-inline float quatlengthsq(const quatern* q)
+inline float quatlengthsq(const quat* q)
 {
     assert(q);
     return q->x * q->x + q->y * q->y + q->z * q->z + q->w * q->w;
 }
 
-inline float quatdot(const quatern* q1, const quatern* q2)
+inline float quatdot(const quat* q1, const quat* q2)
 {
     assert(q1 && q2);
     return q1->x * q2->x + q1->y * q2->y + q1->z * q2->z + q1->w * q2->w;
 }
 
-inline quatern* quatidentity(quatern* out)
+inline quat* quatidentity(quat* out)
 {
     assert(out);
     out->x = out->y = out->z = 0.0f;
@@ -1897,13 +1897,13 @@ inline quatern* quatidentity(quatern* out)
     return out;
 }
 
-inline bool quatisidenetity(const quatern* q)
+inline bool quatisidenetity(const quat* q)
 {
     assert(q);
     return q->x == 0.0f && q->y == 0.0f && q->z == 0.0f && q->w == 1.0f;
 }
 
-inline quatern* quatconjugate(quatern* out, const quatern* q)
+inline quat* quatconjugate(quat* out, const quat* q)
 {
     assert(out && q);
     out->x = -q->x;
@@ -1913,7 +1913,7 @@ inline quatern* quatconjugate(quatern* out, const quatern* q)
     return out;
 }
 
-inline void quattoaxisangle(const quatern* q, vec3* axis, float* angle)
+inline void quattoaxisangle(const quat* q, vec3* axis, float* angle)
 {
     assert(q);
     if(axis) {
@@ -1927,7 +1927,7 @@ inline void quattoaxisangle(const quatern* q, vec3* axis, float* angle)
     }
 }
 
-inline quatern* quatrotatematrix(quatern* out, const matrix* m)
+inline quat* quatrotatematrix(quat* out, const matrix* m)
 {
     assert(out && m);
     float d = m->_11 + m->_22 + m->_33;
@@ -1958,7 +1958,7 @@ inline quatern* quatrotatematrix(quatern* out, const matrix* m)
     return out;
 }
 
-inline quatern* quatrotateaxis(quatern* out, const vec3* v, float angle)
+inline quat* quatrotateaxis(quat* out, const vec3* v, float angle)
 {
     assert(out && v);
     vec3 nv;
@@ -1979,7 +1979,7 @@ inline bool cpt_boundingbox(float a, float b)
     return c >= -bound && c <= bound;
 }
 
-inline quatern* quatln(quatern* out, const quatern* q)
+inline quat* quatln(quat* out, const quat* q)
 {
     assert(out && q);
     out->x = q->x;
@@ -1999,7 +1999,7 @@ inline quatern* quatln(quatern* out, const quatern* q)
     return out;
 }
 
-inline quatern* quatexp(quatern* out, const quatern* q)
+inline quat* quatexp(quat* out, const quat* q)
 {
     assert(out && q);
     out->x = q->x;
@@ -2017,7 +2017,7 @@ inline quatern* quatexp(quatern* out, const quatern* q)
     return out;
 }
 
-inline quatern* quatslerp(quatern* out, const quatern* q1, const quatern* q2, float t)
+inline quat* quatslerp(quat* out, const quat* q1, const quat* q2, float t)
 {
     assert(out && q1 && q2);
     assert(t >= 0 && t <= 1.f);
@@ -2040,16 +2040,16 @@ inline quatern* quatslerp(quatern* out, const quatern* q1, const quatern* q2, fl
     return out;
 }
 
-inline quatern* quatsquad(quatern* out, const quatern* q, const quatern* a, const quatern* b, const quatern* c, float t)
+inline quat* quatsquad(quat* out, const quat* q, const quat* a, const quat* b, const quat* c, float t)
 {
     assert(out && q && a && b && c);
-    quatern tq1, tq2;
+    quat tq1, tq2;
     quatslerp(&tq1, q, c, t);
     quatslerp(&tq2, a, b, t);
     return quatslerp(out, &tq1, &tq2, (1.f - t)*(t + t));
 }
 
-inline quatern* quatbarycentric(quatern* out, const quatern* q1, const quatern* q2, const quatern* q3, float f, float g)
+inline quat* quatbarycentric(quat* out, const quat* q1, const quat* q2, const quat* q3, float f, float g)
 {
     assert(out && q1 && q2 && q3);
     float t = f + g;
@@ -2059,14 +2059,14 @@ inline quatern* quatbarycentric(quatern* out, const quatern* q1, const quatern* 
         return out;
     }
     else {
-        quatern tq1, tq2;
+        quat tq1, tq2;
         quatslerp(&tq1, q1, q2, t);
         quatslerp(&tq2, q1, q3, t);
         return quatslerp(out, &tq1, &tq2, g/t);
     }
 }
 
-inline void quatsquadsetup(quatern* a, quatern* b, quatern* c, const quatern* q1, const quatern* q2, const quatern* q3, const quatern* q4)
+inline void quatsquadsetup(quat* a, quat* b, quat* c, const quat* q1, const quat* q2, const quat* q3, const quat* q4)
 {
 }
 

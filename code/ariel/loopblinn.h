@@ -1,8 +1,8 @@
-/* 
+/*
  * Copyright (c) 2016 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
- * This file is part of the GSLIB project.
+ * This file is part of the gslib project.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -97,6 +97,7 @@ public:
     lb_line* get_next_line() const { return _next; }
     lb_joint* get_prev_joint() const;
     lb_joint* get_next_joint() const;
+    bool is_adjacent_joint(const lb_joint* p) const { return p == get_prev_joint() || p == get_next_joint(); }
     void set_binding(void* p) { _binding = p; }
     void* get_binding() const { return _binding; }
 };
@@ -151,6 +152,7 @@ public:
     lb_line* get_next_line() const;
     const vec2& get_prev_point() const { return _joint[0]->get_point(); }
     const vec2& get_next_point() const { return _joint[1]->get_point(); }
+    static lb_line* get_line_between(lb_joint* j1, lb_joint* j2);
 };
 
 class lb_bisp_line
@@ -334,6 +336,9 @@ protected:
     void calc_klm_coords(lb_polygon* poly, lb_line* start);
     lb_line* calc_klm_span(lb_polygon* poly, lb_line* line);
 };
+
+extern lb_line* lb_get_span(lb_line_list& span, lb_line* start);
+extern void lb_get_current_span(lb_line_list& span, lb_control_joint* joint);
 
 __ariel_end__
 

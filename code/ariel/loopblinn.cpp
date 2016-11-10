@@ -1,8 +1,8 @@
-/* 
+/*
  * Copyright (c) 2016 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
- * This file is part of the GSLIB project.
+ * This file is part of the gslib project.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,7 +29,7 @@
 
 __ariel_begin__
 
-static lb_line* lb_get_span(lb_line_list& span, lb_line* start)
+lb_line* lb_get_span(lb_line_list& span, lb_line* start)
 {
     assert(start);
     span.push_back(start);
@@ -198,7 +198,7 @@ static bool lb_is_convex(_line* line1, _line* line2)
  * logic into consideration, then retrieve the center point of this convex angle.
  */
 
-static void lb_get_current_span(lb_line_list& span, lb_control_joint* joint)
+void lb_get_current_span(lb_line_list& span, lb_control_joint* joint)
 {
     assert(joint);
     auto* prevj = joint->get_prev_joint();
@@ -800,6 +800,19 @@ lb_line* lb_line::get_next_line() const
     assert(_joint[1]);
     assert(_joint[1]->get_prev_line() == this);
     return _joint[1]->get_next_line();
+}
+
+lb_line* lb_line::get_line_between(lb_joint* j1, lb_joint* j2)
+{
+    if(j1->get_prev_joint() == j2) {
+        assert(j2->get_next_joint() == j1);
+        return j1->get_prev_line();
+    }
+    else if(j1->get_next_joint() == j2) {
+        assert(j2->get_prev_joint() == j1);
+        return j1->get_next_line();
+    }
+    return 0;
 }
 
 lb_bisp_line::lb_bisp_line()
@@ -1843,12 +1856,13 @@ int loop_blinn_processor::try_split_cubic(lb_line* line1, lb_line* line2, lb_lin
         float d2 = pink::point_line_distance(p3, p2, p4);
         return abs(d1) < 0.1f && abs(d2) < 0.1f;
     };
+    static const bool enable_merge_segs = false;
     if(is_straight2(p[0], p[1], p[2], p[3])) {
-        if(prevjoint && is_straight1(prevjoint->get_point(), p[0], p[3])) {
+        if(enable_merge_segs && prevjoint && is_straight1(prevjoint->get_point(), p[0], p[3])) {
             j1->set_point(p[3]);
             sp[0] = j1;
             if(is_straight2(p[3], p[4], p[5], p[6])) {
-                if(nextjoint && is_straight1(p[3], p[6], nextjoint->get_point())) {
+                if(enable_merge_segs && nextjoint && is_straight1(p[3], p[6], nextjoint->get_point())) {
                     lb_connect(j1, nextline);
                     return 1;
                 }
@@ -1875,7 +1889,7 @@ int loop_blinn_processor::try_split_cubic(lb_line* line1, lb_line* line2, lb_lin
             sp[0] = j1;
             sp[1] = j4;
             if(is_straight2(p[3], p[4], p[5], p[6])) {
-                if(nextjoint && is_straight1(p[3], p[6], nextjoint->get_point())) {
+                if(enable_merge_segs && nextjoint && is_straight1(p[3], p[6], nextjoint->get_point())) {
                     assert(j4->get_next_line() == nextline);
                     return 2;
                 }
@@ -1912,7 +1926,7 @@ int loop_blinn_processor::try_split_cubic(lb_line* line1, lb_line* line2, lb_lin
         sp[2] = j3;
         sp[3] = j4;
         if(is_straight2(p[3], p[4], p[5], p[6])) {
-            if(nextjoint && is_straight1(p[3], p[6], nextjoint->get_point())) {
+            if(enable_merge_segs && nextjoint && is_straight1(p[3], p[6], nextjoint->get_point())) {
                 assert(j4->get_next_line() == nextline);
                 return 4;
             }

@@ -1,8 +1,8 @@
-/* 
+/*
  * Copyright (c) 2016 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
- * This file is part of the GSLIB project.
+ * This file is part of the gslib project.
  * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -381,8 +381,25 @@ bool dt_edge::is_outside_boundary() const
 bool dt_edge::is_boundary() const
 {
     assert(_symmetric);
-    return is_outside_boundary() ||
-        _symmetric->is_outside_boundary();
+    if(!is_outside_boundary()) {
+        if(!_symmetric->is_outside_boundary()) {
+            /* need detection */
+            auto is_cw = [](const dt_edge* e)->bool {
+                assert(e);
+                auto& p1 = e->get_org_point();
+                auto& p2 = e->get_dest_point();
+                auto& p3 = e->get_prev_edge()->get_org_point();
+                return pink::is_concave_angle(p1, p2, p3);
+            };
+            bool cw1 = is_cw(this);
+            bool cw2 = is_cw(_symmetric);
+            return cw1 != cw2;
+        }
+        return true;
+    }
+    else if(!_symmetric->is_outside_boundary())
+        return true;
+    return false;
 }
 
 void delaunay_triangulation::initialize(dt_input_joints& inputs)

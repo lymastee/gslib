@@ -50,7 +50,7 @@ public:
         brush.set_tag(painter_brush::solid);
         brush.set_color(color(255,0,0));
         painter_pen pen;
-        pen.set_tag(painter_pen::null);
+        pen.set_tag(painter_pen::solid);
         pen.set_color(color(0,255,0));
         pex->save();
         pex->set_brush(brush);

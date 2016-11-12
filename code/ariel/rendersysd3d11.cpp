@@ -130,7 +130,7 @@ bool rendersys_d3d11::setup(uint hwnd, const configs& cfg)
     }
     sd.BufferUsage          = DXGI_USAGE_RENDER_TARGET_OUTPUT;
     sd.OutputWindow         = (HWND)hwnd;
-    sd.SampleDesc.Count     = 1;
+    sd.SampleDesc.Count     = 4;
     sd.SampleDesc.Quality   = 0;
     sd.Windowed             = TRUE;
     if(_fullscreen)

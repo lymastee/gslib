@@ -1048,12 +1048,6 @@ void painter_helper::close_sub_paths(painter_path& output, const painter_path& p
     for(int i = close_sub_path(output, path, 0); i < cap; i = close_sub_path(output, path, i));
 }
 
-graphic::graphic(raster* rast):
-    painter_obj(rast->get_context())
-{
-    assert(rast);
-}
-
 void raster::save()
 {
     _ctxst.push(_context);

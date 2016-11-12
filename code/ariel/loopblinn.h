@@ -34,7 +34,6 @@
 __ariel_begin__
 
 using pink::raster;
-using pink::graphic;
 using pink::image;
 using pink::painter_path;
 using pink::painter_node;
@@ -300,6 +299,7 @@ public:
     void proceed(const painter_path& path);
     lb_polygon_list& get_polygons() { return _polygons; }
     lb_joint_list& get_joints() { return _joint_holdings; }
+    lb_line_list& get_lines() { return _line_holdings; }
     void trace_polygons() const;
     void trace_bisps() const;
     void trace_rtree() const;

@@ -191,11 +191,11 @@ class deque: public std::deque<_ty, gs::allocator<_ty> > {};
 template<class _ty>
 class stack: public std::stack<_ty, gs::deque<_ty> > {};
 
-template<class _kty, class _ty, 
+template<class _kty, class _ty,
     class _pr = std::less<_kty>
     >
-class map: public std::map<_kty, _ty, _pr, 
-    gs::allocator<std::pair<const _kty, _ty> > 
+class map: public std::map<_kty, _ty, _pr,
+    gs::allocator<std::pair<const _kty, _ty> >
     >
 {};
 template<class _ty, class _pr = std::less<_ty> >
@@ -215,15 +215,15 @@ template<class _kty, class _ty,
     class _hs = std::tr1::hash<_kty>, class _equ = std::equal_to<_kty>
     >
 class unordered_map:
-    public std::unordered_map<_kty, _ty, _hs, _equ, 
-        gs::allocator<std::pair<const _kty, _ty> > 
+    public std::unordered_map<_kty, _ty, _hs, _equ,
+        gs::allocator<std::pair<const _kty, _ty> >
     >
 {};
 template<class _kty,
     class _hs = std::tr1::hash<_kty>,
     class _equ = std::equal_to<_kty>
     >
-class unordered_set: 
+class unordered_set:
     public std::unordered_set<_kty, _hs, _equ, gs::allocator<_kty>
     >
 {};
@@ -237,7 +237,7 @@ class unordered_multimap:
     >
 {};
 template<class _kty, class _hs, class _equ>
-class unordered_multiset: 
+class unordered_multiset:
     public std::unordered_multiset<_kty, _hs, _equ, gs::allocator<_kty>
     >
 {};
@@ -253,7 +253,7 @@ class deque: public std::deque<_ty> {};
 template<class _ty>
 class stack: public std::stack<_ty> {};
 
-template<class _kty, class _ty, 
+template<class _kty, class _ty,
     class _pr = std::less<_kty>
     >
 class map: public std::map<_kty, _ty, _pr> {};
@@ -270,17 +270,20 @@ class multiset: public std::multiset<_ty, _pr>
 {};
 
 template<class _kty, class _ty,
-    class _hs = tr1::hash<_kty>
+    class _hs = std::tr1::hash<_kty>
     >
 class unordered_map:
     public std::unordered_map<_kty, _ty, _hs> {};
 
-template<class _kty, class _hs, class _equ>
+template<class _kty,
+    class _hs = std::tr1::hash<_kty>,
+    class _equ = std::equal_to<_kty>
+    >
 class unordered_set:
     public std::unordered_set<_kty, _hs, _equ> {};
 
 template<class _kty, class _ty,
-    class _hs = tr1::hash<_kty>
+    class _hs = std::tr1::hash<_kty>
     >
 class unordered_multimap:
     public std::unordered_multimap<_kty, _ty, _hs> {};

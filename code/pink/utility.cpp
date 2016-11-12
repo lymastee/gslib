@@ -1214,14 +1214,14 @@ float point_line_distance(const vec2& p, const vec2& p1, const vec2& p2)
 int get_interpolate_step(const vec2& a, const vec2& b, const vec2& c)
 {
     int step = round(quad_control_length(a, b, c));
-    step >>= 2;
+    step >>= 3;
     return step < 2 ? 2 : step;
 }
 
 int get_interpolate_step(const vec2& a, const vec2& b, const vec2& c, const vec2& d)
 {
     int step = round(cubic_control_length(a, b, c, d));
-    step >>= 2;
+    step >>= 3;
     return step < 2 ? 2 : step;
 }
 

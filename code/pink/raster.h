@@ -265,19 +265,6 @@ struct painter_helper
     static void close_sub_paths(painter_path& output, const painter_path& path);
 };
 
-class graphic:
-    public painter_obj
-{
-public:
-    graphic(raster* rast);
-    void set_path(const painter_path& p) { _path = p; }
-    const painter_path& get_path() const { return _path; }
-    // void draw();
-
-protected:
-    painter_path        _path;
-};
-
 class __gs_novtable raster abstract:
     public painterex
 {

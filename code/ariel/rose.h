@@ -30,13 +30,12 @@
 #include <ariel/rendersys.h>
 #include <pink/raster.h>
 #include <pink/utility.h>
-#include <ariel/loopblinn.h>
+#include <ariel/gfxobj.h>
 #include <ariel/batch.h>
 
 __ariel_begin__
 
 using pink::raster;
-using pink::graphic;
 using pink::image;
 using pink::painter_path;
 using pink::color;
@@ -170,14 +169,10 @@ protected:
     vertex_stream_cf_cr _vertices;
 };
 
-class rose_graphic:
-    public graphic
-{
-
-};
-
-extern void rose_paint_brush(loop_blinn_processor& lbp, rose_bind_list& bind_cache, const painter_brush& brush);
-extern void rose_paint_solid_brush(loop_blinn_processor& lbp, rose_bind_list& bind_cache, const painter_brush& brush);
+extern void rose_paint_brush(graphics_obj& gfx, rose_bind_list& bind_cache, const painter_brush& brush);
+extern void rose_paint_solid_brush(graphics_obj& gfx, rose_bind_list& bind_cache, const painter_brush& brush);
+extern void rose_paint_pen(graphics_obj& gfx, rose_bind_list& bind_cache, const painter_pen& pen);
+extern void rose_paint_solid_pen(graphics_obj& gfx, rose_bind_list& bind_cache, const painter_pen& pen);
 /* more to come. */
 
 class rose:
@@ -185,6 +180,7 @@ class rose:
 {
 public:
     typedef render_constant_buffer constant_buffer;
+    typedef list<graphics_obj> graphics_obj_cache;
 
 public:
     rose();
@@ -196,6 +192,8 @@ public:
 
 public:
     void setup(rendersys* rsys);
+    void fill_graphics_obj(graphics_obj& gfx);
+    void stroke_graphics_obj(graphics_obj& gfx);
 
 protected:
     rendersys*          _rsys;
@@ -203,6 +201,7 @@ protected:
     batch_processor     _bp;
     rose_batch_list     _batches;
     rose_bind_list      _bindings;
+    graphics_obj_cache  _gocache;
     int                 _nextz;
 
 protected:

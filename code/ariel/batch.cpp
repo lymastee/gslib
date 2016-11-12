@@ -337,7 +337,7 @@ void batch_processor::add_line(lb_joint* i, lb_joint* j, float w, int z)
 void batch_processor::add_aa_border(lb_joint* i, lb_joint* j, int z)
 {
     assert(i && j);
-    static const float aa_width = 2.f;
+    static const float aa_width = 1.3f;
     create_half_line(i, j, i->get_point(), j->get_point(), aa_width, z);
 }
 

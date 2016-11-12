@@ -384,7 +384,24 @@ void rose::on_draw_end()
     clear_batches();
     prepare_batches();
     draw_batches();
-    //draw_test_lines();
+    _gocache.clear();
+}
+
+void rose::fill_graphics_obj(graphics_obj& gfx)
+{
+    auto& polys = gfx->get_polygons();
+    auto z = _nextz ++;
+    for(auto* p : polys)
+        _bp.add_polygon(p, z);
+}
+
+void rose::stroke_graphics_obj(graphics_obj& gfx)
+{
+    auto& lines = gfx->get_lines();
+    auto z = _nextz ++;
+    static const float line_width = 2.4f;
+    for(auto* p : lines)
+        _bp.add_line(p->get_prev_joint(), p->get_next_joint(), line_width, z);
 }
 
 /*
@@ -422,43 +439,22 @@ void rose::prepare_fill(const painter_path& path, const painter_brush& brush)
     painter_helper::transform(cspath, path,
         painter_helper::merge_straight_line | painter_helper::reduce_short_line | painter_helper::reduce_straight_curve
         );
-    loop_blinn_processor lbp((float)get_width(), (float)get_height());
-    lbp.proceed(cspath);
-    rose_paint_brush(lbp, _bindings, brush);
-    auto& polys = lbp.get_polygons();
-    for(auto* p : polys)
-        _bp.add_polygon(p, _nextz ++);
+    graphics_obj gfx((float)get_width(), (float)get_height());
+    gfx->proceed_fill(cspath);
+    rose_paint_brush(gfx, _bindings, brush);
+    fill_graphics_obj(gfx);
+    _gocache.push_back(gfx);
 }
-
-// struct my_line_struct
-// {
-//     vec2 p1, p2;
-//     vec3 coef;
-//     void setup_coef()
-//     {
-//         pink::get_linear_coefficient(coef, p1, vec2().sub(p2, p1));
-//         coef.normalize();
-//     }
-// };
-// 
-// typedef list<my_line_struct> my_line_list;
-// static my_line_list g_linelist;
 
 void rose::prepare_stroke(const painter_path& path, const painter_pen& pen)
 {
-//     if(pen.get_tag() == painter_pen::null)
-//         return;
-//     // test
-//     if(path.size() != 2)
-//         return;
-//     auto* p1 = path.get_node(0);
-//     auto* p2 = path.get_node(1);
-//     my_line_struct ls;
-//     ls.p1 = p1->get_point();
-//     ls.p2 = p2->get_point();
-//     ls.setup_coef();
-//     g_linelist.clear();
-//     g_linelist.push_back(ls);
+    if(pen.get_tag() == painter_pen::null)
+        return;
+    graphics_obj gfx((float)get_width(), (float)get_height());
+    gfx->proceed_stroke(path);
+    rose_paint_pen(gfx, _bindings, pen);
+    stroke_graphics_obj(gfx);
+    _gocache.push_back(gfx);
 }
 
 rose_batch* rose::create_fill_batch_cr()
@@ -529,17 +525,17 @@ void rose::draw_batches()
     }
 }
 
-void rose_paint_brush(loop_blinn_processor& lbp, rose_bind_list& bind_cache, const painter_brush& brush)
+void rose_paint_brush(graphics_obj& gfx, rose_bind_list& bind_cache, const painter_brush& brush)
 {
     auto t = brush.get_tag();
     switch(t)
     {
     case painter_brush::solid:
-        return rose_paint_solid_brush(lbp, bind_cache, brush);
+        return rose_paint_solid_brush(gfx, bind_cache, brush);
     }
 }
 
-void rose_paint_solid_brush(loop_blinn_processor& lbp, rose_bind_list& bind_cache, const painter_brush& brush)
+void rose_paint_solid_brush(graphics_obj& gfx, rose_bind_list& bind_cache, const painter_brush& brush)
 {
     assert(brush.get_tag() == painter_brush::solid);
     bind_cache.push_back(rose_bind_info());
@@ -549,7 +545,34 @@ void rose_paint_solid_brush(loop_blinn_processor& lbp, rose_bind_list& bind_cach
     binding.color.y = (float)cr.green / 255.f;
     binding.color.z = (float)cr.blue / 255.f;
     binding.color.w = (float)cr.alpha / 255.f;
-    auto& joints = lbp.get_joints();
+    auto& joints = gfx->get_joints();
+    for(auto* p : joints) {
+        assert(p);
+        p->set_binding(&binding);
+    }
+}
+
+void rose_paint_pen(graphics_obj& gfx, rose_bind_list& bind_cache, const painter_pen& pen)
+{
+    auto t = pen.get_tag();
+    switch(t)
+    {
+    case painter_pen::solid:
+        return rose_paint_solid_pen(gfx, bind_cache, pen);
+    }
+}
+
+void rose_paint_solid_pen(graphics_obj& gfx, rose_bind_list& bind_cache, const painter_pen& pen)
+{
+    assert(pen.get_tag() == painter_pen::solid);
+    bind_cache.push_back(rose_bind_info());
+    auto& binding = bind_cache.back();
+    auto& cr = pen.get_color();
+    binding.color.x = (float)cr.red / 255.f;
+    binding.color.y = (float)cr.green / 255.f;
+    binding.color.z = (float)cr.blue / 255.f;
+    binding.color.w = (float)cr.alpha / 255.f;
+    auto& joints = gfx->get_joints();
     for(auto* p : joints) {
         assert(p);
         p->set_binding(&binding);

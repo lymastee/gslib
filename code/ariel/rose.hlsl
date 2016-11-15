@@ -50,6 +50,13 @@ void rose_vsf_klm_cr(rose_vsf_klm_cr_input input, out float4 pos : SV_POSITION, 
 
 float4 rose_psf_klm_cr(float4 pos : SV_POSITION, float3 klm : TEXCOORD, float4 cr : COLOR) : SV_TARGET
 {
+    float c = klm.x * klm.x * klm.x - klm.y * klm.z;
+    float alpha = c > 0.0f ? 1.0f : 0.0f;
+    return float4(cr.x, cr.y, cr.z, cr.w * alpha);
+}
+
+float4 rose_psf_klm_cr_aa(float4 pos : SV_POSITION, float3 klm : TEXCOORD, float4 cr : COLOR) : SV_TARGET
+{
     float3 px = ddx(klm);
     float3 py = ddy(klm);
     float k2 = klm.x * klm.x;

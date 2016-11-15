@@ -423,9 +423,13 @@ void painter_path::simplify(painter_path& path) const
 {
     clip_polygons polys;
     clip_result result;
+    painter_path tmp;
     clip_create_polygons(polys, *this);
     clip_exclude(result, polys);
-    clip_compile_path(path, result);
+    clip_compile_path(tmp, result);
+    painter_helper::transform(path, tmp,
+        painter_helper::merge_straight_line | painter_helper::reduce_short_line | painter_helper::reduce_straight_curve
+        );
 }
 
 void painter_path::tracing() const

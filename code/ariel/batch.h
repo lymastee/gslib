@@ -64,7 +64,7 @@ struct bat_triangle
 {
     lb_joint*           _joints[3];
     vec2                _reduced[3];        /* get a reduced triangle so that no overlapping caused by error would be detected. */
-    int                 _zorder;
+    float               _zorder;
     bool                _is_reduced;
 
 public:
@@ -80,8 +80,8 @@ public:
     const vec2& get_reduced_point(int i) const { return _reduced[i]; }
     bool is_overlapped(const bat_triangle& other) const;
     void ensure_make_reduced();
-    void set_zorder(int z) { _zorder = z; }
-    int get_zorder() const { return _zorder; }
+    void set_zorder(float z) { _zorder = z; }
+    float get_zorder() const { return _zorder; }
     void tracing() const;
     void trace_reduced_points() const;
 };
@@ -89,11 +89,13 @@ public:
 struct bat_line
 {
     vec2                _points[2];
+    vec2                _contourpt[4];      /* calculated contour pts */
     lb_joint*           _srcjs[2];
     vec3                _coef;
     float               _width;
-    int                 _zorder;
+    float               _zorder;
     bool                _half;              /* is half line? */
+    bool                _recalc;            /* need recalculation? */
 
 public:
     bat_line();
@@ -106,8 +108,8 @@ public:
     void setup_coef();
     void set_coef(const vec3& c) { _coef = c; }
     const vec3& get_coef() const { return _coef; }
-    void set_zorder(int z) { _zorder = z; }
-    int get_zorder() const { return _zorder; }
+    void set_zorder(float z) { _zorder = z; }
+    float get_zorder() const { return _zorder; }
     void set_line_width(float w) { _width = w; }
     float get_line_width() const { return _width; }
     void set_half_line(bool hl) { _half = hl; }
@@ -115,6 +117,12 @@ public:
     bat_type decide() const;
     void get_bound_rect(rectf& rc) const;
     int clip_triangle(bat_line output[2], const bat_triangle* triangle) const;
+    void calc_contour_points();
+    const vec2& get_contour_point(int i) const { return _contourpt[i]; }
+    void set_contour_point(int i, const vec2& p) { _contourpt[i] = p; }
+    bool set_need_recalc(bool b) { _recalc = b; }
+    bool need_recalc() const { return _recalc; }
+    void trim_contour(bat_line& line);
     void tracing() const;
 };
 
@@ -155,13 +163,14 @@ class batch_processor
 public:
     typedef bat_batches::iterator bat_iter;
     typedef bat_batches::const_iterator bat_const_iter;
+    friend class rose;
 
 public:
     batch_processor();
     ~batch_processor();
-    void add_polygon(lb_polygon* poly, int z);
-    void add_line(lb_joint* i, lb_joint* j, float w, int z);
-    void add_aa_border(lb_joint* i, lb_joint* j, int z);
+    void add_polygon(lb_polygon* poly, float z);
+    bat_line* add_line(lb_joint* i, lb_joint* j, float w, float z);
+    bat_line* add_aa_border(lb_joint* i, lb_joint* j, float z);
     void finish_batching();
     bat_batches& get_batches() { return _batches; }
     void clear_batches();
@@ -174,10 +183,10 @@ protected:
 protected:
     template<class _batch>
     _batch* create_batch(bat_type t);
-    bat_triangle* create_triangle(lb_joint* i, lb_joint* j, lb_joint* k, int z);
-    bat_line* create_line(lb_joint* i, lb_joint* j, float w, int z);
-    bat_line* create_half_line(lb_joint* i, lb_joint* j, const vec2& p1, const vec2& p2, float w, int z);
-    void add_triangle(lb_joint* i, lb_joint* j, lb_joint* k, bool b[3], int z);
+    bat_triangle* create_triangle(lb_joint* i, lb_joint* j, lb_joint* k, float z);
+    bat_line* create_line(lb_joint* i, lb_joint* j, float w, float z, bool half);
+    bat_line* create_half_line(lb_joint* i, lb_joint* j, const vec2& p1, const vec2& p2, float w, float z);
+    void add_triangle(lb_joint* i, lb_joint* j, lb_joint* k, bool b[3], float z);
     void collect_aa_borders(bat_triangle* triangle, bool b[3]);
     void proceed_line_batch();
 };

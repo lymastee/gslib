@@ -288,32 +288,15 @@ void rose_fill_batch_klm_cr::tracing() const
 void rose_stroke_batch_coef_cr::create(bat_batch* bat)
 {
     assert(bat);
-    auto offset_line = [](const vec2& p1, const vec2& p2, vec2& p3, vec2& p4, float dist) {
-        vec2 d;
-        d.sub(p2, p1);
-        vec2 c(d.y, -d.x);
-        c.normalize();
-        c.scale(dist);
-        p3.add(p1, c);
-        p4.add(p2, c);
-    };
     auto& lines = static_cast<bat_stroke_batch*>(bat)->get_lines();
     for(auto* line : lines) {
         assert(line);
         /* point */
-        vec2 p[4];      /* tl, tr, bl, br */
         auto& p1 = line->get_start_point();
         auto& p2 = line->get_end_point();
-        if(line->is_half_line()) {
-            p[0] = p1;
-            p[1] = p2;
-            offset_line(p[0], p[1], p[2], p[3], line->get_line_width());
-        }
-        else {
-            float w = line->get_line_width() * 0.5f;
-            offset_line(p1, p2, p[0], p[1], -w);
-            offset_line(p1, p2, p[2], p[3], w);
-        }
+        if(line->need_recalc())
+            line->calc_contour_points();
+        auto* p = &line->get_contour_point(0);
         /* coef */
         vec4 coef;
         (vec3&)coef = line->get_coef();
@@ -338,10 +321,10 @@ void rose_stroke_batch_coef_cr::create(bat_batch* bat)
             { p[3], coef, cr2 },
         };
         _vertices.push_back(pt[0]);
-        _vertices.push_back(pt[2]);
-        _vertices.push_back(pt[1]);
         _vertices.push_back(pt[1]);
         _vertices.push_back(pt[2]);
+        _vertices.push_back(pt[2]);
+        _vertices.push_back(pt[1]);
         _vertices.push_back(pt[3]);
     }
 }
@@ -352,7 +335,7 @@ void rose_stroke_batch_coef_cr::tracing() const
 
 rose::rose()
 {
-    _nextz = 0;
+    _nextz = 0.f;
     initialize();
 }
 
@@ -373,7 +356,7 @@ void rose::draw_path(const painter_path& path)
 
 void rose::on_draw_begin()
 {
-    _nextz = 0;
+    _nextz = 0.f;
     _bp.clear_batches();
     _bindings.clear();
 }
@@ -397,11 +380,41 @@ void rose::fill_graphics_obj(graphics_obj& gfx)
 
 void rose::stroke_graphics_obj(graphics_obj& gfx)
 {
-    auto& lines = gfx->get_lines();
-    auto z = _nextz ++;
     static const float line_width = 2.4f;
-    for(auto* p : lines)
-        _bp.add_line(p->get_prev_joint(), p->get_next_joint(), line_width, z);
+    auto z = _nextz ++;
+    meta_stroke_graphics_obj(gfx, [&](lb_joint* i, lb_joint* j)-> bat_line* {
+        assert(i && j);
+        return _bp.create_line(i, j, line_width, z, false);
+    });
+}
+
+template<class _addline>
+void rose::meta_stroke_graphics_obj(graphics_obj& gfx, _addline fn_add)
+{
+    auto& lines = gfx->get_lines();
+    if(lines.empty())
+        return;
+    auto i = lines.begin();
+    auto* last = fn_add((*i)->get_prev_joint(), (*i)->get_next_joint());
+    assert(last);
+    last->calc_contour_points();
+    auto* laststart = last;
+    for(++ i; i != lines.end(); ++ i) {
+        auto* line = fn_add((*i)->get_prev_joint(), (*i)->get_next_joint());
+        assert(line);
+        line->calc_contour_points();
+        if(last->get_end_point() == line->get_start_point()) {
+            last->trim_contour(*line);
+            last = line;
+        }
+        else {
+            if((last != laststart) &&
+                (laststart->get_start_point() == last->get_end_point())
+                )
+                last->trim_contour(*laststart);
+            laststart = last = line;
+        }
+    }
 }
 
 /*
@@ -434,16 +447,22 @@ void rose::prepare_fill(const painter_path& path, const painter_brush& brush)
 {
     if(brush.get_tag() == painter_brush::null)
         return;
-    using namespace pink;
-    painter_path cspath;
-    painter_helper::transform(cspath, path,
-        painter_helper::merge_straight_line | painter_helper::reduce_short_line | painter_helper::reduce_straight_curve
-        );
     graphics_obj gfx((float)get_width(), (float)get_height());
-    gfx->proceed_fill(cspath);
+    gfx->proceed_fill(path);
     rose_paint_brush(gfx, _bindings, brush);
     fill_graphics_obj(gfx);
     _gocache.push_back(gfx);
+    /* anti-aliasing */
+    auto z = _nextz ++;
+    graphics_obj gfxaa((float)get_width(), (float)get_height());
+    gfxaa->proceed_stroke(path);
+    rose_paint_brush(gfxaa, _bindings, brush);
+    meta_stroke_graphics_obj(gfxaa, [this, &z](lb_joint* i, lb_joint* j)-> bat_line* {
+        assert(i && j);
+        static const float aa_width = 1.4f;
+        return _bp.create_line(i, j, aa_width, z, true);
+    });
+    _gocache.push_back(gfxaa);
 }
 
 void rose::prepare_stroke(const painter_path& path, const painter_pen& pen)

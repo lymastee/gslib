@@ -31,7 +31,7 @@ __ariel_begin__
 bat_triangle::bat_triangle()
 {
     _joints[0] = _joints[1] = _joints[2] = 0;
-    _zorder = -1;
+    _zorder = -1.f;
     _is_reduced = false;
 }
 
@@ -40,7 +40,7 @@ bat_triangle::bat_triangle(lb_joint* i, lb_joint* j, lb_joint* k)
     _joints[0] = i;
     _joints[1] = j;
     _joints[2] = k;
-    _zorder = -1;
+    _zorder = -1.f;
     _is_reduced = false;
 }
 
@@ -178,9 +178,10 @@ void bat_triangle::trace_reduced_points() const
 bat_line::bat_line()
 {
     _width = 2.f;
-    _zorder = -1;
+    _zorder = -1.f;
     _srcjs[0] = _srcjs[1] = 0;
     _half = false;
+    _recalc = true;
 }
 
 void bat_line::setup_coef()
@@ -287,14 +288,64 @@ int bat_line::clip_triangle(bat_line output[2], const bat_triangle* triangle) co
         trace_clip_triangle(triangle, output, 2);
         return 2;
     }
-    output[0] = *this;
-    return 1;
+    return -1;      /* itself */
+}
+
+void bat_line::calc_contour_points()
+{
+    auto offset_line = [](const vec2& p1, const vec2& p2, vec2& p3, vec2& p4, float dist) {
+        vec2 d;
+        d.sub(p2, p1);
+        vec2 c(d.y, -d.x);
+        c.normalize();
+        c.scale(dist);
+        p3.add(p1, c);
+        p4.add(p2, c);
+    };
+    if(is_half_line()) {
+        float w = get_line_width();
+        offset_line(_points[0], _points[1], _contourpt[0], _contourpt[1], 0.2f * w);
+        offset_line(_points[0], _points[1], _contourpt[2], _contourpt[3], -0.8f * w);
+    }
+    else {
+        float w = get_line_width() * 0.5f;
+        offset_line(_points[0], _points[1], _contourpt[0], _contourpt[1], w);
+        offset_line(_points[0], _points[1], _contourpt[2], _contourpt[3], -w);
+    }
+    _recalc = false;
+}
+
+void bat_line::trim_contour(bat_line& line)
+{
+    assert(!_recalc);
+    assert(get_end_point() == line.get_start_point());
+    vec2 p;
+    const vec2& m1 = get_contour_point(2);
+    const vec2& m2 = get_contour_point(3);
+    const vec2& n1 = line.get_contour_point(2);
+    const vec2& n2 = line.get_contour_point(3);
+    pink::intersectp_linear_linear(p, m1, n1, vec2().sub(m2, m1), vec2().sub(n2, n1));
+    set_contour_point(3, p);
+    line.set_contour_point(2, p);
+    const vec2& m3 = get_contour_point(0);
+    const vec2& m4 = get_contour_point(1);
+    const vec2& n3 = line.get_contour_point(0);
+    const vec2& n4 = line.get_contour_point(1);
+    pink::intersectp_linear_linear(p, m3, n3, vec2().sub(m4, m3), vec2().sub(n4, n3));
+    set_contour_point(1, p);
+    line.set_contour_point(0, p);
 }
 
 void bat_line::tracing() const
 {
     trace(_t("@moveTo %f, %f;\n"), _points[0].x, _points[0].y);
     trace(_t("@lineTo %f, %f;\n"), _points[1].x, _points[1].y);
+    trace(_t("#tracing contour info.\n"));
+    trace(_t("@moveTo %f, %f;\n"), _contourpt[0].x, _contourpt[0].y);
+    trace(_t("@lineTo %f, %f;\n"), _contourpt[1].x, _contourpt[1].y);
+    trace(_t("@lineTo %f, %f;\n"), _contourpt[3].x, _contourpt[3].y);
+    trace(_t("@lineTo %f, %f;\n"), _contourpt[2].x, _contourpt[2].y);
+    trace(_t("@lineTo %f, %f;\n"), _contourpt[0].x, _contourpt[0].y);
 }
 
 batch_processor::batch_processor()
@@ -306,7 +357,7 @@ batch_processor::~batch_processor()
     clear_batches();
 }
 
-void batch_processor::add_polygon(lb_polygon* poly, int z)
+void batch_processor::add_polygon(lb_polygon* poly, float z)
 {
     assert(poly);
     auto& cdt = poly->get_cdt_result();
@@ -328,17 +379,17 @@ void batch_processor::add_polygon(lb_polygon* poly, int z)
     });
 }
 
-void batch_processor::add_line(lb_joint* i, lb_joint* j, float w, int z)
+bat_line* batch_processor::add_line(lb_joint* i, lb_joint* j, float w, float z)
 {
     assert(i && j);
-    create_line(i, j, w, z);
+    return create_line(i, j, w, z, false);
 }
 
-void batch_processor::add_aa_border(lb_joint* i, lb_joint* j, int z)
+bat_line* batch_processor::add_aa_border(lb_joint* i, lb_joint* j, float z)
 {
     assert(i && j);
     static const float aa_width = 1.3f;
-    create_half_line(i, j, i->get_point(), j->get_point(), aa_width, z);
+    return create_half_line(i, j, i->get_point(), j->get_point(), aa_width, z);
 }
 
 void batch_processor::finish_batching()
@@ -365,7 +416,7 @@ _batch* batch_processor::create_batch(bat_type t)
     return p;
 }
 
-bat_triangle* batch_processor::create_triangle(lb_joint* j1, lb_joint* j2, lb_joint* j3, int z)
+bat_triangle* batch_processor::create_triangle(lb_joint* j1, lb_joint* j2, lb_joint* j3, float z)
 {
     assert(j1 && j2 && j3);
     auto* p = gs_new(bat_triangle, j1, j2, j3);
@@ -374,7 +425,7 @@ bat_triangle* batch_processor::create_triangle(lb_joint* j1, lb_joint* j2, lb_jo
     return p;
 }
 
-bat_line* batch_processor::create_line(lb_joint* i, lb_joint* j, float w, int z)
+bat_line* batch_processor::create_line(lb_joint* i, lb_joint* j, float w, float z, bool half)
 {
     assert(i && j);
     auto* p = gs_new(bat_line);
@@ -382,7 +433,7 @@ bat_line* batch_processor::create_line(lb_joint* i, lb_joint* j, float w, int z)
     p->set_source_joint(0, i);
     p->set_source_joint(1, j);
     p->set_zorder(z);
-    p->set_half_line(false);
+    p->set_half_line(half);
     p->set_line_width(w);
     p->set_start_point(i->get_point());
     p->set_end_point(j->get_point());
@@ -391,7 +442,7 @@ bat_line* batch_processor::create_line(lb_joint* i, lb_joint* j, float w, int z)
     return p;
 }
 
-bat_line* batch_processor::create_half_line(lb_joint* i, lb_joint* j, const vec2& p1, const vec2& p2, float w, int z)
+bat_line* batch_processor::create_half_line(lb_joint* i, lb_joint* j, const vec2& p1, const vec2& p2, float w, float z)
 {
     assert(i && j);
     auto* p = gs_new(bat_line);
@@ -408,12 +459,12 @@ bat_line* batch_processor::create_half_line(lb_joint* i, lb_joint* j, const vec2
     return p;
 }
 
-void batch_processor::add_triangle(lb_joint* j1, lb_joint* j2, lb_joint* j3, bool b[3], int z)
+void batch_processor::add_triangle(lb_joint* j1, lb_joint* j2, lb_joint* j3, bool b[3], float z)
 {
     assert(j1 && j2 && j3);
     auto* triangle = create_triangle(j1, j2, j3, z);
     assert(triangle);
-    collect_aa_borders(triangle, b);
+    // collect_aa_borders(triangle, b);
     rectf rc;
     triangle->make_rect(rc);
     auto t = triangle->decide();
@@ -479,26 +530,40 @@ void batch_processor::collect_aa_borders(bat_triangle* triangle, bool b[3])
         add_aa_border(j3, j1, triangle->get_zorder());
 }
 
-static void bat_clip_triangles(bat_lines& line_holdings, const bat_triangles& triangles, bat_triangles::const_iterator i, bat_line* line)
+static void bat_clip_triangles(bat_lines& out_lines, bat_lines& line_holdings, const bat_triangles& triangles, bat_triangles::const_iterator i, bat_line* line, bat_line* orgline)
 {
-    assert(line);
+    assert(line && orgline);
     assert(i != triangles.end());
+    auto record_line = [&out_lines, &line_holdings, &orgline](bat_line* line) {
+        assert(line);
+        if(line == orgline)
+            out_lines.push_back(line);
+        else {
+            auto* p = gs_new(bat_line, *line);
+            out_lines.push_back(p);
+            line_holdings.push_back(p);
+        }
+    };
     bat_line output[2];
     int c = line->clip_triangle(output, *i);
     if(++ i == triangles.end()) {
-        if(c == 1)
-            line_holdings.push_back(gs_new(bat_line, output[0]));
+        if(c == -1)
+            record_line(line);
+        else if(c == 1)
+            record_line(&output[0]);
         else if(c == 2) {
-            line_holdings.push_back(gs_new(bat_line, output[0]));
-            line_holdings.push_back(gs_new(bat_line, output[1]));
+            record_line(&output[0]);
+            record_line(&output[1]);
         }
         return;
     }
-    if(c == 1)
-        bat_clip_triangles(line_holdings, triangles, i, &output[0]);
+    if(c == -1)
+        bat_clip_triangles(out_lines, line_holdings, triangles, i, line, orgline);
+    else if(c == 1)
+        bat_clip_triangles(out_lines, line_holdings, triangles, i, &output[0], orgline);
     else if(c == 2) {
-        bat_clip_triangles(line_holdings, triangles, i, &output[0]);
-        bat_clip_triangles(line_holdings, triangles, i, &output[1]);
+        bat_clip_triangles(out_lines, line_holdings, triangles, i, &output[0], orgline);
+        bat_clip_triangles(out_lines, line_holdings, triangles, i, &output[1], orgline);
     }
 }
 
@@ -522,23 +587,26 @@ void batch_processor::proceed_line_batch()
             }
         }
     };
-    bat_lines line_holdings;
+    bat_lines out_lines, line_holdings;
     for(auto* line : _lines) {
         assert(line);
         bat_triangles ovltris;
         query_triangles(ovltris, line);
         if(ovltris.empty()) {
-            line_holdings.push_back(gs_new(bat_line, *line));
+            out_lines.push_back(line);
             continue;
         }
-        bat_clip_triangles(line_holdings, ovltris, ovltris.begin(), line);
+        bat_clip_triangles(out_lines, line_holdings, ovltris, ovltris.begin(), line, line);
     }
-    if(line_holdings.empty())
+    if(out_lines.empty())
         return;
-    _lines.insert(_lines.end(), line_holdings.begin(), line_holdings.end());
+    if(!line_holdings.empty()) {
+        _lines.insert(_lines.end(), line_holdings.begin(), line_holdings.end());
+        line_holdings.clear();
+    }
     /* generate batches */
     bat_stroke_batch *texbat = 0, *crbat = 0;
-    for(auto* line : line_holdings) {
+    for(auto* line : out_lines) {
         assert(line);
         auto t = line->decide();
         if(t == bs_coef_cr) {

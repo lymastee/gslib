@@ -196,13 +196,17 @@ public:
     void stroke_graphics_obj(graphics_obj& gfx);
 
 protected:
+    template<class _addline>
+    void meta_stroke_graphics_obj(graphics_obj& gfx, _addline fn_add);
+
+protected:
     rendersys*          _rsys;
     rose_configs        _cfgs;
     batch_processor     _bp;
     rose_batch_list     _batches;
     rose_bind_list      _bindings;
     graphics_obj_cache  _gocache;
-    int                 _nextz;
+    float               _nextz;
 
 protected:
     void setup_configs();

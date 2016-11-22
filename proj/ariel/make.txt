@@ -4,7 +4,9 @@
 	"type":"executable",
 	"output_directory":"../../bin",
 	"add_libraries":[
-		"dxgi.lib"
+		"dxgi.lib",
+		"d3d11.lib",
+		"d3dcompiler.lib"
 	],
 	"add_include_directories":[
 		"../../code",
@@ -79,10 +81,5 @@
 		"../../code/gslib/xml.h",
 		"../../code/gslib/xml.cpp",
 		"main.cpp"
-	],
-	"ext_sheet":{
-		"vs_LibraryPath":"$(LibraryPath);$(DXSDK_DIR)Lib/x86",
-		"vs_IncludePath":"$(IncludePath);$(DXSDK_DIR)Include",
-		"vs_ExecutablePath":"$(ExecutablePath);$(DXSDK_DIR)Utilities/bin/x86"
-	}
+	]
 }

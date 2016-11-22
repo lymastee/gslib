@@ -11,9 +11,9 @@
 #include <ariel/delaunay.h>
 #include <ariel/loopblinn.h>
 
-#pragma comment(lib, "d3d11.lib")
-#pragma comment(lib, "d3dcompiler.lib")
-#pragma comment(lib, "d3dx11d.lib")
+// #pragma comment(lib, "d3d11.lib")
+// #pragma comment(lib, "d3dcompiler.lib")
+//#pragma comment(lib, "d3dx11d.lib")
 
 using namespace gs;
 using namespace gs::pink;
@@ -46,11 +46,14 @@ public:
         path.simplify(simplified_path);
         simplified_path.tracing();
 
+//         path.move_to(10.f, 10.f);
+//         path.line_to(230.f, 210.f);
+
         painter_brush brush;
         brush.set_tag(painter_brush::solid);
         brush.set_color(color(255,0,0));
         painter_pen pen;
-        pen.set_tag(painter_pen::solid);
+        pen.set_tag(painter_pen::null);
         pen.set_color(color(0,255,0));
         pex->save();
         pex->set_brush(brush);

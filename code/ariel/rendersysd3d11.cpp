@@ -211,7 +211,9 @@ void rendersys_d3d11::begin_create_shader(create_shader_context& context, const 
     _string<char> sbentry, sbsmodel;
     sbentry.from(entry);
     sbsmodel.from(sm);
-    hr = D3DX11CompileFromFile(file, 0, inc, sbentry.c_str(), sbsmodel.c_str(), flags, 0, 0, &context, &err_blob, 0);
+    _string<wchar> mbfile;
+    mbfile.from(file);
+    hr = D3DCompileFromFile(mbfile.c_str(), 0, inc, sbentry.c_str(), sbsmodel.c_str(), flags, 0, &context, &err_blob);
     if(FAILED(hr)) {
         if(err_blob)
             OutputDebugStringA((char*)err_blob->GetBufferPointer());
@@ -233,7 +235,8 @@ void rendersys_d3d11::begin_create_shader_in_memory(create_shader_context& conte
     sbentry.from(entry);
     sbsmodel.from(sm);
     sbname.from(name);
-    hr = D3DX11CompileFromMemory(src, len, sbname.c_str(), 0, inc, sbentry.c_str(), sbsmodel.c_str(), flags, 0, 0, &context, &err_blob, 0);
+    //hr = D3DX11CompileFromMemory(src, len, sbname.c_str(), 0, inc, sbentry.c_str(), sbsmodel.c_str(), flags, 0, 0, &context, &err_blob, 0);
+    hr = E_FAIL;
     if(FAILED(hr)) {
         if(err_blob)
             OutputDebugStringA((char*)err_blob->GetBufferPointer());

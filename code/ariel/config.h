@@ -50,7 +50,6 @@ enum
 #if use_rendersys_d3d_11
 #include <d3d11.h>
 #include <dxgi.h>
-#include <d3dx11.h>
 #endif
 
 __ariel_begin__

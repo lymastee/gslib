@@ -3,20 +3,15 @@
 Everything from scratch, just for fun
 
 For start:<br>
-Use the gsmake.exe to generate project file.<br>
+Use premake5 to make the project file.<br>
+For premake5, pay a visit to:<br>
+[http://premake.github.io/](http://premake.github.io/)<br>
+<br>
 A typical command line was like:<br>
 
 ```
-gsmake -debug -compiler "vs_12" -tar "c:/"
+premake5 vs2013
 ```
-
-Only Visual Studio 2013 and 2015 was currently supported,<br>
-otherwise modify gsm.h|.cpp to generate the project file you wanted, DIY ;-)<br>
-or simply use your own ways to make these codes running, if you knew the rules.<br>
-
-for Visual Studio 2015, use option -compiler "vs_14".<br>
-for release, use option -release instead of -debug.<br>
-for the source directory, use option -src "", default by current directory.<br>
 
 Notice:<br>
 These codes were experimentally for now. You may read it for fun, but be ware<br>

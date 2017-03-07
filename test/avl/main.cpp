@@ -25,7 +25,7 @@ struct test_tree_node
 };
 
 typedef vector<int> test_value_set;
-typedef rbtree<test_tree_node> test_tree;
+typedef rbtree<test_tree_node> test_tree;       /* could be used to test red black tree or avl tree */
 typedef std::set<test_tree_node> test_tree2;
 
 static test_value_set __test_values;
@@ -88,29 +88,31 @@ static void run_specific_test(test_tree& tr, int n[], int c)
         flush_tree(tr, n[i]);
 }
 
-// void main()
-// {
-//     mtsrand(mtgoodseed());
-// 
-//     // loop times
-//     const int c = 10000000;
-// 
-//     test_tree tree1;
-//     DWORD t1 = GetTickCount();
-//     for(int i = 0; i < c; i ++)
-//         rand_append_once(tree1);
-//     DWORD t2 = GetTickCount();
-//     printf("time elapse for AVL: %d\n", t2 - t1);
-// 
-//     test_tree2 tree2;
-//     DWORD t3 = GetTickCount();
-//     for(int i = 0; i < c; i ++)
-//         rand_append_once(tree2);
-//     DWORD t4 = GetTickCount();
-//     printf("time elapse for RB: %d\n", t4 - t3);
-// 
-//     system("pause");
-// }
+/*
+void main()
+{
+    mtsrand(mtgoodseed());
+
+    // loop times
+    const int c = 10000000;
+
+    test_tree tree1;
+    DWORD t1 = GetTickCount();
+    for(int i = 0; i < c; i ++)
+        rand_append_once(tree1);
+    DWORD t2 = GetTickCount();
+    printf("time elapse for AVL: %d\n", t2 - t1);
+
+    test_tree2 tree2;
+    DWORD t3 = GetTickCount();
+    for(int i = 0; i < c; i ++)
+        rand_append_once(tree2);
+    DWORD t4 = GetTickCount();
+    printf("time elapse for RB: %d\n", t4 - t3);
+
+    system("pause");
+}
+*/
 
 void main()
 {

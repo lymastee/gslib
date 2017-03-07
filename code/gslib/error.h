@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 lymastee, All rights reserved.
+ * Copyright (c) 2016-2017 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -73,7 +73,7 @@ extern void reset_error();
 
 extern void dumperr_file(void);
 
-#ifdef _DEBUG
+#if defined (DEBUG) || defined (_DEBUG)
 extern void trace(const gchar* fmt, ...);
 extern void trace_all(const gchar* str);
 #else

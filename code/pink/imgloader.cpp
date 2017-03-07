@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 lymastee, All rights reserved.
+ * Copyright (c) 2016-2017 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -102,14 +102,14 @@ bool load_image(const gchar* dir, image& img)
             alpha_ptr = 0;
     }
     img.create(w, h, alpha_ptr != 0);
-    bitmap_header_v1* hdr = (bitmap_header_v1*)img.get_header();
-    bitmap_header_v1* hdr1 = (bitmap_header_v1*)rdi.GetDIB();
-    hdr->xpels = hdr1->xpels;
-    hdr->ypels = hdr1->ypels;
-    assert(hdr->imgsize == hdr1->imgsize);
+    bitmap_header* hdr = (bitmap_header*)img.get_header();
+    bitmap_header* hdr1 = (bitmap_header*)rdi.GetDIB();
+    hdr->x_pels = hdr1->x_pels;
+    hdr->y_pels = hdr1->y_pels;
+    assert(hdr->image_size == hdr1->image_size);
     if(alpha_ptr != 0)
         memcpy_s(img.get_alpha(0, false), size, rdi.AlphaGetPointer(), size);
-    size = hdr1->imgsize;
+    size = hdr1->image_size;
     memcpy_s(img.get_color(0, false), size, rdi.GetBits(0), size);
     return true;
 }
@@ -120,7 +120,7 @@ bool save_image(const gchar* dir, const image& img)
     CxImage wdi;
     uint imgtype = _get_cximage_type(dir);
     verify(wdi.Create(img.get_width(), img.get_height(), 24, imgtype) != 0);
-    int size = ((bitmap_header_v1*)wdi.GetDIB())->imgsize;
+    int size = ((bitmap_header*)wdi.GetDIB())->image_size;
     memcpy_s(wdi.GetBits(0), size, img.get_color(0, false), size);
     if(byte* alpha_ptr = (byte*)img.get_alpha(0, false)) {
         verify(wdi.AlphaCreate());

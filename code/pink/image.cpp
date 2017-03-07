@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 lymastee, All rights reserved.
+ * Copyright (c) 2016-2017 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -27,45 +27,47 @@
 #include <pink/image.h>
 #include <pink/widget.h>
 #include <pink/imgloader.h>
+#include <pink/imageio.h>
 
 __pink_begin__
 
-image::image()
+image_old::image_old()
 {
     _realw = 0;
+    _color = 0;
     _alpha = 0;
-    _rawptr = 0;
+    //memset(static_cast<bitmap_header*>(this), 0, sizeof(bitmap_header));
 }
 
-bool image::load(const gchar* n)
-{
-    return load_image(n, *this);
-}
+// bool image::load(const gchar* n)
+// {
+//     return load_image(n, *this);
+// }
+// 
+// bool image::save(const gchar* n)
+// {
+//     return save_image(n, *this);
+// }
 
-bool image::save(const gchar* n)
-{
-    return save_image(n, *this);
-}
-
-bool image::create(int w, int h, bool a)
+bool image_old::create(int w, int h, bool a)
 {
     destroy();
     if(!w || !h)
         return false;
     _realw = (int)(((uint)(24 * w + 31)) >> 5 << 2);
     int imgsize = _realw * h;
-    _rawptr = (unarrtype*)(new byte[imgsize+sizeof(bitmap_header_v1)]); /* allocate! */
-    _rawptr->size = sizeof(bitmap_header_v1);
+    _rawptr = (unarrtype*)(new byte[imgsize+sizeof(bitmap_header)]); /* allocate! */
+    _rawptr->size = sizeof(bitmap_header);
     _rawptr->width = w;
     _rawptr->height = h;
     _rawptr->planes = 1;
-    _rawptr->bitcount = 24;
+    _rawptr->bit_count = 24;
     _rawptr->compression = 0;
-    _rawptr->imgsize = imgsize;
-    _rawptr->xpels = 0;
-    _rawptr->ypels = 0;
-    _rawptr->clrused = 0;
-    _rawptr->clrimportant = 0;
+    _rawptr->image_size = imgsize;
+    _rawptr->x_pels = 0;
+    _rawptr->y_pels = 0;
+    _rawptr->clr_used = 0;
+    _rawptr->clr_important = 0;
     if(a) {
         int bitsz = w * h;
         _alpha = new byte[bitsz];
@@ -73,11 +75,38 @@ bool image::create(int w, int h, bool a)
     return true;
 }
 
-void image::destroy()
+// bool image::create(int w, int h, bool a)
+// {
+//     destroy();
+//     if(!w || !h)
+//         return false;
+//     _realw = (int)(((uint)(24 * w + 31)) >> 5 << 2);
+//     size = sizeof(bitmap_header);   /* header size */
+//     width = w;
+//     height = h;
+//     planes = 1;
+//     bit_count = 24;
+//     compression = 0;
+//     image_size = _realw * h;
+//     x_pels = 0;
+//     y_pels = 0;
+//     clr_used = 0;
+//     clr_important = 0;
+//     assert(!_color);
+//     _color = new byte[image_size];
+//     if(a) {
+//         assert(!_alpha);
+//         int bitsz = w * h;
+//         _alpha = new byte[bitsz];
+//     }
+//     return true;
+// }
+
+void image_old::destroy()
 {
-    if(_rawptr) {
-        delete [] (byte*)_rawptr;   /* deallocate! */
-        _rawptr = 0;
+    if(_color) {
+        delete [] _color;
+        _color = 0;
     }
     if(_alpha) {
         delete [] _alpha;
@@ -85,22 +114,26 @@ void image::destroy()
     }
 }
 
-void image::clear(const pixel& pix, const rect* rc)
+void image_old::clear(const pixel& pix, const rect* rc)
 {
-    assert(is_valid());
-    rect rc1(0, 0, get_width(), get_height());
-    if(rc) {
-        rc1.left = rc->left;
-        rc1.top = rc->top;
-        if(rc1.right > rc->right)
-            rc1.right = rc->right;
-        if(rc1.bottom > rc->bottom)
-            rc1.bottom = rc->bottom;
-    }
-    draw_rect(rc1, pix);
 }
 
-void image::set_alpha(int a, const rect* rc)
+// void image::clear(const pixel& pix, const rect* rc)
+// {
+//     assert(is_valid());
+//     rect rc1(0, 0, get_width(), get_height());
+//     if(rc) {
+//         rc1.left = rc->left;
+//         rc1.top = rc->top;
+//         if(rc1.right > rc->right)
+//             rc1.right = rc->right;
+//         if(rc1.bottom > rc->bottom)
+//             rc1.bottom = rc->bottom;
+//     }
+//     draw_rect(rc1, pix);
+// }
+
+void image_old::set_alpha(int a, const rect* rc)
 {
     assert(is_valid() && _alpha);
     if(rc) {
@@ -114,7 +147,7 @@ void image::set_alpha(int a, const rect* rc)
     memset(_alpha, a, size);
 }
 
-void image::copy(const image* img, bool cpix, bool calpha)
+void image_old::copy(const image_old* img, bool cpix, bool calpha)
 {
     assert(img && is_valid());
     int u = gs_min(get_width(), img->get_width()), 
@@ -130,7 +163,7 @@ void image::copy(const image* img, bool cpix, bool calpha)
     }
 }
 
-void image::copy(const image* img, int x, int y, int cx, int cy, int sx, int sy)
+void image_old::copy(const image_old* img, int x, int y, int cx, int cy, int sx, int sy)
 {
     if(!is_valid() || !cx || !cy)
         return;
@@ -162,7 +195,7 @@ void image::copy(const image* img, int x, int y, int cx, int cy, int sx, int sy)
     }
 }
 
-void image::draw(const image* img, int x, int y, int cx, int cy, int sx, int sy)
+void image_old::draw(const image_old* img, int x, int y, int cx, int cy, int sx, int sy)
 {
     if(!is_valid() || !cx || !cy)
         return;
@@ -216,24 +249,24 @@ void image::draw(const image* img, int x, int y, int cx, int cy, int sx, int sy)
     }
 }
 
-void image::draw_text(const gchar* str, int x, int y, const pixel& p)
+void image_old::draw_text(const gchar* str, int x, int y, const pixel& p)
 {
     //fontsys* fsys = wsys_manager::get_singleton_ptr()->get_fontsys();
     fontsys* fsys = 0;
     assert(fsys);
-    fsys->draw(*this, str, x, y, p);
+    //fsys->draw(*this, str, x, y, p);
 }
 
-void image::draw_text(const gchar* str, int x, int y, const font& ft, const pixel& p)
+void image_old::draw_text(const gchar* str, int x, int y, const font& ft, const pixel& p)
 {
     //fontsys* fsys = wsys_manager::get_singleton_ptr()->get_fontsys();
     fontsys* fsys = 0;
     assert(fsys);
     fsys->set_font(ft);
-    fsys->draw(*this, str, x, y, p);
+    //fsys->draw(*this, str, x, y, p);
 }
 
-void image::draw_line(const point& start, const point& end, const pixel& p)
+void image_old::draw_line(const point& start, const point& end, const pixel& p)
 {
     int x = start.x, y = start.y, x2 = end.x, y2 = end.y;
     assert(x >= 0 && y >= 0 && x2 >= 0 && y2 >= 0);
@@ -269,7 +302,7 @@ void image::draw_line(const point& start, const point& end, const pixel& p)
     }
 }
 
-void image::draw_rect(const rect& rc1, const pixel& p)
+void image_old::draw_rect(const rect& rc1, const pixel& p)
 {
     assert(is_valid());
     rect rc = rc1;
@@ -319,75 +352,75 @@ pixel& adjust_brightness(pixel& original, float scale)
     }
 }
 
-void image::set_brigntness(real32 s)
-{
-    int w = get_width(), h = get_height();
-    for(int i = 0; i < h; i ++) {
-        pixel* p = get_color(i);
-        for(int j = 0; j < w; j ++)
-            adjust_brightness(p[j], s);
-    }
-}
+// void image::set_brigntness(real32 s)
+// {
+//     int w = get_width(), h = get_height();
+//     for(int i = 0; i < h; i ++) {
+//         pixel* p = get_color(i);
+//         for(int j = 0; j < w; j ++)
+//             adjust_brightness(p[j], s);
+//     }
+// }
 
-void image::set_brigntness(const image* img, real32 s)
-{
-    int w = get_width(), h = get_height();
-    if(img->get_width() != w || img->get_height() != h)
-        return;
-    for(int i = 0; i < h; i ++) {
-        pixel* p1 = get_color(i);
-        const pixel* p2 = img->get_color(i);
-        for(int j = 0; j < w; j ++) {
-            p1[j] = p2[j];
-            adjust_brightness(p1[j], s);
-        }
-    }
-}
+// void image::set_brigntness(const image* img, real32 s)
+// {
+//     int w = get_width(), h = get_height();
+//     if(img->get_width() != w || img->get_height() != h)
+//         return;
+//     for(int i = 0; i < h; i ++) {
+//         pixel* p1 = get_color(i);
+//         const pixel* p2 = img->get_color(i);
+//         for(int j = 0; j < w; j ++) {
+//             p1[j] = p2[j];
+//             adjust_brightness(p1[j], s);
+//         }
+//     }
+// }
 
-void image::set_gray(const image* img)
-{
-    int w = img->get_width(), h = img->get_height();
-    assert(w == get_width() && h == get_height());
-    copy(img, false, true);
-    for(int i = 0; i < h; i ++) {
-        pixel* p = get_color(i);
-        const pixel* s = img->get_color(i);
-        for(int j = 0; j < w; j ++) {
-            int av = s[j].red + s[j].green + s[j].blue;
-            av /= 3;
-            p[j].red = av;
-            p[j].green = av;
-            p[j].blue = av;
-        }
-    }
-}
+// void image::set_gray(const image* img)
+// {
+//     int w = img->get_width(), h = img->get_height();
+//     assert(w == get_width() && h == get_height());
+//     copy(img, false, true);
+//     for(int i = 0; i < h; i ++) {
+//         pixel* p = get_color(i);
+//         const pixel* s = img->get_color(i);
+//         for(int j = 0; j < w; j ++) {
+//             int av = s[j].red + s[j].green + s[j].blue;
+//             av /= 3;
+//             p[j].red = av;
+//             p[j].green = av;
+//             p[j].blue = av;
+//         }
+//     }
+// }
 
-void image::set_inverse(const rect& rc)
-{
-    int w = rc.right, h = rc.bottom;
-    for(int i = rc.top; i < h; i ++) {
-        pixel* p = get_color(i);
-        for(int j = rc.left; j < w; j ++) {
-            p[j].red = 0xff - p[j].red;
-            p[j].green = 0xff - p[j].green;
-            p[j].blue = 0xff - p[j].blue;
-        }
-    }
-}
+// void image::set_inverse(const rect& rc)
+// {
+//     int w = rc.right, h = rc.bottom;
+//     for(int i = rc.top; i < h; i ++) {
+//         pixel* p = get_color(i);
+//         for(int j = rc.left; j < w; j ++) {
+//             p[j].red = 0xff - p[j].red;
+//             p[j].green = 0xff - p[j].green;
+//             p[j].blue = 0xff - p[j].blue;
+//         }
+//     }
+// }
 
-void image::fade_to(real32 s)
-{
-    assert(s >= 0 && s < 1.0);
-    int w = get_width(), h = get_height();
-    for(int i = 0; i < h; i ++) {
-        byte* ptr = get_alpha(i);
-        assert(ptr);
-        for(int j = 0; j < w; j ++)
-            ptr[j] = byte(s * ptr[j]);
-    }
-}
+// void image::fade_to(real32 s)
+// {
+//     assert(s >= 0 && s < 1.0);
+//     int w = get_width(), h = get_height();
+//     for(int i = 0; i < h; i ++) {
+//         byte* ptr = get_alpha(i);
+//         assert(ptr);
+//         for(int j = 0; j < w; j ++)
+//             ptr[j] = byte(s * ptr[j]);
+//     }
+// }
 
-const byte* image::get_const(const byte* sp, int l, bool flip) const
+const byte* image_old::get_const(const byte* sp, int l, bool flip) const
 {
     if(!is_valid() || l >= get_height())
         return 0;
@@ -397,7 +430,7 @@ const byte* image::get_const(const byte* sp, int l, bool flip) const
     return sp ? sp + r : 0;
 }
 
-const pixel* image::get_const(const pixel* sp, int l, bool flip) const
+const pixel* image_old::get_const(const pixel* sp, int l, bool flip) const
 {
     if(!is_valid() || l >= get_height())
         return 0;
@@ -405,6 +438,105 @@ const pixel* image::get_const(const pixel* sp, int l, bool flip) const
     assert(l >= 0);
     int r = _realw * l;
     return sp ? (const pixel*)((const byte*)sp + r) : 0;
+}
+
+image::image()
+{
+    _width = _height = 0;
+    _depth = 0;
+    _color_bytes = 0;
+    _bytes_per_line = 0;
+    _data = 0;
+    _xpels_per_meter = _ypels_per_meter = 96;
+}
+
+bool image::is_valid() const
+{
+    if(_data) {
+        assert((_width != 0) && (_height != 0));
+        assert(_color_bytes != 0);
+        assert(_bytes_per_line != 0);
+        return true;
+    }
+    return false;
+}
+
+bool image::create(image_format fmt, int w, int h)
+{
+    if(!w || !h)
+        return false;
+    if(is_valid())
+        destroy();
+    _width = w;
+    _height = h;
+    _format = fmt;
+    switch(fmt)
+    {
+    case fmt_raw:
+        _depth = 8;
+        break;
+    case fmt_rgb:
+        _depth = 24;
+        break;
+    case fmt_rgba:
+        _depth = 32;
+        break;
+    default:
+        return false;
+    }
+    _xpels_per_meter = _ypels_per_meter = 96;
+    _bytes_per_line = (int)(((uint)(_depth * w + 31)) >> 5 << 2);
+    _color_bytes = _bytes_per_line * h;
+    _data = new byte[_color_bytes];
+    return true;
+}
+
+void image::destroy()
+{
+    if(_data) {
+        delete [] _data;
+        _data = 0;
+    }
+    _width = _height = 0;
+    _depth = 0;
+    _color_bytes = 0;
+    _bytes_per_line = 0;
+}
+
+bool image::has_alpha() const
+{
+    if(_depth == 32) {
+        assert(_format == fmt_rgba);
+        return true;
+    }
+    return false;
+}
+
+// byte* image::get_color(int x, int y) const
+// {
+//     assert(is_valid());
+//     if((x >= _width) || (y >= _height)) {
+//         assert(!"invalid position.");
+//         return 0;
+//     }
+//     int pos = _bytes_per_line * y + x;
+//     return _data + pos;
+// }
+
+byte* image::get_data(int x, int y) const
+{
+    assert(is_valid());
+    if((x >= _width) || (y >= _height)) {
+        assert(!"invalid position.");
+        return 0;
+    }
+    int pos = _bytes_per_line * y + x;
+    return _data + pos;
+}
+
+bool image::load(const string& filepath)
+{
+    return imageio::read_image(*this, filepath);
 }
 
 __pink_end__

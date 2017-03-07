@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 lymastee, All rights reserved.
+ * Copyright (c) 2016-2017 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -24,7 +24,7 @@
  */
 
 #include <pink/utility.h>
-#include <ariel/gfxobj.h>
+#include <ariel/gobj.h>
 
 __ariel_begin__
 
@@ -188,21 +188,10 @@ void graphics_obj_entity::add_cubic_seg(path_seg& seg, const painter_node* node1
 
 graphics_obj::graphics_obj(float w, float h)
 {
-    _ptr = gs_new(graphics_obj_entity, w, h);
-}
-
-graphics_obj::graphics_obj(const graphics_obj& that)
-{
-    _ptr = that._ptr;
-    const_cast<graphics_obj&>(that)._ptr = 0;
-}
-
-graphics_obj::~graphics_obj()
-{
-    if(_ptr) {
-        gs_del(graphics_obj_entity, _ptr);
-        _ptr = 0;
-    }
+    __super::reset(gs_new(graphics_obj_entity, w, h), [](graphics_obj_entity* p) {
+        assert(p);
+        gs_del(graphics_obj_entity, p);
+    });
 }
 
 __ariel_end__

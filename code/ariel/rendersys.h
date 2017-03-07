@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 lymastee, All rights reserved.
+ * Copyright (c) 2016-2017 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -59,7 +59,7 @@ public:
     virtual bool setup(uint hwnd, const configs& cfg) = 0;
     virtual void destroy() = 0;
     virtual void begin_create_shader(create_shader_context& context, const gchar* file, const gchar* entry, const gchar* sm, render_include* inc) = 0;
-    virtual void begin_create_shader_in_memory(create_shader_context& context, const char* src, int len, const gchar* name, const gchar* entry, const gchar* sm, render_include* inc) = 0;
+    virtual void begin_create_shader_mem(create_shader_context& context, const char* src, int len, const gchar* name, const gchar* entry, const gchar* sm, render_include* inc) = 0;
     virtual void end_create_shader(create_shader_context& context) = 0;
     virtual vertex_shader* create_vertex_shader(create_shader_context& context) = 0;
     virtual pixel_shader* create_pixel_shader(create_shader_context& context) = 0;

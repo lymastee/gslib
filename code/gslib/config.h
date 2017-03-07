@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 lymastee, All rights reserved.
+ * Copyright (c) 2016-2017 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -89,7 +89,7 @@
 
 #undef verify
 
-#ifdef _DEBUG
+#if defined (DEBUG) || defined (_DEBUG)
 #define verify(exp)         assert(exp)
 #else
 #define verify(exp)         bool(exp)

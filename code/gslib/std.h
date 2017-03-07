@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 lymastee, All rights reserved.
+ * Copyright (c) 2016-2017 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -28,6 +28,7 @@
 
 #include <xutility>
 #include <algorithm>
+#include <memory>
 #include <list>
 #include <vector>
 #include <deque>

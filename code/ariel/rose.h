@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 lymastee, All rights reserved.
+ * Copyright (c) 2016-2017 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -30,7 +30,7 @@
 #include <ariel/rendersys.h>
 #include <pink/raster.h>
 #include <pink/utility.h>
-#include <ariel/gfxobj.h>
+#include <ariel/gobj.h>
 #include <ariel/batch.h>
 
 __ariel_begin__
@@ -60,9 +60,14 @@ uint pack_cb_size()
     return !m ? s : s + (16 - m);
 }
 
-struct rose_bind_info
+struct rose_bind_info_cr
 {
     vec4                color;      /* RGBA */
+};
+
+struct rose_bind_info_tex
+{
+
 };
 
 struct vertex_info_cr
@@ -85,12 +90,36 @@ struct vertex_info_coef_cr
     vec4                cr;
 };
 
+struct vertex_info_tex
+{
+    vec2                pos;
+    vec2                tex;
+};
+
+struct vertex_info_klm_tex
+{
+    vec2                pos;
+    vec3                klm;
+    vec2                tex;
+};
+
+struct vertex_info_coef_tex
+{
+    vec2                pos;
+    vec4                coef;
+    vec2                tex;
+};
+
 class rose_batch;
-typedef list<rose_bind_info> rose_bind_list;
+typedef list<rose_bind_info_cr> rose_bind_list_cr;
+typedef list<rose_bind_info_tex> rose_bind_list_tex;
 typedef vector<rose_batch*> rose_batch_list;
 typedef vector<vertex_info_cr> vertex_stream_cr;
 typedef vector<vertex_info_klm_cr> vertex_stream_klm_cr;
 typedef vector<vertex_info_coef_cr> vertex_stream_cf_cr;
+typedef vector<vertex_info_tex> vertex_stream_tex;
+typedef vector<vertex_info_klm_tex> vertex_stream_klm_tex;
+typedef vector<vertex_info_coef_tex> vertex_stream_cf_tex;
 typedef vector<int> index_stream;
 typedef bat_type rose_batch_tag;
 
@@ -155,6 +184,34 @@ protected:
     vertex_stream_klm_cr _vertices;
 };
 
+class rose_fill_batch_tex:
+    public rose_batch
+{
+public:
+    rose_batch_tag get_tag() const override { return bf_tex; }
+    void create(bat_batch* bat) override;
+    int buffering(rendersys* rsys) override;
+    void draw(rendersys* rsys) override;
+    void tracing() const override;
+
+protected:
+    vertex_stream_tex   _vertices;
+};
+
+class rose_fill_batch_klm_tex:
+    public rose_batch
+{
+public:
+    rose_batch_tag get_tag() const override { return bf_klm_tex; }
+    void create(bat_batch* bat) override;
+    int buffering(rendersys* rsys) override;
+    void draw(rendersys* rsys) override;
+    void tracing() const override;
+
+protected:
+    vertex_stream_klm_tex _vertices;
+};
+
 class rose_stroke_batch_coef_cr:
     public rose_batch
 {
@@ -169,10 +226,38 @@ protected:
     vertex_stream_cf_cr _vertices;
 };
 
-extern void rose_paint_brush(graphics_obj& gfx, rose_bind_list& bind_cache, const painter_brush& brush);
-extern void rose_paint_solid_brush(graphics_obj& gfx, rose_bind_list& bind_cache, const painter_brush& brush);
-extern void rose_paint_pen(graphics_obj& gfx, rose_bind_list& bind_cache, const painter_pen& pen);
-extern void rose_paint_solid_pen(graphics_obj& gfx, rose_bind_list& bind_cache, const painter_pen& pen);
+class rose_stroke_batch_coef_tex:
+    public rose_batch
+{
+public:
+    rose_batch_tag get_tag() const override { return bs_coef_tex; }
+    void create(bat_batch* bat) override;
+    int buffering(rendersys* rsys) override;
+    void draw(rendersys* rsys) override;
+    void tracing() const override;
+
+protected:
+    vertex_stream_cf_tex _vertices;
+};
+
+class rose_bindings
+{
+public:
+    rose_bind_list_cr& get_cr_bindings() { return _cr_bindings; }
+    rose_bind_list_tex& get_tex_bindings() { return _tex_bindings; }
+    void clear_binding_cache();
+
+protected:
+    rose_bind_list_cr   _cr_bindings;
+    rose_bind_list_tex  _tex_bindings;
+};
+
+extern void rose_paint_brush(graphics_obj& gfx, rose_bindings& bindings, const painter_brush& brush);
+extern void rose_paint_solid_brush(graphics_obj& gfx, rose_bind_list_cr& bind_cache, const painter_brush& brush);
+extern void rose_paint_picture_brush(graphics_obj& gfx, rose_bind_list_tex& bind_cache, const painter_brush& brush);
+extern void rose_paint_pen(graphics_obj& gfx, rose_bindings& bindings, const painter_pen& pen);
+extern void rose_paint_solid_pen(graphics_obj& gfx, rose_bind_list_cr& bind_cache, const painter_pen& pen);
+extern void rose_paint_picture_pen(graphics_obj& gfx, rose_bind_list_tex& bind_cache, const painter_pen& pen);
 /* more to come. */
 
 class rose:
@@ -192,8 +277,8 @@ public:
 
 public:
     void setup(rendersys* rsys);
-    void fill_graphics_obj(graphics_obj& gfx);
-    void stroke_graphics_obj(graphics_obj& gfx);
+    void fill_graphics_obj(graphics_obj& gfx, uint brush_tag);
+    void stroke_graphics_obj(graphics_obj& gfx, uint pen_tag);
 
 protected:
     template<class _addline>
@@ -204,7 +289,7 @@ protected:
     rose_configs        _cfgs;
     batch_processor     _bp;
     rose_batch_list     _batches;
-    rose_bind_list      _bindings;
+    rose_bindings       _bindings;
     graphics_obj_cache  _gocache;
     float               _nextz;
 
@@ -214,7 +299,10 @@ protected:
     void prepare_stroke(const painter_path& path, const painter_pen& pen);
     rose_batch* create_fill_batch_cr();
     rose_batch* create_fill_batch_klm_cr();
+    rose_batch* create_fill_batch_tex();
+    rose_batch* create_fill_batch_klm_tex();
     rose_batch* create_stroke_batch_cr();
+    rose_batch* create_stroke_batch_tex();
     void clear_batches();
     void prepare_batches();
     void draw_batches();
@@ -227,13 +315,22 @@ protected:
 protected:
     vertex_shader*      _vsf_cr;
     vertex_shader*      _vsf_klm_cr;
+    vertex_shader*      _vsf_tex;
+    vertex_shader*      _vsf_klm_tex;
     pixel_shader*       _psf_cr;
     pixel_shader*       _psf_klm_cr;
+    pixel_shader*       _psf_tex;
+    pixel_shader*       _psf_klm_tex;
     vertex_format*      _vf_cr;
     vertex_format*      _vf_klm_cr;
+    vertex_format*      _vf_tex;
+    vertex_format*      _vf_klm_tex;
     vertex_shader*      _vss_coef_cr;
+    vertex_shader*      _vss_coef_tex;
     pixel_shader*       _pss_coef_cr;
+    pixel_shader*       _pss_coef_tex;
     vertex_format*      _vf_coef_cr;
+    vertex_format*      _vf_coef_tex;
     constant_buffer*    _cb_configs;
     uint                _cb_config_slot;
 #endif

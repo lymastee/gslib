@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 lymastee, All rights reserved.
+ * Copyright (c) 2016-2017 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -1321,7 +1321,7 @@ void get_reduce_point(vec2& p, const vec2& a, const vec2& b, const vec2& c, cons
  */
 static void reverse_cubic_klm_coords(vec3 m[4], const vec3 im[4])
 {
-	assert(m && im);
+    assert(m && im);
     m[0].x = -im[0].x;
     m[1].x = -im[1].x;
     m[2].x = -im[2].x;

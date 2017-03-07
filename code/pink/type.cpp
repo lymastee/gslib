@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 lymastee, All rights reserved.
+ * Copyright (c) 2016-2017 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -182,6 +182,27 @@ void rect::deflate(int u, int v)
 }
 
 void rect::move_to(int x, int y)
+{
+    right = x + width();
+    bottom = y + height();
+    left = x;
+    top = y;
+}
+
+void rectf::deflate(float u, float v)
+{
+    float w = width(), h = height();
+    w /= 2;
+    h /= 2;
+    if(u > w) u = w;
+    if(v > h) v = h;
+    left += u;
+    right -= u;
+    top += v;
+    bottom -= v;
+}
+
+void rectf::move_to(float x, float y)
 {
     right = x + width();
     bottom = y + height();

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 lymastee, All rights reserved.
+ * Copyright (c) 2016-2017 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -382,7 +382,7 @@ void button::set_image(const image* img, bool as)
     if(as) w >>= 2;
     _pos.right = _pos.left + w;
     _pos.bottom = _pos.top + h;
-    _bkground.create(w, h, img->get_alpha(0) != 0);
+    //_bkground.create(w, h, img->get_alpha(0) != 0);
     _enable ? set_normal() : set_gray();
 }
 
@@ -390,9 +390,9 @@ void button::set_press()
 {
     if(_source == 0)
         return;
-    _allstate ?
-        _bkground.copy(_source, 0, 0, get_width(), get_height(), get_width()<<1, 0) :
-        _bkground.set_brigntness(_source, 0.7f);
+//     _allstate ?
+//         _bkground.copy(_source, 0, 0, get_width(), get_height(), get_width()<<1, 0) :
+//         _bkground.set_brigntness(_source, 0.7f);
     refresh(true);
 }
 
@@ -400,9 +400,9 @@ void button::set_normal()
 {
     if(_source == 0)
         return;
-    _allstate ?
-        _bkground.copy(_source, 0, 0, get_width(), get_height(), 0, 0) :
-        _bkground.copy(_source, true, true);
+    //_allstate ?
+    //    _bkground.copy(_source, 0, 0, get_width(), get_height(), 0, 0) :
+    //    _bkground.copy(_source, true, true);
     refresh(true);
 }
 
@@ -410,9 +410,9 @@ void button::set_hover()
 {
     if(_source == 0)
         return;
-    _allstate ? 
-        _bkground.copy(_source, 0, 0, get_width(), get_height(), get_width(), 0) :
-        _bkground.set_brigntness(_source, 1.3f);
+//     _allstate ? 
+//         _bkground.copy(_source, 0, 0, get_width(), get_height(), get_width(), 0) :
+//         _bkground.set_brigntness(_source, 1.3f);
     refresh(true);
 }
 
@@ -420,9 +420,9 @@ void button::set_gray()
 {
     if(_source == 0)
         return;
-    _allstate ? 
-        _bkground.copy(_source, 0, 0, get_width(), get_height(), get_width()*3, 0) :
-        _bkground.set_gray(_source);
+//     _allstate ? 
+//         _bkground.copy(_source, 0, 0, get_width(), get_height(), get_width()*3, 0) :
+//         _bkground.set_gray(_source);
     refresh(true);
 }
 
@@ -1087,20 +1087,20 @@ image* sharpfit::get_grid_map()
     if(!_gridmap.is_valid() || _gridmap.get_width() != get_width() || 
         _gridmap.get_height() != get_height() ) {
         _gridmap.destroy();
-        _gridmap.create(get_width(), get_height(), true);
+        //_gridmap.create(get_width(), get_height(), true);
         /* angles */
         rect rcs = get_src_grid(0, 0);
         rect rcd = get_dest_grid(0, 0);
-        _gridmap.copy(_gridsrc, rcd.left, rcd.top, rcd.width(), rcd.height(), rcs.left, rcs.top);
+        //_gridmap.copy(_gridsrc, rcd.left, rcd.top, rcd.width(), rcd.height(), rcs.left, rcs.top);
         rcs = get_src_grid(2, 0);
         rcd = get_dest_grid(2, 0);
-        _gridmap.copy(_gridsrc, rcd.left, rcd.top, rcd.width(), rcd.height(), rcs.left, rcs.top);
+        //_gridmap.copy(_gridsrc, rcd.left, rcd.top, rcd.width(), rcd.height(), rcs.left, rcs.top);
         rcs = get_src_grid(0, 2);
         rcd = get_dest_grid(0, 2);
-        _gridmap.copy(_gridsrc, rcd.left, rcd.top, rcd.width(), rcd.height(), rcs.left, rcs.top);
+        //_gridmap.copy(_gridsrc, rcd.left, rcd.top, rcd.width(), rcd.height(), rcs.left, rcs.top);
         rcs = get_src_grid(2, 2);
         rcd = get_dest_grid(2, 2);
-        _gridmap.copy(_gridsrc, rcd.left, rcd.top, rcd.width(), rcd.height(), rcs.left, rcs.top);
+        //_gridmap.copy(_gridsrc, rcd.left, rcd.top, rcd.width(), rcd.height(), rcs.left, rcs.top);
         /* edges */
         rcs = get_src_grid(1, 0);
         rcd = get_dest_grid(1, 0);
@@ -1126,28 +1126,28 @@ void sharpfit::draw_horizontal(const rect& src, const rect& des)
         return;
     if(src.width() == 1) {
         for(int i = src.top, j = des.top; i < src.bottom; i ++, j ++) {
-            pixel p = _gridsrc->get_color(i)[src.left];
-            byte a = _gridsrc->get_alpha(i)[src.left];
-            pixel* pd = _gridmap.get_color(j) + des.left;
-            byte* ad = _gridmap.get_alpha(j) + des.left;
-            for(int k = 0; k < des.width(); k ++) {
-                *pd ++ = p;
-                *ad ++ = a;
-            }
+            //pixel p = _gridsrc->get_color(i)[src.left];
+            //byte a = _gridsrc->get_alpha(i)[src.left];
+            //pixel* pd = _gridmap.get_color(j) + des.left;
+            //byte* ad = _gridmap.get_alpha(j) + des.left;
+            //for(int k = 0; k < des.width(); k ++) {
+            //    *pd ++ = p;
+            //    *ad ++ = a;
+            //}
         }
     }
     else {
         int m = src.width();
         for(int i = src.top, j = des.top; i < src.bottom; i ++, j ++) {
-            const pixel* p = _gridsrc->get_color(i) + src.left;
-            const byte* a = _gridsrc->get_alpha(i) + src.left;
-            pixel* pd = _gridmap.get_color(j) + des.left;
-            byte* ad = _gridmap.get_alpha(j) + des.left;
-            for(int k = 0; k < des.width(); k ++) {
-                int l = k % m;
-                pd[k] = p[l];
-                ad[k] = a[l];
-            }
+            //const pixel* p = _gridsrc->get_color(i) + src.left;
+            //const byte* a = _gridsrc->get_alpha(i) + src.left;
+            //pixel* pd = _gridmap.get_color(j) + des.left;
+            //byte* ad = _gridmap.get_alpha(j) + des.left;
+            //for(int k = 0; k < des.width(); k ++) {
+            //    int l = k % m;
+            //    pd[k] = p[l];
+            //    ad[k] = a[l];
+            //}
         }
     }
 }
@@ -1158,21 +1158,21 @@ void sharpfit::draw_vertical(const rect& src, const rect& des)
         return;
     if(src.height() == 1) {
         for(int i = src.left, j = des.left; i < src.right; i ++, j ++) {
-            pixel p = _gridsrc->get_color(src.top)[i];
-            byte a = _gridsrc->get_alpha(src.top)[i];
-            for(int k = des.top; k < des.bottom; k ++) {
-                _gridmap.get_color(k)[j] = p;
-                _gridmap.get_alpha(k)[j] = a;
-            }
+            //pixel p = _gridsrc->get_color(src.top)[i];
+            //byte a = _gridsrc->get_alpha(src.top)[i];
+            //for(int k = des.top; k < des.bottom; k ++) {
+            //    _gridmap.get_color(k)[j] = p;
+            //    _gridmap.get_alpha(k)[j] = a;
+            //}
         }
     }
     else {
         int m = src.height();
         for(int i = src.left, j = des.left; i < src.right; i ++, j ++) {
             for(int k = 0; k < des.height(); k ++) {
-                int l = k % m;
-                _gridmap.get_color(des.top+k)[j] = _gridsrc->get_color(src.top+l)[i];
-                _gridmap.get_alpha(des.top+k)[j] = _gridsrc->get_alpha(src.top+l)[i];
+                //int l = k % m;
+                //_gridmap.get_color(des.top+k)[j] = _gridsrc->get_color(src.top+l)[i];
+                //_gridmap.get_alpha(des.top+k)[j] = _gridsrc->get_alpha(src.top+l)[i];
             }
         }
     }
@@ -1182,10 +1182,10 @@ void sharpfit::draw_center(const rect& src, const rect& des)
 {
     if(!src.width() || !src.height())
         return;
-    pixel p = _gridsrc->get_color(src.top)[src.left];
-    byte a = _gridsrc->get_alpha(src.top)[src.left];
-    _gridmap.clear(p, &des);
-    _gridmap.set_alpha(a, &des);
+    //pixel p = _gridsrc->get_color(src.top)[src.left];
+    //byte a = _gridsrc->get_alpha(src.top)[src.left];
+    //_gridmap.clear(p, &des);
+    //_gridmap.set_alpha(a, &des);
 }
 
 wsys_manager::wsys_manager()
@@ -1253,7 +1253,7 @@ void wsys_manager::set_dimension(int w, int h)
         _dirty.set_dimension(w, h);
         /* deal with the canvas */
         image* img = gs_new(image);
-        img->create(w, h);
+        //img->create(w, h);
         if(image* oldimg = _painter->select(img))
             gs_del(image, oldimg);
     }

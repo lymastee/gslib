@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 lymastee, All rights reserved.
+ * Copyright (c) 2016-2017 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -76,7 +76,8 @@ public:
     lb_joint* get_joint(int i) const { return _joints[i]; }
     const vec2& get_point(int i) const { return _joints[i]->get_point(); }
     void* get_lb_binding(int i) const { return _joints[i]->get_binding(); }
-    bat_type decide() const;
+    bat_type decide(uint brush_tag) const;
+    bool has_klm_coords() const;
     const vec2& get_reduced_point(int i) const { return _reduced[i]; }
     bool is_overlapped(const bat_triangle& other) const;
     void ensure_make_reduced();
@@ -94,6 +95,7 @@ struct bat_line
     vec3                _coef;
     float               _width;
     float               _zorder;
+    uint                _tag;               /* pen tag */
     bool                _half;              /* is half line? */
     bool                _recalc;            /* need recalculation? */
 
@@ -105,6 +107,7 @@ public:
     lb_joint* get_source_joint(int i) const { return _srcjs[i]; }
     const vec2& get_start_point() const { return _points[0]; }
     const vec2& get_end_point() const { return _points[1]; }
+    void set_pen_tag(uint t) { _tag = t; }
     void setup_coef();
     void set_coef(const vec3& c) { _coef = c; }
     const vec3& get_coef() const { return _coef; }
@@ -168,9 +171,9 @@ public:
 public:
     batch_processor();
     ~batch_processor();
-    void add_polygon(lb_polygon* poly, float z);
-    bat_line* add_line(lb_joint* i, lb_joint* j, float w, float z);
-    bat_line* add_aa_border(lb_joint* i, lb_joint* j, float z);
+    void add_polygon(lb_polygon* poly, float z, uint brush_tag);
+    bat_line* add_line(lb_joint* i, lb_joint* j, float w, float z, uint pen_tag);
+    bat_line* add_aa_border(lb_joint* i, lb_joint* j, float z, uint pen_tag);
     void finish_batching();
     bat_batches& get_batches() { return _batches; }
     void clear_batches();
@@ -184,10 +187,10 @@ protected:
     template<class _batch>
     _batch* create_batch(bat_type t);
     bat_triangle* create_triangle(lb_joint* i, lb_joint* j, lb_joint* k, float z);
-    bat_line* create_line(lb_joint* i, lb_joint* j, float w, float z, bool half);
-    bat_line* create_half_line(lb_joint* i, lb_joint* j, const vec2& p1, const vec2& p2, float w, float z);
-    void add_triangle(lb_joint* i, lb_joint* j, lb_joint* k, bool b[3], float z);
-    void collect_aa_borders(bat_triangle* triangle, bool b[3]);
+    bat_line* create_line(lb_joint* i, lb_joint* j, float w, float z, uint t, bool half);
+    bat_line* create_half_line(lb_joint* i, lb_joint* j, const vec2& p1, const vec2& p2, float w, float z, uint t);
+    void add_triangle(lb_joint* i, lb_joint* j, lb_joint* k, bool b[3], float z, uint brush_tag);
+    void collect_aa_borders(bat_triangle* triangle, bool b[3], uint pen_tag);
     void proceed_line_batch();
 };
 

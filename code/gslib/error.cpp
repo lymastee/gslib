@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 lymastee, All rights reserved.
+ * Copyright (c) 2016-2017 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -167,7 +167,7 @@ void reset_error()
     errst->reset();
 }
 
-#ifdef _DEBUG
+#if defined (DEBUG) || defined (_DEBUG)
 
 void trace(const gchar* fmt, ...)
 {

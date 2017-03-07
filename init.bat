@@ -1,1 +1,1 @@
-gsmake -debug -compiler "vs_12" -tar "..\build"
+premake5 vs2013

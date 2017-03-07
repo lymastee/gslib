@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 lymastee, All rights reserved.
+ * Copyright (c) 2016-2017 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -434,7 +434,7 @@ void painter_path::simplify(painter_path& path) const
 
 void painter_path::tracing() const
 {
-#ifdef _DEBUG
+#if defined (DEBUG) || defined (_DEBUG)
     trace(_t("@!\n"));
     std::for_each(_nodelist.begin(), _nodelist.end(), [this](const node* n) {
         assert(n);
@@ -479,7 +479,7 @@ void painter_path::tracing() const
 
 void painter_path::tracing_segments() const
 {
-#ifdef _DEBUG
+#if defined (DEBUG) || defined (_DEBUG)
     trace(_t("@!\n"));
     const node* last = 0;
     for(const auto* n : _nodelist) {

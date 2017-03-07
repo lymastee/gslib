@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 lymastee, All rights reserved.
+ * Copyright (c) 2016-2017 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -23,8 +23,8 @@
  * SOFTWARE.
  */
 
-#ifndef gfxobj_ae667559_1772_4e7b_a808_6f15e70fae88_h
-#define gfxobj_ae667559_1772_4e7b_a808_6f15e70fae88_h
+#ifndef gobj_ae667559_1772_4e7b_a808_6f15e70fae88_h
+#define gobj_ae667559_1772_4e7b_a808_6f15e70fae88_h
 
 #include <ariel/loopblinn.h>
 
@@ -52,17 +52,11 @@ protected:
     void add_cubic_seg(path_seg& seg, const painter_node* node1, const painter_path::cubic_to_node* node2);
 };
 
-class graphics_obj
+class graphics_obj:
+    public std::shared_ptr<graphics_obj_entity>
 {
 public:
     graphics_obj(float w, float h);
-    graphics_obj(const graphics_obj& that);
-    ~graphics_obj();
-    graphics_obj_entity* operator->() { return _ptr; }
-    const graphics_obj_entity* operator->() const { return _ptr; }
-
-protected:
-    graphics_obj_entity* _ptr;
 };
 
 __ariel_end__

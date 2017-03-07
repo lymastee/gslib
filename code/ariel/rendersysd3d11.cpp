@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 lymastee, All rights reserved.
+ * Copyright (c) 2016-2017 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -223,7 +223,7 @@ void rendersys_d3d11::begin_create_shader(create_shader_context& context, const 
     SafeRelease(err_blob);
 }
 
-void rendersys_d3d11::begin_create_shader_in_memory(create_shader_context& context, const char* src, int len, const gchar* name, const gchar* entry, const gchar* sm, render_include* inc)
+void rendersys_d3d11::begin_create_shader_mem(create_shader_context& context, const char* src, int len, const gchar* name, const gchar* entry, const gchar* sm, render_include* inc)
 {
     HRESULT hr = S_OK;
     DWORD flags = D3DCOMPILE_ENABLE_STRICTNESS;
@@ -235,8 +235,7 @@ void rendersys_d3d11::begin_create_shader_in_memory(create_shader_context& conte
     sbentry.from(entry);
     sbsmodel.from(sm);
     sbname.from(name);
-    //hr = D3DX11CompileFromMemory(src, len, sbname.c_str(), 0, inc, sbentry.c_str(), sbsmodel.c_str(), flags, 0, 0, &context, &err_blob, 0);
-    hr = E_FAIL;
+    hr = D3DCompile(src, len, sbname.c_str(), 0, inc, sbentry.c_str(), sbsmodel.c_str(), flags, 0, &context, &err_blob);
     if(FAILED(hr)) {
         if(err_blob)
             OutputDebugStringA((char*)err_blob->GetBufferPointer());

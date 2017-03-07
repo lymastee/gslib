@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 lymastee, All rights reserved.
+ * Copyright (c) 2016-2017 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -26,6 +26,7 @@
 #ifndef painter_0e5e866a_20d2_4fb1_93c0_1785588121f2_h
 #define painter_0e5e866a_20d2_4fb1_93c0_1785588121f2_h
 
+#include <memory>
 #include <gslib/sysop.h>
 #include <pink/image.h>
 
@@ -105,21 +106,45 @@ protected:
     void set_convex_init() const { _tst_table |= st_convex_mask; }
 };
 
+struct painter_data
+{
+protected:
+    virtual ~painter_data() {}
+};
+
+struct painter_picture_data:
+    public painter_data
+{
+protected:
+    image*          _image;
+
+public:
+    painter_picture_data() { _image = 0; }
+    void set_image(image* p) { _image = p; }
+    image* get_image() const { return _image; }
+};
+
 typedef list<painter_linestrip> linestrips;
 typedef vector<painter_linestrip*> linestripvec;
+typedef std::shared_ptr<painter_data> painter_extra_data;
 
 struct gradient {};
 
 struct painter_brush
 {
+public:
     enum
     {
-        null,
+        none,
         solid,
+        picture,
     };
+    typedef painter_extra_data extra_data;
+
+protected:
     uint            _tag;
-    uint            _extra;
     color           _color;
+    extra_data      _extra;
 
     typedef void (*fn_fill)(image& img, linestrips& c, const pixel& cr, uint ext);
     typedef void (*fn_fill_alpha)(image& img, linestrips& c, const pixel& cr, float alpha, uint ext);
@@ -127,26 +152,31 @@ struct painter_brush
     static void solid_fill(image& img, linestrips& c, const pixel& cr, uint ext);
 
 public:
-    painter_brush() { _tag = null; }
+    painter_brush() { _tag = solid; }
     void set_tag(uint tag) { _tag = tag; }
     uint get_tag() const { return _tag; }
     void set_color(const color& cr) { _color = cr; }
     const color& get_color() const { return _color; }
-    void set_extra(uint ext) { _extra = ext; }
-    uint get_extra() const { return _extra; }
+    void set_extra(const extra_data& ext) { _extra = ext; }
+    const extra_data& get_extra() const { return _extra; }
     void fill(image& img, linestrips& c, float alpha = 1.f) const;
 };
 
 struct painter_pen
 {
+public:
     enum
     {
-        null,
+        none,
         solid,
+        picture,
     };
+    typedef painter_extra_data extra_data;
+
+protected:
     uint            _tag;
-    uint            _extra;
     color           _color;
+    extra_data      _extra;
 
     typedef void (*fn_stroke)(image& img, const pointf& p1, const pointf& p2, const pixel& cr, uint ext);
     typedef void (*fn_stroke_alpha)(image& img, const pointf& p1, const pointf& p2, const pixel& cr, float alpha, uint ext);
@@ -155,15 +185,15 @@ struct painter_pen
     // more to come...
 
 public:
-    painter_pen() { _tag = null; }
+    painter_pen() { _tag = solid; }
     painter_pen(uint tag) { _tag = tag; }
     painter_pen(uint tag, const color& cr) { _tag = tag; _color = cr; }
     void set_tag(uint tag) { _tag = tag; }
     uint get_tag() const { return _tag; }
     void set_color(const color& cr) { _color = cr; }
     const color& get_color() const { return _color; }
-    void set_extra(uint ext) { _extra = ext; }
-    uint get_extra() const { return _extra; }
+    void set_extra(const extra_data& ext) { _extra = ext; }
+    const extra_data& get_extra() const { return _extra; }
 };
 
 struct painter_context

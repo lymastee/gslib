@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 lymastee, All rights reserved.
+ * Copyright (c) 2016-2017 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -552,9 +552,9 @@ protected:
         if(i.is_root())
             a = _t("root(");
         else if(i.is_left())
-            a.format(1024, _t("left%d("), level);
+            a.format(_t("left%d("), level);
         else if(i.is_right())
-            a.format(1024, _t("right%d("), level);
+            a.format(_t("right%d("), level);
         else {
             /* inner error? */
             assert(0);

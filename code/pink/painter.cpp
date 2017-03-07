@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016 lymastee, All rights reserved.
+ * Copyright (c) 2016-2017 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -252,7 +252,8 @@ void software_painter::draw(const image* img, int x, int y, int cx, int cy, int 
         cy = _lock.bottom - y;
     if(!cx || !cy)
         return;
-    _image->draw(img, x, y, cx, cy, sx, sy);
+    //_image->draw(img, x, y, cx, cy, sx, sy);
+    // todo:
 }
 
 void software_painter::draw_text(const gchar* str, int x, int y, const pixel& p)
@@ -261,7 +262,8 @@ void software_painter::draw_text(const gchar* str, int x, int y, const pixel& p)
     x += _lock.left;
     y += _lock.top;
     assert(x >= 0 && y >= 0);
-    _image->draw_text(str, x, y, p);
+    //_image->draw_text(str, x, y, p);
+    // todo:
 }
 
 void software_painter::draw_line(const point& start, const point& end, const pixel& p)
@@ -270,7 +272,8 @@ void software_painter::draw_line(const point& start, const point& end, const pix
     point ps = start, pe = end;
     ps.offset(_lock.left, _lock.top);
     pe.offset(_lock.left, _lock.top);
-    _image->draw_line(ps, pe, p);
+    //_image->draw_line(ps, pe, p);
+    // todo:
 }
 
 void software_painter::draw_rect(const rect& rc, const pixel& p)
@@ -278,7 +281,8 @@ void software_painter::draw_rect(const rect& rc, const pixel& p)
     assert(_locked);
     rect r = rc;
     r.offset(_lock.left, _lock.top);
-    _image->draw_rect(r, p);
+    //_image->draw_rect(r, p);
+    // todo:
 }
 
 __pink_end__

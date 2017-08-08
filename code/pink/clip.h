@@ -398,6 +398,7 @@ public:
     const clip_sweeper& const_start_point() const { return _start_point; }
     const clip_sweeper& const_end_point() const { return _end_point; }
     void reverse_direction();
+    void finish_patch();
     void tracing() const;
 
 protected:

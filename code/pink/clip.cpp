@@ -681,6 +681,22 @@ void clip_patch::reverse_direction()
     set_end_point(sweeper1);
 }
 
+void clip_patch::finish_patch()
+{
+    auto* line1 = _line_start;
+    auto* line2 = _line_end;
+    assert(line1 && line2);
+    auto* j0 = line1->get_joint(0);
+    auto* j1 = line2->get_joint(1);
+    if(!j0 || !j1)
+        return;     // todo: why?
+    assert(j0 && j1);
+    if(j0 != j1) {
+        assert(!j0->get_prev_line() && !j1->get_next_line());
+        create_line(j1, j0);
+    }
+}
+
 void clip_patch::tracing() const
 {
     if(!_line_start)
@@ -3011,8 +3027,12 @@ void clip_assembler_exclude::finish_proceed_patches(iterator p)
     if(!p->is_patch())
         return;
     finish_proceed_sub_patches(p);
-    if(p.is_leaf())
+    if(p.is_leaf()) {
+        /* finish leaf patch if needed */
+        assert(p->is_patch());
+        static_cast<clip_patch&>(*p).finish_patch();
         return;
+    }
     auto& patch = static_cast<clip_patch&>(*p);
     auto c1 = p.child();
     auto c2 = p.last_child();
@@ -3170,7 +3190,7 @@ static void compile_path(painter_path& path, const clip_result& poly_result, cli
         return line3->get_next_line();
     };
     auto& poly = *p;
-    assert(!poly.is_patch());
+    //assert(!poly.is_patch());
     auto* line1 = poly.get_line_start();
     assert(line1);
     auto& p1 = line1->get_point(0);

@@ -527,8 +527,25 @@ void delaunay_triangulation::trim(dt_edge_list& edges)
         if(!e2->is_checked())
             collect_trim_edges(for_trim, e2->get_symmetric());
     }
-    for(auto* e : for_trim)
+    bool need_reset_left = false;
+    auto* rleft = _edge_range.left;
+    for(auto* e : for_trim) {
+        if((e == rleft) || (e->get_symmetric() == rleft))
+            need_reset_left = true;
         destroy_edge_pair(e);
+    }
+    if(need_reset_left) {
+        /* find a boundary from remains */
+        dt_edge* any_bound = nullptr;
+        for(auto* e : _edge_holdings) {
+            if(e->is_boundary()) {
+                any_bound = e;
+                break;
+            }
+        }
+        assert(any_bound);
+        set_range_left(any_bound);
+    }
 }
 
 void delaunay_triangulation::tracing() const
@@ -765,6 +782,11 @@ void delaunay_triangulation::collect_trim_edges(dt_edge_list& edges, dt_edge* e)
         collect_trim_edges(edges, e1->get_symmetric());
     if(!e2->is_checked())
         collect_trim_edges(edges, e2->get_symmetric());
+}
+
+void delaunay_triangulation::reset_traverse()
+{
+    dt_reset_edge_checked(_edge_holdings);
 }
 
 __ariel_end__

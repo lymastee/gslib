@@ -24,6 +24,7 @@
  */
 
 #include <assert.h>
+#include <gslib/error.h>
 #include <pink/painter.h>
 #include <pink/utility.h>
 
@@ -102,6 +103,23 @@ bool painter_linestrip::is_convex(int i) const
     int prev = i == 0 ? cap - 1 : i - 1,
         post = i == cap - 1 ? 0 : i + 1;
     return !is_concave_angle(_pts.at(prev), _pts.at(i), _pts.at(post), cw);
+}
+
+void painter_linestrip::tracing() const
+{
+#ifdef _DEBUG
+    if(_pts.empty())
+        return;
+    trace(_t("@!\n"));
+    auto i = _pts.begin();
+    trace(_t("@moveTo %f, %f;\n"), i->x, i->y);
+    for(++ i; i != _pts.end(); ++ i) {
+        trace(_t("@lineTo %f, %f;\n"), i->x, i->y);
+    }
+    i = _pts.begin();
+    trace(_t("@lineTo %f, %f;\n"), i->x, i->y);
+    trace(_t("@@\n"));
+#endif
 }
 
 painter_obj::painter_obj(const painter_context& ctx)

@@ -182,6 +182,7 @@ public:
     {
         traverse_triangles_recursively(_edge_range.left, visit);
     }
+    void reset_traverse();
 };
 
 __ariel_end__

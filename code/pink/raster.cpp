@@ -54,11 +54,9 @@ void painter_path::quad_to_node::interpolate(painter_linestrip& c, const node* l
     const vec2& lastp = last->get_point();
     const quad_to_node* n = static_cast<const quad_to_node*>(this);
     const vec2& c1 = n->get_control();
-    c.add_point(lastp);
     int cs = get_quad_step(lastp, c1, _pt);
-    if(int ecs = cs - 2)
-        quadratic_interpolate(c.expand(ecs), lastp, c1, _pt, cs);
-    c.add_point(_pt);
+    if(int ecs = cs - 1)
+        quadratic_interpolate(c.expand(ecs) - 1, lastp, c1, _pt, ecs + 1);
 }
 
 void painter_path::cubic_to_node::interpolate(painter_linestrip& c, const node* last) const
@@ -67,11 +65,9 @@ void painter_path::cubic_to_node::interpolate(painter_linestrip& c, const node* 
     const cubic_to_node* n = static_cast<const cubic_to_node*>(this);
     const vec2& c1 = n->get_control1();
     const vec2& c2 = n->get_control2();
-    c.add_point(lastp);
     int cs = get_cubic_step(lastp, c1, c2, _pt);
-    if(int ecs = cs - 2)
-        cubic_interpolate(c.expand(ecs), lastp, c1, c2, _pt, cs);
-    c.add_point(_pt);
+    if(int ecs = cs - 1)
+        cubic_interpolate(c.expand(ecs) - 1, lastp, c1, c2, _pt, ecs + 1);
 }
 
 void painter_path::resize(int len)
@@ -307,6 +303,7 @@ void painter_path::get_linestrips(linestrips& c) const
         }
         last = n;
     }
+    if(pc)  pc->finish();
 }
 
 int painter_path::get_control_contour(painter_linestrip& ls, int start) const

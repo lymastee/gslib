@@ -88,6 +88,7 @@ public:
     bool is_clock_wise() const;
     bool is_convex() const;
     bool is_convex(int i) const;
+    void tracing() const;
 
 protected:
     enum

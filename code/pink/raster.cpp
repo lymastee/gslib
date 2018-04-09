@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 lymastee, All rights reserved.
+ * Copyright (c) 2016-2018 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -88,11 +88,11 @@ void painter_path::destroy()
     _nodelist.clear();
 }
 
-void painter_path::duplicate(const painter_path& pa)
+void painter_path::duplicate(const painter_path& path)
 {
     painter_path cast;
     attach(cast);
-    std::for_each(pa.begin(), pa.end(), [this](const node* n) {
+    std::for_each(path.begin(), path.end(), [this](const node* n) {
         switch(n->get_tag())
         {
         case pt_moveto:
@@ -118,9 +118,9 @@ void painter_path::duplicate(const painter_path& pa)
     });
 }
 
-void painter_path::attach(painter_path& pa)
+void painter_path::attach(painter_path& path)
 {
-    _nodelist.swap(pa._nodelist);
+    _nodelist.swap(path._nodelist);
 }
 
 void painter_path::close_path()
@@ -156,6 +156,77 @@ void painter_path::close_sub_path()
         if(first->get_point() != back->get_point())
             line_to(first->get_point());
     }
+}
+
+void painter_path::get_boundary_box(rectf& rc) const
+{
+    float left, top, bottom, right;
+    left = top = FLT_MAX;
+    bottom = right = -FLT_MAX;
+    auto retrieve_dimensions = [&left, &top, &right, &bottom](const vec2& p) {
+        left = gs_min(left, p.x);
+        top = gs_min(top, p.y);
+        right = gs_max(right, p.x);
+        bottom = gs_max(bottom, p.y);
+    };
+    node* lastn = nullptr;
+    for(auto* n : _nodelist) {
+        assert(n);
+        switch(n->get_tag())
+        {
+        case pt_moveto:
+        case pt_lineto:
+            retrieve_dimensions(n->get_point());
+            break;
+        case pt_quadto:
+            {
+                auto* quads = static_cast<const quad_to_node*>(n);
+                vec3 para[2];
+                pink::get_quad_parameter_equation(para, lastn->get_point(), quads->get_control(), quads->get_point());
+                vec2 derivate[2];
+                pink::get_first_derivate_factor(derivate, para);
+                float t = -derivate[0].y / derivate[0].x;
+                vec2 p;
+                eval_quad(p, para, t);
+                retrieve_dimensions(p);
+                t = -derivate[1].y / derivate[1].x;
+                if(t >= 0.f && t <= 1.f) {
+                    eval_quad(p, para, t);
+                    retrieve_dimensions(p);
+                }
+                retrieve_dimensions(quads->get_point());
+                break;
+            }
+        case pt_cubicto:
+            {
+                auto* cubics = static_cast<const cubic_to_node*>(n);
+                vec4 para[2];
+                pink::get_cubic_parameter_equation(para, lastn->get_point(), cubics->get_control1(), cubics->get_control2(), cubics->get_point());
+                vec3 derivate[2];
+                pink::get_first_derivate_factor(derivate, para);
+                float t[4];
+                int c1 = pink::solve_univariate_quadratic(t, derivate[0]);
+                int c2 = pink::solve_univariate_quadratic(t + c1, derivate[1]);
+                int c = c1 + c2;
+                assert(c <= 4);
+                for(int i = 0; i < c; i ++) {
+                    vec2 p;
+                    float s = t[i];
+                    if(s >= 0.f && s <= 1.f) {
+                        pink::eval_cubic(p, para, s);
+                        retrieve_dimensions(p);
+                    }
+                }
+                retrieve_dimensions(cubics->get_point());
+                break;
+            }
+        default:
+            assert(!"unexpected.");
+            break;
+        }
+        lastn = n;
+    }
+    rc.set_ltrb(left, top, right, bottom);
 }
 
 /*
@@ -427,6 +498,49 @@ void painter_path::simplify(painter_path& path) const
     painter_helper::transform(path, tmp,
         painter_helper::merge_straight_line | painter_helper::reduce_short_line | painter_helper::reduce_straight_curve
         );
+}
+
+void painter_path::reverse()
+{
+    painter_path rp;
+    int i = 0;
+    for(;;) {
+        painter_path subpath;
+        i = get_sub_path(subpath, i);
+        if(subpath.size() > 1) {
+            int j = subpath.size() - 1;
+            int k = j - 1;
+            auto* n = subpath.get_node(j);
+            rp.move_to(n->get_point());
+            for(;;) {
+                auto* cur = subpath.get_node(j);
+                auto* prev = subpath.get_node(k);
+                switch(cur->get_tag())
+                {
+                case pt_lineto:
+                    rp.line_to(prev->get_point());
+                    break;
+                case pt_quadto:
+                    rp.quad_to(static_cast<quad_to_node*>(cur)->get_control(),
+                        prev->get_point()
+                        );
+                    break;
+                case pt_cubicto:
+                    rp.cubic_to(static_cast<cubic_to_node*>(cur)->get_control2(),
+                        static_cast<cubic_to_node*>(cur)->get_control1(),
+                        prev->get_point()
+                        );
+                    break;
+                }
+                j = k --;
+                if(k < 0)
+                    break;
+            }
+        }
+        if(i >= size())
+            break;
+    }
+    _nodelist.swap(rp._nodelist);
 }
 
 void painter_path::tracing() const

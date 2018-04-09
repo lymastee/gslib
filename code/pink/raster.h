@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 lymastee, All rights reserved.
+ * Copyright (c) 2016-2018 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -127,14 +127,14 @@ protected:
 
 public:
     painter_path() {}
-    painter_path(const painter_path& pa) { attach(const_cast<painter_path&>(pa)); }
+    painter_path(const painter_path& path) { attach(const_cast<painter_path&>(path)); }
     ~painter_path() { destroy(); }
     bool empty() const { return _nodelist.empty(); }
     int size() const { return (int)_nodelist.size(); }
     void resize(int len);
     void destroy();
-    void duplicate(const painter_path& pa);
-    void attach(painter_path& pa);
+    void duplicate(const painter_path& path);
+    void attach(painter_path& path);
     iterator begin() { return _nodelist.begin(); }
     iterator end() { return _nodelist.end(); }
     const_iterator begin() const { return _nodelist.begin(); }
@@ -143,6 +143,7 @@ public:
     const node* get_node(int i) const { return _nodelist.at(i); }
     void close_path();
     void close_sub_path();
+    void get_boundary_box(rectf& rc) const;
     void move_to(float x, float y) { move_to(vec2(x, y)); }
     void line_to(float x, float y) { line_to(vec2(x, y)); }
     void arc_to(float x, float y, float r) { arc_to(vec2(x, y), r); }
@@ -163,6 +164,7 @@ public:
     bool is_clock_wise() const;
     bool is_convex() const;
     void simplify(painter_path& path) const;
+    void reverse();
     void tracing() const;
     void tracing_segments() const;
 };

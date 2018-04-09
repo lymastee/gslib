@@ -139,6 +139,51 @@ DebugPath.prototype.done = function() {
 	this.callings.push(obj);
 }
 
+DebugPath.prototype.modifyStrokeColor = function(v) {
+	var obj = { type: "modifyStrokeColor", data: v };
+	this.callings.push(obj);
+}
+
+DebugPath.prototype.modifyFillColor = function(v) {
+	var obj = { type: "modifyFillColor", data: v };
+	this.callings.push(obj);
+}
+
+DebugPath.prototype.modifyBgColor = function(v) {
+	var obj = { type: "modifyBgColor", data: v };
+	this.callings.push(obj);
+}
+
+DebugPath.prototype.modifyPkColor = function(v) {
+	var obj = { type: "modifyPkColor", data: v };
+	this.callings.push(obj);
+}
+
+DebugPath.prototype.modifyWithArrow = function(v) {
+	var obj = { type: "modifyWithArrow", data: v };
+	this.callings.push(obj);
+}
+
+DebugPath.prototype.modifyWithControlBoundary = function(v) {
+	var obj = { type: "modifyWithControlBoundary", data: v };
+	this.callings.push(obj);
+}
+
+DebugPath.prototype.modifyStrokeWidth = function(v) {
+	var obj = { type: "modifyStrokeWidth", data: v };
+	this.callings.push(obj);
+}
+
+DebugPath.prototype.modifyScaleView = function(v) {
+	var obj = { type: "modifyScaleView", data: v };
+	this.callings.push(obj);
+}
+
+DebugPath.prototype.modifyStrokeDash = function(v) {
+	var obj = { type: "modifyStrokeDash", data: v };
+	this.callings.push(obj);
+}
+
 DebugPath.prototype.modifyProperty = function(str) {
 	var len = str.length;
 	var end = str.indexOf(';');
@@ -151,23 +196,23 @@ DebugPath.prototype.modifyProperty = function(str) {
 	var lv = equ.substring(0, eqPos);
 	var rv = equ.substring(eqPos + 1);
 	if(lv.match("strokeColor"))
-		this.config.strokeColor = rv;
+		this.modifyStrokeColor(rv);
 	else if(lv.match("fillColor"))
-		this.config.fillColor = rv;
+		this.modifyFillColor(rv);
 	else if(lv.match("bgColor"))
-		this.config.bgColor = rv;
+		this.modifyBgColor(rv);
 	else if(lv.match("pkColor"))
-		this.config.pkColor = rv;
+		this.modifyPkColor(rv);
 	else if(lv.match("withArrow"))
-		this.config.withArrow = rv;
+		this.modifyWithArrow(rv);
 	else if(lv.match("withControlBoundary"))
-		this.config.withControlBoundary = rv;
+		this.modifyWithControlBoundary(rv);
 	else if(lv.match("strokeWidth"))
-		this.config.strokeWidth = rv;
+		this.modifyStrokeWidth(rv);
 	else if(lv.match("scaleView"))
-		this.config.scaleView = rv;
+		this.modifyScaleView(rv);
 	else if(lv.match("strokeDash"))
-		this.config.strokeDash = rv;
+		this.modifyStrokeDash(rv);
 	else
 		alert("modifyProperty failed, bad l-value: " + lv);
 	return str + end;
@@ -201,6 +246,24 @@ DebugPath.prototype.run = function() {
 		}
 		else if(func.type == "done")
 			that.done1();
+		else if(func.type == "modifyStrokeColor")
+			that.config.strokeColor = d;
+		else if(func.type == "modifyFillColor")
+			that.config.fillColor = d;
+		else if(func.type == "modifyBgColor")
+			that.config.bgColor = d;
+		else if(func.type == "modifyPkColor")
+			that.config.pkColor = d;
+		else if(func.type == "modifyWithArrow")
+			that.config.withArrow = d;
+		else if(func.type == "modifyWithControlBoundary")
+			that.config.withControlBoundary = d;
+		else if(func.type == "modifyStrokeWidth")
+			that.config.strokeWidth = d;
+		else if(func.type == "modifyScaleView")
+			that.config.scaleView = d;
+		else if(func.type == "modifyStrokeDash")
+			that.config.strokeDash = d;
 	}
 	if(this.config.scaleView)
 		this.scaling();

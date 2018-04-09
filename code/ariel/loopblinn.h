@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 lymastee, All rights reserved.
+ * Copyright (c) 2016-2018 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -46,13 +46,13 @@ class lb_end_joint;
 class lb_control_joint;
 class lb_line;
 class lb_polygon;
-class lb_bisp_line;
-class lb_bisp;
+class lb_shrink_line;
+class lb_shrink;
 
 typedef vector<lb_joint*> lb_joint_list;
 typedef vector<lb_line*> lb_line_list;
 typedef vector<lb_polygon*> lb_polygon_list;
-typedef vector<lb_bisp_line*> lb_bisp_lines;
+typedef vector<lb_shrink_line*> lb_shrink_lines;
 typedef stack<lb_polygon*> lb_polygon_stack;
 
 enum lb_joint_type
@@ -154,25 +154,25 @@ public:
     static lb_line* get_line_between(lb_joint* j1, lb_joint* j2);
 };
 
-class lb_bisp_line
+class lb_shrink_line
 {
 protected:
-    lb_bisp_line*       _prev;
-    lb_bisp_line*       _next;
-    lb_bisp_line*       _bin[2];
+    lb_shrink_line*     _prev;
+    lb_shrink_line*     _next;
+    lb_shrink_line*     _bin[2];
     vec2                _point;
     vec3                _le;
 
 public:
-    lb_bisp_line();
-    void set_prev(lb_bisp_line* p) { _prev = p; }
-    void set_next(lb_bisp_line* p) { _next = p; }
-    void set_binary(int i, lb_bisp_line* p) { _bin[i] = p; }
+    lb_shrink_line();
+    void set_prev(lb_shrink_line* p) { _prev = p; }
+    void set_next(lb_shrink_line* p) { _next = p; }
+    void set_binary(int i, lb_shrink_line* p) { _bin[i] = p; }
     void set_prev_point(const vec2& p) { _point = p; }
     void set_next_point(const vec2& p) { _next->set_prev_point(p); }
-    lb_bisp_line* get_prev() const { return _prev; }
-    lb_bisp_line* get_next() const { return _next; }
-    lb_bisp_line* get_binary(int i) const { return _bin[i]; }
+    lb_shrink_line* get_prev() const { return _prev; }
+    lb_shrink_line* get_next() const { return _next; }
+    lb_shrink_line* get_binary(int i) const { return _bin[i]; }
     const vec2& get_prev_point() const { return _point; }
     const vec2& get_next_point() const { return _next->get_prev_point(); }
     bool is_boundary() const { return !_bin[0]; }
@@ -182,32 +182,32 @@ public:
     void tracing() const;
 };
 
-class lb_bisp
+class lb_shrink
 {
 public:
-    lb_bisp() { _center = 0; }
-    ~lb_bisp();
-    lb_bisp_line* get_center() const { return _center; }
+    lb_shrink() { _center = 0; }
+    ~lb_shrink();
+    lb_shrink_line* get_center() const { return _center; }
     void setup(lb_line* start);
     bool is_inside(const vec2& p) const;
     void tracing() const;
     void trace_loop() const;
 
 protected:
-    lb_bisp_lines       _lines;
-    lb_bisp_line*       _center;
+    lb_shrink_lines     _lines;
+    lb_shrink_line*     _center;
 
 protected:
-    lb_bisp_line* create_line();
-    lb_bisp_line* create(lb_line* start);
-    void create_segment(lb_line_list& span, lb_bisp_line* seg[2]);
-    void create_linear_segment(lb_line* line1, lb_bisp_line* seg[2]);
-    void create_quadratic_segment(lb_line* line1, lb_line* line2, lb_bisp_line* seg[2]);
-    void create_cubic_segment(lb_line* line1, lb_line* line2, lb_line* line3, lb_bisp_line* seg[2]);
-    lb_bisp_line* shrink(lb_bisp_line* start);
-    lb_bisp_line* make_shrink(lb_bisp_line* line1, lb_bisp_line* line2);
-    lb_bisp_line* query(const vec2& p) const;
-    lb_bisp_line* query(const vec2& p, lb_bisp_line* last) const;
+    lb_shrink_line* create_line();
+    lb_shrink_line* create(lb_line* start);
+    void create_segment(lb_line_list& span, lb_shrink_line* seg[2]);
+    void create_linear_segment(lb_line* line1, lb_shrink_line* seg[2]);
+    void create_quadratic_segment(lb_line* line1, lb_line* line2, lb_shrink_line* seg[2]);
+    void create_cubic_segment(lb_line* line1, lb_line* line2, lb_line* line3, lb_shrink_line* seg[2]);
+    lb_shrink_line* shrink(lb_shrink_line* start);
+    lb_shrink_line* make_shrink(lb_shrink_line* line1, lb_shrink_line* line2);
+    lb_shrink_line* query(const vec2& p) const;
+    lb_shrink_line* query(const vec2& p, lb_shrink_line* last) const;
 };
 
 enum lb_span_type
@@ -243,8 +243,8 @@ typedef delaunay_triangulation lb_triangulator;
 
 /*
  * The polygon should be decomposed to the form like boundary - holes,
- * this procedure could also be called hierarchy flatten.
- * After we retrieve the boundary we need to create a bisp for the boundary
+ * this procedure could also be called flattening.
+ * After we retrieve the boundary we need to create a shrink for the boundary
  * for including test, if necessary, so that we could decide if a sub path
  * (case : cw - ccw - {cw}?) was a new path that ends the previous boundary.
  */
@@ -253,7 +253,7 @@ class lb_polygon
 protected:
     lb_line*            _boundary;
     lb_line_list        _holes;
-    lb_bisp             _bisp;
+    lb_shrink           _shrink;
     lb_rtree            _mytree;
     lb_triangulator     _cdt;
     dt_input_joints     _dtjoints;
@@ -264,15 +264,13 @@ public:
     void add_hole(lb_line* p) { _holes.push_back(p); }
     lb_line* get_boundary() const { return _boundary; }
     const lb_line_list& get_holes() const { return _holes; }
-    bool is_bisp_available() const { return _bisp.get_center() != 0; }
-    void create_bisp() { _bisp.setup(_boundary); }
-    void ensure_create_bisp() { if(!is_bisp_available()) create_bisp(); }
-    bool is_inside(const vec2& p) const { return _bisp.is_inside(p); }
+    bool is_shrink_available() const { return _shrink.get_center() != 0; }
+    void create_shrink() { _shrink.setup(_boundary); }
+    void ensure_create_shrink() { if(!is_shrink_available()) create_shrink(); }
+    bool is_inside(const vec2& p) const { return _shrink.is_inside(p); }
     lb_rtree& get_rtree() { return _mytree; }
     void convert_to_ncoord(const mat3& m);
     void create_dt_joints();
-    void add_trim_constraints();
-    void pack_constraints1();
     void pack_constraints();
     void build_cdt();
     lb_triangulator& get_cdt_result() { return _cdt; }
@@ -280,7 +278,7 @@ public:
     void trace_boundary() const;
     void trace_last_hole() const;
     void trace_holes() const;
-    void trace_bisp() const { _bisp.tracing(); }
+    void trace_shrink() const { _shrink.tracing(); }
     void trace_rtree() const { _mytree.tracing(); }
 };
 
@@ -301,7 +299,7 @@ public:
     lb_joint_list& get_joints() { return _joint_holdings; }
     lb_line_list& get_lines() { return _line_holdings; }
     void trace_polygons() const;
-    void trace_bisps() const;
+    void trace_shrinks() const;
     void trace_rtree() const;
 
 protected:
@@ -317,8 +315,8 @@ protected:
     lb_joint* create_joint(const vec2& p);
     lb_line* create_line();
     lb_polygon* create_polygon();
-    void hierarchy_flatten(const painter_path& path);
-    int hierarchy_flatten(const painter_path& path, int start, lb_polygon* parent, lb_polygon_stack& st);
+    void flattening(const painter_path& path);
+    int flattening(const painter_path& path, int start, lb_polygon* parent, lb_polygon_stack& st);
     int create_patch(lb_line*& line, const painter_path& path, int start);
     lb_joint* create_segment(lb_joint* prev, const painter_path& path, int i);
     void check_boundary(lb_polygon* poly);

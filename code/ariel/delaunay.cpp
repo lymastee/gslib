@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 lymastee, All rights reserved.
+ * Copyright (c) 2016-2018 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -641,6 +641,8 @@ dt_edge_range delaunay_triangulation::delaunay(int begin, int end)
                 while(dt_in_circle(basel->get_dest_point(), basel->get_org_point(),
                     lcand->get_dest_point(), lcand->get_org_next()->get_dest_point()
                     )) {
+                    if(lcand == ldo)
+                        break;
                     auto* t = lcand->get_org_next();
                     destroy_edge_pair(lcand);
                     lcand = t;
@@ -651,6 +653,8 @@ dt_edge_range delaunay_triangulation::delaunay(int begin, int end)
                 while(dt_in_circle(basel->get_dest_point(), basel->get_org_point(),
                     rcand->get_dest_point(), rcand->get_org_prev()->get_dest_point()
                     )) {
+                    if(rcand->get_symmetric() == rdo)
+                        break;
                     auto* t = rcand->get_org_prev();
                     destroy_edge_pair(rcand);
                     rcand = t;

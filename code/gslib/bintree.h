@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 lymastee, All rights reserved.
+ * Copyright (c) 2016-2018 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -84,7 +84,6 @@ struct _bintreenode_wrapper
     value& get_ref() { return *_value; }
     const value& const_ref() const { return *_value; }
     void copy(const myref* a) { get_ref() = a->const_ref(); }
-    //void born() { _value = gs_new(value); }
     void born() { !! }
     template<class _cst>
     void born() { _value = gs_new(_cst); }
@@ -179,9 +178,9 @@ protected:
         if(!_vptr || !_vptr->_parent)
             return 0;
         if(is_left())
-            return _vptr->_right;
+            return _vptr->_parent->_right;
         else if(is_right())
-            return _vptr->_left;
+            return _vptr->_parent->_left;
         assert(!"unexpected.");
         return 0;
     }
@@ -258,7 +257,7 @@ public:
     const value* operator->() const { return _cvptr->const_ptr(); }
     const value& operator*() const { return _cvptr->const_ref(); }
     iterator left() const { return iterator(vleft()); }
-    iterator right() const { return iterator(vright()) }
+    iterator right() const { return iterator(vright()); }
     iterator parent() const { return iterator(vparent()); }
     iterator sibling() const { return iterator(vsibling()); }
     iterator root() const { return iterator(vroot()); }
@@ -448,12 +447,12 @@ public:
         src->_left = 0;
         src->_right = 0;
     }
-    void attach(myref& subtree, iterator i)
+    iterator attach(myref& subtree, iterator i)
     {
         assert(i && is_mine(i) && i.is_leaf());
         if(i.is_root()) {
             swap(subtree);
-            return;
+            return iterator(_vptr);
         }
         iterator p = i.parent();
         assert(p);
@@ -462,21 +461,22 @@ public:
         leftp ? connect_left_child(p.get_wrapper(), i.get_wrapper()) :
             connect_right_child(p.get_wrapper(), i.get_wrapper());
         subtree.destroy();
+        return i;
     }
 
 public:
     template<class _lambda>
-    void preorder_for_each(_lambda lam) { preorder_traversal([](wrapper* w) { lam(w->get_ptr()); }); }
+    void preorder_for_each(_lambda lam) { preorder_traversal([&](wrapper* w) { lam(w->get_ptr()); }); }
     template<class _lambda>
-    void preorder_const_for_each(_lambda lam) const { preorder_traversal([](const wrapper* w) { lam(w->const_ptr()); }); }
+    void preorder_const_for_each(_lambda lam) const { preorder_traversal([&](const wrapper* w) { lam(w->const_ptr()); }); }
     template<class _lambda>
-    void inorder_for_each(_lambda lam) { inorder_traversal([](wrapper* w) { lam(w->get_ptr()); }); }
+    void inorder_for_each(_lambda lam) { inorder_traversal([&](wrapper* w) { lam(w->get_ptr()); }); }
     template<class _lambda>
-    void inorder_const_for_each(_lambda lam) const { inorder_traversal([](const wrapper* w) { lam(w->const_ptr()); }); }
+    void inorder_const_for_each(_lambda lam) const { inorder_traversal([&](const wrapper* w) { lam(w->const_ptr()); }); }
     template<class _lambda>
-    void postorder_for_each(_lambda lam) { postorder_traversal([](wrapper* w) { lam(w->get_ptr()); }); }
+    void postorder_for_each(_lambda lam) { postorder_traversal([&](wrapper* w) { lam(w->get_ptr()); }); }
     template<class _lambda>
-    void postorder_const_for_each(_lambda lam) const { postorder_traversal([](const wrapper* w) { lam(w->const_ptr()); }); }
+    void postorder_const_for_each(_lambda lam) const { postorder_traversal([&](const wrapper* w) { lam(w->const_ptr()); }); }
 
 protected:
     bintree(iterator i) { _vptr = i._vptr; }
@@ -536,12 +536,12 @@ public:
     const gchar* print()
     {
         _src.clear();
-        append(_inst.get_root(), 0);
+        append(_inst.const_root(), 0);
         return _src.c_str();
     }
 
 protected:
-    string decorate(iterator i, int level)
+    string decorate(const_iterator i, int level)
     {
         if(!i.is_valid())
             return string();
@@ -550,7 +550,7 @@ protected:
             r.append(_t("  "));
         i.is_leaf() ? r.append(_t("+ ")) : r.append(_t("- "));
         if(i.is_root())
-            a = _t("root(");
+            a.assign(_t("root("));
         else if(i.is_left())
             a.format(_t("left%d("), level);
         else if(i.is_right())
@@ -564,7 +564,7 @@ protected:
         r.append(_t(")\n"));
         return r;
     }
-    void append(iterator i, int level)
+    void append(const_iterator i, int level)
     {
         if(!i.is_valid())
             return;

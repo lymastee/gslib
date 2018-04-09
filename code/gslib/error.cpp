@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 lymastee, All rights reserved.
+ * Copyright (c) 2016-2018 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -167,7 +167,45 @@ void reset_error()
     errst->reset();
 }
 
-#if defined (DEBUG) || defined (_DEBUG)
+/* CAUTION: multi-thread was not supported. */
+static string __holding_trace_string;
+
+void trace_hold(const gchar* fmt, ...)
+{
+    assert(fmt);
+    va_list ptr;
+    va_start(ptr, fmt);
+    static string str;
+    str.formatv(fmt, ptr);
+    __holding_trace_string += str;
+}
+
+void _trace_to_clipboard()
+{
+#if defined(_WIN32)
+    if(__holding_trace_string.empty())
+        return;
+    /* prepare memory */
+    auto size = sizeof(gchar) * __holding_trace_string.length();
+    HGLOBAL hmem =  GlobalAlloc(GMEM_MOVEABLE | GMEM_ZEROINIT, size + sizeof(gchar));
+    void* mem = GlobalLock(hmem);
+    memcpy_s(mem, size + sizeof(gchar), __holding_trace_string.c_str(), size);
+    memset(((byte*)mem) + size, 0, sizeof(gchar));      /* eos */
+    GlobalUnlock(hmem);
+    /* op clipboard */
+    OpenClipboard(nullptr);
+    EmptyClipboard();
+    UINT fmt = (sizeof(gchar) == 1) ? CF_TEXT : CF_UNICODETEXT;
+    SetClipboardData(fmt, hmem);
+    CloseClipboard();
+    /* report */
+    printf("trace to clipboard done.\n");
+#endif
+}
+
+#ifdef _GS_TRACE_TO_CLIPBOARD
+
+#elif defined (DEBUG) || defined (_DEBUG)
 
 void trace(const gchar* fmt, ...)
 {

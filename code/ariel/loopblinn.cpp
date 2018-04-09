@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 lymastee, All rights reserved.
+ * Copyright (c) 2016-2018 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -134,7 +134,7 @@ static void lb_connect(lb_joint* joint1, lb_line* line, lb_joint* joint2)
     lb_connect(line, joint2);
 }
 
-static void lb_connect(lb_bisp_line* line1, lb_bisp_line* line2)
+static void lb_connect(lb_shrink_line* line1, lb_shrink_line* line2)
 {
     assert(line1 && line2);
     line1->set_next(line2);
@@ -815,19 +815,19 @@ lb_line* lb_line::get_line_between(lb_joint* j1, lb_joint* j2)
     return 0;
 }
 
-lb_bisp_line::lb_bisp_line()
+lb_shrink_line::lb_shrink_line()
 {
     _prev = _next = 0;
     _bin[0] = _bin[1] = 0;
     _le.x = NAN;
 }
 
-bool lb_bisp_line::is_le_available() const
+bool lb_shrink_line::is_le_available() const
 {
     return !isnan(_le.x);
 }
 
-void lb_bisp_line::calc_linear_expression()
+void lb_shrink_line::calc_linear_expression()
 {
     if(is_le_available())
         return;
@@ -836,13 +836,13 @@ void lb_bisp_line::calc_linear_expression()
     pink::get_linear_coefficient(_le, p1, vec2().sub(p2, p1));
 }
 
-float lb_bisp_line::get_le_dot(const vec2& p) const
+float lb_shrink_line::get_le_dot(const vec2& p) const
 {
     assert(is_le_available());
     return _le.dot(vec3(p.x, p.y, 1.f));
 }
 
-void lb_bisp_line::tracing() const
+void lb_shrink_line::tracing() const
 {
     assert(_next);
     auto& p1 = get_prev_point();
@@ -855,14 +855,14 @@ void lb_bisp_line::tracing() const
         _bin[1]->tracing();
 }
 
-lb_bisp::~lb_bisp()
+lb_shrink::~lb_shrink()
 {
-    for(auto* p : _lines) { gs_del(lb_bisp_line, p); }
+    for(auto* p : _lines) { gs_del(lb_shrink_line, p); }
     _lines.clear();
     _center = 0;
 }
 
-void lb_bisp::setup(lb_line* start)
+void lb_shrink::setup(lb_line* start)
 {
     assert(start);
     auto* first = create(start);
@@ -875,14 +875,14 @@ void lb_bisp::setup(lb_line* start)
     _center = shrink(first);
 }
 
-bool lb_bisp::is_inside(const vec2& p) const
+bool lb_shrink::is_inside(const vec2& p) const
 {
     assert(_center);
     auto* c = query(p);
     return !(c && c->is_boundary());
 }
 
-void lb_bisp::tracing() const
+void lb_shrink::tracing() const
 {
     if(!_center)
         return;
@@ -897,7 +897,7 @@ void lb_bisp::tracing() const
     line2->tracing();
 }
 
-void lb_bisp::trace_loop() const
+void lb_shrink::trace_loop() const
 {
     assert(_center);
     _center->tracing();
@@ -905,20 +905,20 @@ void lb_bisp::trace_loop() const
         line->tracing();
 }
 
-lb_bisp_line* lb_bisp::create_line()
+lb_shrink_line* lb_shrink::create_line()
 {
-    auto* p = gs_new(lb_bisp_line);
+    auto* p = gs_new(lb_shrink_line);
     assert(p);
     _lines.push_back(p);
     return p;
 }
 
-lb_bisp_line* lb_bisp::create(lb_line* start)
+lb_shrink_line* lb_shrink::create(lb_line* start)
 {
     assert(start);
     lb_line_list span;
     auto* line = lb_get_span(span, start);
-    lb_bisp_line* seg[2];
+    lb_shrink_line* seg[2];
     create_segment(span, seg);
     if(line == start) {
         lb_connect(seg[1], seg[0]);
@@ -940,7 +940,7 @@ lb_bisp_line* lb_bisp::create(lb_line* start)
     return first;
 }
 
-void lb_bisp::create_segment(lb_line_list& span, lb_bisp_line* seg[2])
+void lb_shrink::create_segment(lb_line_list& span, lb_shrink_line* seg[2])
 {
     int size = (int)span.size();
     switch(size)
@@ -957,7 +957,7 @@ void lb_bisp::create_segment(lb_line_list& span, lb_bisp_line* seg[2])
     }
 }
 
-void lb_bisp::create_linear_segment(lb_line* line1, lb_bisp_line* seg[2])
+void lb_shrink::create_linear_segment(lb_line* line1, lb_shrink_line* seg[2])
 {
     assert(line1);
     auto& p1 = line1->get_prev_point();
@@ -966,7 +966,7 @@ void lb_bisp::create_linear_segment(lb_line* line1, lb_bisp_line* seg[2])
     seg[0] = seg[1] = s;
 }
 
-void lb_bisp::create_quadratic_segment(lb_line* line1, lb_line* line2, lb_bisp_line* seg[2])
+void lb_shrink::create_quadratic_segment(lb_line* line1, lb_line* line2, lb_shrink_line* seg[2])
 {
     assert(line1 && line2);
     auto& p1 = line1->get_prev_point();
@@ -992,7 +992,7 @@ void lb_bisp::create_quadratic_segment(lb_line* line1, lb_line* line2, lb_bisp_l
     seg[1] = last;
 }
 
-void lb_bisp::create_cubic_segment(lb_line* line1, lb_line* line2, lb_line* line3, lb_bisp_line* seg[2])
+void lb_shrink::create_cubic_segment(lb_line* line1, lb_line* line2, lb_line* line3, lb_shrink_line* seg[2])
 {
     assert(line1 && line2 && line3);
     auto& p1 = line1->get_prev_point();
@@ -1019,11 +1019,11 @@ void lb_bisp::create_cubic_segment(lb_line* line1, lb_line* line2, lb_line* line
     seg[1] = last;
 }
 
-lb_bisp_line* lb_bisp::shrink(lb_bisp_line* start)
+lb_shrink_line* lb_shrink::shrink(lb_shrink_line* start)
 {
     assert(start);
     int ctr = 1;
-    lb_bisp_line *first, *last, *curr, *next = start->get_next();
+    lb_shrink_line *first, *last, *curr, *next = start->get_next();
     if(lb_is_convex(start, next)) {
         first = last = make_shrink(start, next);
         curr = next->get_next();
@@ -1072,7 +1072,7 @@ lb_bisp_line* lb_bisp::shrink(lb_bisp_line* start)
     return ctr <= 3 ? first : shrink(first);
 }
 
-lb_bisp_line* lb_bisp::make_shrink(lb_bisp_line* line1, lb_bisp_line* line2)
+lb_shrink_line* lb_shrink::make_shrink(lb_shrink_line* line1, lb_shrink_line* line2)
 {
     assert(line1 && line2);
     auto* line = create_line();
@@ -1082,7 +1082,7 @@ lb_bisp_line* lb_bisp::make_shrink(lb_bisp_line* line1, lb_bisp_line* line2)
     return line;
 }
 
-lb_bisp_line* lb_bisp::query(const vec2& p) const
+lb_shrink_line* lb_shrink::query(const vec2& p) const
 {
     assert(_center);
     /* the center could be binary or triangle. */
@@ -1116,7 +1116,7 @@ lb_bisp_line* lb_bisp::query(const vec2& p) const
     }
 }
 
-lb_bisp_line* lb_bisp::query(const vec2& p, lb_bisp_line* last) const
+lb_shrink_line* lb_shrink::query(const vec2& p, lb_shrink_line* last) const
 {
     assert(last);
     if(last->is_boundary())
@@ -1390,7 +1390,7 @@ loop_blinn_processor::~loop_blinn_processor()
 
 void loop_blinn_processor::proceed(const painter_path& path)
 {
-    hierarchy_flatten(path);
+    flattening(path);
     if(_polygons.empty())
         return;
     for(auto* p : _polygons) {
@@ -1412,12 +1412,12 @@ void loop_blinn_processor::trace_polygons() const
     trace(_t("@@\n"));
 }
 
-void loop_blinn_processor::trace_bisps() const
+void loop_blinn_processor::trace_shrinks() const
 {
-    trace(_t("#trace bisps start:\n"));
+    trace(_t("#trace shrinks start:\n"));
     trace(_t("@!\n"));
     for(auto* p : _polygons)
-        p->trace_bisp();
+        p->trace_shrink();
     trace(_t("@@\n"));
 }
 
@@ -1454,7 +1454,7 @@ lb_joint* loop_blinn_processor::create_joint(const vec2& p)
     return static_cast<lb_joint*>(j);
 }
 
-void loop_blinn_processor::hierarchy_flatten(const painter_path& path)
+void loop_blinn_processor::flattening(const painter_path& path)
 {
     int size = path.size();
     assert(size > 0);
@@ -1468,11 +1468,11 @@ void loop_blinn_processor::hierarchy_flatten(const painter_path& path)
     if(next == size)
         return;
     lb_polygon_stack st;
-    do { next = hierarchy_flatten(path, next, poly, st); }
+    do { next = flattening(path, next, poly, st); }
     while(next < size);
 }
 
-int loop_blinn_processor::hierarchy_flatten(const painter_path& path, int start, lb_polygon* parent, lb_polygon_stack& st)
+int loop_blinn_processor::flattening(const painter_path& path, int start, lb_polygon* parent, lb_polygon_stack& st)
 {
     assert(parent);
     int size = path.size();
@@ -1488,33 +1488,33 @@ int loop_blinn_processor::hierarchy_flatten(const painter_path& path, int start,
             return size;
         vec2 sample;
         lb_get_sample_cw(sample, line);
-        parent->ensure_create_bisp();
+        parent->ensure_create_shrink();
         bool in = parent->is_inside(sample);
         if(in)
             st.push(parent);
-        return hierarchy_flatten(path, next, poly, st);
+        return flattening(path, next, poly, st);
     }
     else {
         vec2 sample;
         lb_get_sample_ccw(sample, line);
-        parent->ensure_create_bisp();
+        parent->ensure_create_shrink();
         bool in = parent->is_inside(sample);
         if(in) {
             parent->add_hole(line);
             return (next == size) ? size :
-                hierarchy_flatten(path, next, parent, st);
+                flattening(path, next, parent, st);
         }
         else {
             /* find a suitable boundary */
             while(!st.empty()) {
                 auto* uptrace = st.top();
                 st.pop();
-                uptrace->ensure_create_bisp();
+                uptrace->ensure_create_shrink();
                 in = uptrace->is_inside(sample);
                 if(in) {
                     uptrace->add_hole(line);
                     return (next == size) ? size :
-                        hierarchy_flatten(path, next, uptrace, st);
+                        flattening(path, next, uptrace, st);
                 }
             }
             assert(!"unexpected path.");
@@ -1605,7 +1605,7 @@ lb_joint* loop_blinn_processor::create_segment(lb_joint* prev, const painter_pat
  * This function would try to avoid the situation that the control path of the
  * boundary runs outside the boundary itself.
  * Such kind of situation would be a problem in the following CDT process.
- * Collect all the concave control points first, then check them by the bisp
+ * Collect all the concave control points first, then check them by the shrink
  * to see if they were outside the boundary, these checks needn't be too strict,
  * split them and make sure they won't cross the boundary.
  */
@@ -1626,7 +1626,7 @@ void loop_blinn_processor::check_boundary(lb_polygon* poly)
     }
     if(concaves.empty())
         return;
-    poly->ensure_create_bisp();
+    poly->ensure_create_shrink();
     for(auto* p : concaves)
         check_span(poly, static_cast<lb_control_joint*>(p));
 }
@@ -1655,7 +1655,7 @@ void loop_blinn_processor::check_holes(lb_polygon* poly)
     }
     if(candidates.empty())
         return;
-    poly->ensure_create_bisp();
+    poly->ensure_create_shrink();
     for(auto* p : candidates)
         check_span(poly, static_cast<lb_control_joint*>(p));
 }

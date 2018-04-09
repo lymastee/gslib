@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 lymastee, All rights reserved.
+ * Copyright (c) 2016-2018 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -435,17 +435,17 @@ private:
     widget_map      _widget_map;
 
 public:
-    template<class _cst>
-    _cst* add_widget(widget* ptr, const gchar* name, const rect& rc, uint style)
+    template<class _ctor>
+    _ctor* add_widget(widget* ptr, const gchar* name, const rect& rc, uint style)
     {
         if(name && _widget_map.find(name) != _widget_map.end())
             return 0;
         if(!ptr && _root)
             ptr = _root;
-        _cst* p = gs_new(_cst, this);
+        _ctor* p = gs_new(_ctor, this);
         assert(p);
         if(!p->create(ptr, name, rc, style)) {
-            gs_del(_cst, p);
+            gs_del(_ctor, p);
             return 0;
         }
         if(name != 0) {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 lymastee, All rights reserved.
+ * Copyright (c) 2016-2018 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -50,7 +50,6 @@ enum bat_type
     bf_start,
     bf_cr = bf_start,       /* pt, cr */
     bf_klm_cr,              /* pt, klm, cr */
-    bf_tex,                 /* pt, tex */
     bf_klm_tex,             /* pt, klm, tex */
     bf_end = bf_klm_tex,
 
@@ -71,7 +70,7 @@ public:
     bat_triangle();
     bat_triangle(lb_joint* i, lb_joint* j, lb_joint* k);
     ~bat_triangle() {}
-    void make_rect(rectf& rc);
+    void make_rect(rectf& rc) const;
     void set_joint(int i, lb_joint* p) { _joints[i] = p; }
     lb_joint* get_joint(int i) const { return _joints[i]; }
     const vec2& get_point(int i) const { return _joints[i]->get_point(); }
@@ -127,6 +126,10 @@ public:
     bool need_recalc() const { return _recalc; }
     void trim_contour(bat_line& line);
     void tracing() const;
+
+public:
+    static bat_line* create_line(lb_joint* i, lb_joint* j, float w, float z, uint t, bool half);
+    static bat_line* create_half_line(lb_joint* i, lb_joint* j, const vec2& p1, const vec2& p2, float w, float z, uint t);
 };
 
 struct bat_batch
@@ -157,6 +160,7 @@ struct bat_stroke_batch:
 
 public:
     bat_stroke_batch(bat_type t): bat_batch(t) {}
+    void add_line(bat_line* p) { _lines.push_back(p); }
     bat_lines& get_lines() { return _lines; }
     const bat_lines& const_lines() const { return _lines; }
 };
@@ -171,7 +175,8 @@ public:
 public:
     batch_processor();
     ~batch_processor();
-    void add_polygon(lb_polygon* poly, float z, uint brush_tag);
+    void add_non_tex_polygon(lb_polygon* poly, float z, uint brush_tag);
+    bat_batch* add_tex_polygons(lb_polygon_list& polys, float z);
     bat_line* add_line(lb_joint* i, lb_joint* j, float w, float z, uint pen_tag);
     bat_line* add_aa_border(lb_joint* i, lb_joint* j, float z, uint pen_tag);
     void finish_batching();
@@ -192,6 +197,9 @@ protected:
     void add_triangle(lb_joint* i, lb_joint* j, lb_joint* k, bool b[3], float z, uint brush_tag);
     void collect_aa_borders(bat_triangle* triangle, bool b[3], uint pen_tag);
     void proceed_line_batch();
+    void gather_tex_triangles(bat_triangles& triangles, lb_polygon* poly, float z);
+    bat_batch* find_containable_tex_batch(const bat_triangles& triangles);
+    bat_stroke_batch* find_associated_tex_stroke_batch(const bat_batch* bat);
 };
 
 __ariel_end__

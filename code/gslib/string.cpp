@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 lymastee, All rights reserved.
+ * Copyright (c) 2016-2018 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -306,8 +306,16 @@ static void frac_to_string(_std_string<char>& str, double frac, int precision)
     }
     assert(ptd <= 0);
     if(ptd < 0) {
-        str.append(-ptd, '0');
-        len += ptd;
+        if(-ptd > precision)
+        {
+            str.append(precision, '0');
+            return;
+        }
+        else
+        {
+            str.append(-ptd, '0');
+            len += ptd;
+        }
     }
     str.append(szf, len);
 }
@@ -367,8 +375,16 @@ static void frac_to_string(_std_string<wchar>& str, double frac, int precision)
     }
     assert(ptd <= 0);
     if(ptd < 0) {
-        str.append(-ptd, L'0');
-        len += ptd;
+        if(-ptd > precision)
+        {
+            str.append(precision, L'0');
+            return;
+        }
+        else
+        {
+            str.append(-ptd, L'0');
+            len += ptd;
+        }
     }
     for(int i = 0; i < len; i ++)
         str.push_back(szf[i]);

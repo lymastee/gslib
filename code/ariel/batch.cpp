@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 lymastee, All rights reserved.
+ * Copyright (c) 2016-2018 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -28,6 +28,68 @@
 
 __ariel_begin__
 
+static bat_type bat_decide_type(uint brush_tag, bool has_klm)
+{
+    if(has_klm) {
+        switch(brush_tag)
+        {
+        case painter_brush::solid:
+            return bf_klm_cr;
+        case painter_brush::picture:
+            return bf_klm_tex;
+        default:
+            assert(!"unexpected tag.");
+            return bf_klm_cr;
+        }
+    }
+    else {
+        switch(brush_tag)
+        {
+        case painter_brush::solid:
+            return bf_cr;
+        case painter_brush::picture:
+            return bf_klm_tex;      /* use bf_klm_tex for better batching. */
+        default:
+            assert(!"unexpected tag.");
+            return bf_cr;
+        }
+    }
+}
+
+static bool bat_is_triangle_overlapped(const bat_triangle* triangle, const rectf& rc, const bat_batch* batch)
+{
+    assert(triangle && batch);
+    assert((batch->get_type() >= bf_start) && (batch->get_type() <= bf_end));
+    auto& rtr = static_cast<const bat_fill_batch*>(batch)->const_rtree();
+    vector<bat_triangle*> result;
+    rtr.query(rc, result);
+    for(auto* p : result) {
+        assert(p);
+        if(p->is_overlapped(*triangle))
+            return true;
+    }
+    return false;
+}
+
+static bool bat_is_triangle_overlapped(const bat_triangle* triangle, const bat_batch* batch)
+{
+    assert(triangle && batch);
+    rectf rc;
+    triangle->make_rect(rc);
+    return bat_is_triangle_overlapped(triangle, rc, batch);
+}
+
+static bool bat_is_triangles_overlapped(const bat_triangles& triangles, const bat_batch* batch)
+{
+    assert(batch);
+    for(const bat_triangle* p : triangles) {
+        assert(p);
+        if(bat_is_triangle_overlapped(p, batch))
+            return true;
+    }
+    return false;
+}
+
 bat_triangle::bat_triangle()
 {
     _joints[0] = _joints[1] = _joints[2] = 0;
@@ -44,7 +106,7 @@ bat_triangle::bat_triangle(lb_joint* i, lb_joint* j, lb_joint* k)
     _is_reduced = false;
 }
 
-void bat_triangle::make_rect(rectf& rc)
+void bat_triangle::make_rect(rectf& rc) const
 {
     float min_x = FLT_MAX, max_x = -FLT_MAX, min_y = FLT_MAX, max_y = -FLT_MAX;
     auto check_bound = [&](lb_joint* p) {
@@ -64,31 +126,7 @@ void bat_triangle::make_rect(rectf& rc)
 
 bat_type bat_triangle::decide(uint brush_tag) const
 {
-    bool has_klm = has_klm_coords();
-    if(has_klm) {
-        switch(brush_tag)
-        {
-        case painter_brush::solid:
-            return bf_klm_cr;
-        case painter_brush::picture:
-            return bf_klm_tex;
-        default:
-            assert(!"unexpected tag.");
-            return bf_klm_cr;
-        }
-    }
-    else {
-        switch(brush_tag)
-        {
-        case painter_brush::solid:
-            return bf_cr;
-        case painter_brush::picture:
-            return bf_tex;
-        default:
-            assert(!"unexpected tag.");
-            return bf_cr;
-        }
-    }
+    return bat_decide_type(brush_tag, has_klm_coords());
 }
 
 bool bat_triangle::has_klm_coords() const
@@ -387,6 +425,40 @@ void bat_line::tracing() const
     trace(_t("@lineTo %f, %f;\n"), _contourpt[0].x, _contourpt[0].y);
 }
 
+bat_line* bat_line::create_line(lb_joint* i, lb_joint* j, float w, float z, uint t, bool half)
+{
+    assert(i && j);
+    auto* p = gs_new(bat_line);
+    assert(p);
+    p->set_source_joint(0, i);
+    p->set_source_joint(1, j);
+    p->set_zorder(z);
+    p->set_pen_tag(t);
+    p->set_half_line(half);
+    p->set_line_width(w);
+    p->set_start_point(i->get_point());
+    p->set_end_point(j->get_point());
+    p->setup_coef();
+    return p;
+}
+
+bat_line* bat_line::create_half_line(lb_joint* i, lb_joint* j, const vec2& p1, const vec2& p2, float w, float z, uint t)
+{
+    assert(i && j);
+    auto* p = gs_new(bat_line);
+    assert(p);
+    p->set_source_joint(0, i);
+    p->set_source_joint(1, j);
+    p->set_pen_tag(t);
+    p->set_zorder(z);
+    p->set_half_line(true);
+    p->set_line_width(w);
+    p->set_start_point(p1);
+    p->set_end_point(p2);
+    p->setup_coef();
+    return p;
+}
+
 batch_processor::batch_processor()
 {
 }
@@ -396,16 +468,17 @@ batch_processor::~batch_processor()
     clear_batches();
 }
 
-void batch_processor::add_polygon(lb_polygon* poly, float z, uint brush_tag)
+void batch_processor::add_non_tex_polygon(lb_polygon* poly, float z, uint brush_tag)
 {
     assert(poly);
+    assert(brush_tag != painter_brush::picture);
     auto& cdt = poly->get_cdt_result();
     cdt.traverse_triangles([this, &z, &brush_tag](void* i, void* j, void* k, bool b[3]) {
         assert(i && j && k);
         auto* j1 = reinterpret_cast<lb_joint*>(i);
         auto* j2 = reinterpret_cast<lb_joint*>(j);
         auto* j3 = reinterpret_cast<lb_joint*>(k);
-#if defined (DEBUG) || defined (_DEBUG)
+#if (defined (DEBUG) || defined (_DEBUG)) && defined(_GS_DEBUG_VERBOSE)
         auto& p1 = j1->get_point();
         auto& p2 = j2->get_point();
         auto& p3 = j3->get_point();
@@ -416,6 +489,38 @@ void batch_processor::add_polygon(lb_polygon* poly, float z, uint brush_tag)
 #endif
         add_triangle(j1, j2, j3, b, z, brush_tag);
     });
+}
+
+/* I put the picture fill into one batch for better texture batching purpose. */
+bat_batch* batch_processor::add_tex_polygons(lb_polygon_list& polys, float z)
+{
+    if(polys.empty())
+        return nullptr;
+    /* gather all the tex triangles */
+    bat_triangles triangles;
+    for(auto* poly : polys) {
+        assert(poly);
+        gather_tex_triangles(triangles, poly, z);
+    }
+    if(triangles.empty())
+        return nullptr;
+    /* find which batch could contain the whole polygon */
+    auto* f = find_containable_tex_batch(triangles);
+    if(!f) {
+        f = create_batch<bat_fill_batch>(bf_klm_tex);
+        /* for every bf_klm_tex batch, will have a bs_coef_tex batch for boundary anti-aliasing. */
+        create_batch<bat_stroke_batch>(bs_coef_tex);
+    }
+    assert(f && (f->get_type() == bf_klm_tex));
+    /* insert all the triangles into the batch */
+    auto& rtr = static_cast<bat_fill_batch*>(f)->get_rtree();
+    for(auto* t : triangles) {
+        assert(t);
+        rectf rc;
+        t->make_rect(rc);
+        rtr.insert(t, rc);
+    }
+    return f;
 }
 
 bat_line* batch_processor::add_line(lb_joint* i, lb_joint* j, float w, float z, uint pen_tag)
@@ -467,17 +572,8 @@ bat_triangle* batch_processor::create_triangle(lb_joint* j1, lb_joint* j2, lb_jo
 bat_line* batch_processor::create_line(lb_joint* i, lb_joint* j, float w, float z, uint t, bool half)
 {
     assert(i && j);
-    auto* p = gs_new(bat_line);
+    auto* p = bat_line::create_line(i, j, w, z, t, half);
     assert(p);
-    p->set_source_joint(0, i);
-    p->set_source_joint(1, j);
-    p->set_zorder(z);
-    p->set_pen_tag(t);
-    p->set_half_line(half);
-    p->set_line_width(w);
-    p->set_start_point(i->get_point());
-    p->set_end_point(j->get_point());
-    p->setup_coef();
     _lines.push_back(p);
     return p;
 }
@@ -485,17 +581,8 @@ bat_line* batch_processor::create_line(lb_joint* i, lb_joint* j, float w, float 
 bat_line* batch_processor::create_half_line(lb_joint* i, lb_joint* j, const vec2& p1, const vec2& p2, float w, float z, uint t)
 {
     assert(i && j);
-    auto* p = gs_new(bat_line);
+    auto* p = bat_line::create_half_line(i, j, p1, p2, w, z, t);
     assert(p);
-    p->set_source_joint(0, i);
-    p->set_source_joint(1, j);
-    p->set_pen_tag(t);
-    p->set_zorder(z);
-    p->set_half_line(true);
-    p->set_line_width(w);
-    p->set_start_point(p1);
-    p->set_end_point(p2);
-    p->setup_coef();
     _lines.push_back(p);
     return p;
 }
@@ -521,18 +608,8 @@ void batch_processor::add_triangle(lb_joint* j1, lb_joint* j2, lb_joint* j3, boo
         auto* bat = *f;
         assert(bat);
         assert((bat->get_type() >= bf_start) && (bat->get_type() <= bf_end));
-        auto& rtr = static_cast<bat_fill_batch*>(bat)->get_rtree();
-        vector<bat_triangle*> result;
-        rtr.query(rc, result);
-        bool overlapped = false;
-        for(auto* p : result) {
-            assert(p);
-            if(p->is_overlapped(*triangle)) {
-                overlapped = true;
-                break;
-            }
-        }
-        if(!overlapped) {
+        if(!bat_is_triangle_overlapped(triangle, rc, bat)) {
+            auto& rtr = static_cast<bat_fill_batch*>(bat)->get_rtree();
             rtr.insert(triangle, rc);
             return;
         }
@@ -617,14 +694,15 @@ void batch_processor::proceed_line_batch()
         auto z = line->get_zorder();
         for(auto* batch : _batches) {
             assert(batch);
-            assert((batch->get_type() >= bf_start) && (batch->get_type() <= bf_end));
-            bat_triangles ovltris;
-            auto& rtr = static_cast<bat_fill_batch*>(batch)->get_rtree();
-            rtr.query(rc, ovltris);
-            for(auto* p : ovltris) {
-                assert(p);
-                if(z < p->get_zorder())
-                    triangles.push_back(p);
+            if((batch->get_type() >= bf_start) && (batch->get_type() <= bf_end)) {
+                bat_triangles ovltris;
+                auto& rtr = static_cast<bat_fill_batch*>(batch)->get_rtree();
+                rtr.query(rc, ovltris);
+                for(auto* p : ovltris) {
+                    assert(p);
+                    if(z < p->get_zorder())
+                        triangles.push_back(p);
+                }
             }
         }
     };
@@ -668,6 +746,63 @@ void batch_processor::proceed_line_batch()
         _batches.push_back(texbat);
     if(crbat)
         _batches.push_back(crbat);
+}
+
+void batch_processor::gather_tex_triangles(bat_triangles& triangles, lb_polygon* poly, float z)
+{
+    assert(poly);
+    auto& cdt = poly->get_cdt_result();
+    cdt.traverse_triangles([this, &z, &triangles](void* i, void* j, void* k, bool b[3]) {
+        assert(i && j && k);
+        auto* j1 = reinterpret_cast<lb_joint*>(i);
+        auto* j2 = reinterpret_cast<lb_joint*>(j);
+        auto* j3 = reinterpret_cast<lb_joint*>(k);
+        auto* triangle = create_triangle(j1, j2, j3, z);
+        assert(triangle);
+        triangles.push_back(triangle);
+    });
+}
+
+bat_batch* batch_processor::find_containable_tex_batch(const bat_triangles& triangles)
+{
+    auto find_next_batch = [](bat_iter from, bat_iter to)-> bat_iter {
+        for(auto i = from; i != to; ++ i) {
+            if((*i)->get_type() == bf_klm_tex)      /* so there's only bf_klm_tex type */
+                return i;
+        }
+        return to;
+    };
+    auto f = find_next_batch(_batches.begin(), _batches.end());
+    while(f != _batches.end()) {
+        auto* bat = *f;
+        assert(bat);
+        assert(bat->get_type() == bf_klm_tex);
+        if(!bat_is_triangles_overlapped(triangles, bat))
+            return bat;
+        f = find_next_batch(++ f, _batches.end());
+    }
+    return nullptr;
+}
+
+bat_stroke_batch* batch_processor::find_associated_tex_stroke_batch(const bat_batch* bat)
+{
+    assert(bat && (bat->get_type() == bf_klm_tex));
+    auto f = _batches.begin();
+    for(; f != _batches.end(); ++ f) {
+        if(*f == bat)
+            break;
+    }
+    if(f == _batches.end()) {
+        assert(!"batch processor locate bat failed.");
+        return nullptr;
+    }
+    if(++ f == _batches.end())
+        return nullptr;
+    auto* stroke_bat = *f;
+    assert(stroke_bat);
+    if(stroke_bat->get_type() != bs_coef_tex)
+        return nullptr;
+    return static_cast<bat_stroke_batch*>(stroke_bat);
 }
 
 __ariel_end__

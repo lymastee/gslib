@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 lymastee, All rights reserved.
+ * Copyright (c) 2016-2018 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -29,12 +29,31 @@
 #include <ariel/rendersysd3d11.h>
 #include <gslib/entrywin32.h>
 
+class FakeD3DBlob:
+    public ID3DBlob
+{
+public:
+    static FakeD3DBlob* create(void* p, SIZE_T s) { return new FakeD3DBlob(p, s); }
+    virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void **ppvObject) override { return E_FAIL; }
+    virtual ULONG STDMETHODCALLTYPE AddRef() override { return 1; }
+    virtual ULONG STDMETHODCALLTYPE Release() override { delete this; return 0; }
+    virtual LPVOID STDMETHODCALLTYPE GetBufferPointer() override { return m_ptr; }
+    virtual SIZE_T STDMETHODCALLTYPE GetBufferSize() override { return m_size; }
+
+private:
+    void*           m_ptr;
+    SIZE_T          m_size;
+
+private:
+    FakeD3DBlob(void* p, SIZE_T s): m_ptr(p), m_size(s) {}
+};
+
 template<class Interface>
 inline void SafeRelease(Interface*& pInterface)
 {
     if(pInterface) {
         pInterface->Release();
-        pInterface = 0;
+        pInterface = nullptr;
     }
 }
 
@@ -44,10 +63,10 @@ rendersys_d3d11::rendersys_d3d11()
 {
     _drvtype = D3D_DRIVER_TYPE_NULL;
     _level = D3D_FEATURE_LEVEL_11_0;
-    _device = 0;
-    _context = 0;
-    _swapchain = 0;
-    _rtview = 0;
+    _device = nullptr;
+    _context = nullptr;
+    _swapchain = nullptr;
+    _rtview = nullptr;
     _vsync = false;
     _fullscreen = false;
 }
@@ -68,7 +87,7 @@ bool rendersys_d3d11::setup(uint hwnd, const configs& cfg)
     uint height = rc.bottom - rc.top;
     uint flags = 0;
 #if defined (DEBUG) || defined (_DEBUG)
-    //flags |= D3D11_CREATE_DEVICE_DEBUG;
+    flags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
     D3D_DRIVER_TYPE drvtypes[] = 
     {
@@ -85,9 +104,9 @@ bool rendersys_d3d11::setup(uint hwnd, const configs& cfg)
     };
     uint clevels = _countof(levels);
     /* get numerator & denominator */
-    IDXGIFactory* factory = 0;
-    IDXGIAdapter* adapter = 0;
-    IDXGIOutput* adapter_output = 0;
+    IDXGIFactory* factory = nullptr;
+    IDXGIAdapter* adapter = nullptr;
+    IDXGIOutput* adapter_output = nullptr;
     uint numerator, denominator, modes;
     if(FAILED(CreateDXGIFactory(__uuidof(IDXGIFactory), (void**)&factory)) ||
         FAILED(factory->EnumAdapters(0, &adapter)) ||
@@ -144,7 +163,7 @@ bool rendersys_d3d11::setup(uint hwnd, const configs& cfg)
     }
     if(!_device || !_swapchain)
         return false;
-    ID3D11Texture2D* buffer = 0;
+    ID3D11Texture2D* buffer = nullptr;
     if(FAILED(_swapchain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&buffer)))
         return false;
     bool fail = FAILED(_device->CreateRenderTargetView(buffer, 0, &_rtview));
@@ -161,7 +180,7 @@ bool rendersys_d3d11::setup(uint hwnd, const configs& cfg)
     vp.TopLeftY = 0;
     _context->RSSetViewports(1, &vp);
     /* enable alpha blending */
-    ID3D11BlendState* blendstate = 0;
+    ID3D11BlendState* blendstate = nullptr;
     D3D11_BLEND_DESC bd;
     memset(&bd, 0, sizeof(bd));
     bd.RenderTarget[0].BlendEnable = TRUE;
@@ -176,17 +195,7 @@ bool rendersys_d3d11::setup(uint hwnd, const configs& cfg)
     if(fail)
         return false;
     _context->OMSetBlendState(blendstate, 0, 0xffffffff);
-
-//     D3D11_RASTERIZER_DESC rasdesc;
-//     memset(&rasdesc, 0 ,sizeof(rasdesc));
-//     rasdesc.FillMode = D3D11_FILL_SOLID;
-//     rasdesc.CullMode = D3D11_CULL_NONE;
-//     rasdesc.FrontCounterClockwise = FALSE;
-//     rasdesc.DepthClipEnable = TRUE;
-//     ID3D11RasterizerState* prs = 0;
-//     _device->CreateRasterizerState(&rasdesc, &prs);
-//     _context->RSSetState(prs);
-
+    blendstate->Release();
     return true;
 }
 
@@ -197,17 +206,29 @@ void rendersys_d3d11::destroy()
     SafeRelease(_rtview);
     SafeRelease(_swapchain);
     SafeRelease(_context);
+#if defined(DEBUG) || defined(_DEBUG)
+    ID3D11Debug* pDebug = nullptr;
+    HRESULT hr = _device->QueryInterface(__uuidof(ID3D11Debug), (void**)&pDebug);
+    if(SUCCEEDED(hr) && pDebug)
+        pDebug->ReportLiveDeviceObjects(D3D11_RLDO_DETAIL);
+    SafeRelease(pDebug);
+#endif
     SafeRelease(_device);
 }
 
-void rendersys_d3d11::begin_create_shader(create_shader_context& context, const gchar* file, const gchar* entry, const gchar* sm, render_include* inc)
+void rendersys_d3d11::begin_create_shader(create_shader_context& context, const void* buf, int size)
+{
+    context = FakeD3DBlob::create(const_cast<void*>(buf), size);
+}
+
+void rendersys_d3d11::begin_create_shader_from_file(create_shader_context& context, const gchar* file, const gchar* entry, const gchar* sm, render_include* inc)
 {
     HRESULT hr = S_OK;
     DWORD flags = D3DCOMPILE_ENABLE_STRICTNESS;
 #if defined (DEBUG) || defined (_DEBUG)
     flags |= D3DCOMPILE_DEBUG;
 #endif
-    render_blob* err_blob = 0;
+    render_blob* err_blob = nullptr;
     _string<char> sbentry, sbsmodel;
     sbentry.from(entry);
     sbsmodel.from(sm);
@@ -223,14 +244,14 @@ void rendersys_d3d11::begin_create_shader(create_shader_context& context, const 
     SafeRelease(err_blob);
 }
 
-void rendersys_d3d11::begin_create_shader_mem(create_shader_context& context, const char* src, int len, const gchar* name, const gchar* entry, const gchar* sm, render_include* inc)
+void rendersys_d3d11::begin_create_shader_from_memory(create_shader_context& context, const char* src, int len, const gchar* name, const gchar* entry, const gchar* sm, render_include* inc)
 {
     HRESULT hr = S_OK;
     DWORD flags = D3DCOMPILE_ENABLE_STRICTNESS;
 #if defined (DEBUG) || defined (_DEBUG)
     flags |= D3DCOMPILE_DEBUG;
 #endif
-    render_blob* err_blob = 0;
+    render_blob* err_blob = nullptr;
     _string<char> sbname, sbentry, sbsmodel;
     sbentry.from(entry);
     sbsmodel.from(sm);
@@ -255,7 +276,7 @@ vertex_shader* rendersys_d3d11::create_vertex_shader(create_shader_context& cont
     if(!context)
         return 0;
     assert(_device);
-    vertex_shader* shader = 0;
+    vertex_shader* shader = nullptr;
     return FAILED(_device->CreateVertexShader(context->GetBufferPointer(), context->GetBufferSize(), 0, &shader)) ? 0 : shader;
 }
 
@@ -263,7 +284,7 @@ pixel_shader* rendersys_d3d11::create_pixel_shader(create_shader_context& contex
 {
     if(!context)
         return 0;
-    pixel_shader* shader = 0;
+    pixel_shader* shader = nullptr;
     assert(_device);
     return FAILED(_device->CreatePixelShader(context->GetBufferPointer(), context->GetBufferSize(), 0, &shader)) ? 0 : shader;
 }
@@ -272,7 +293,7 @@ compute_shader* rendersys_d3d11::create_compute_shader(create_shader_context& co
 {
     if(!context)
         return 0;
-    compute_shader* shader = 0;
+    compute_shader* shader = nullptr;
     assert(_device);
     return FAILED(_device->CreateComputeShader(context->GetBufferPointer(), context->GetBufferSize(), 0, &shader)) ? 0 : shader;
 }
@@ -281,7 +302,7 @@ geometry_shader* rendersys_d3d11::create_geometry_shader(create_shader_context& 
 {
     if(!context)
         return 0;
-    geometry_shader* shader = 0;
+    geometry_shader* shader = nullptr;
     assert(_device);
     return FAILED(_device->CreateGeometryShader(context->GetBufferPointer(), context->GetBufferSize(), 0, &shader)) ? 0 : shader;
 }
@@ -290,7 +311,7 @@ hull_shader* rendersys_d3d11::create_hull_shader(create_shader_context& context)
 {
     if(!context)
         return 0;
-    hull_shader* shader = 0;
+    hull_shader* shader = nullptr;
     assert(_device);
     return FAILED(_device->CreateHullShader(context->GetBufferPointer(), context->GetBufferSize(), 0, &shader)) ? 0 : shader;
 }
@@ -299,14 +320,14 @@ domain_shader* rendersys_d3d11::create_domain_shader(create_shader_context& cont
 {
     if(!context)
         return 0;
-    domain_shader* shader = 0;
+    domain_shader* shader = nullptr;
     assert(_device);
     return FAILED(_device->CreateDomainShader(context->GetBufferPointer(), context->GetBufferSize(), 0, &shader)) ? 0 : shader;
 }
 
 vertex_format* rendersys_d3d11::create_vertex_format(create_shader_context& context, vertex_format_desc desc[], uint n)
 {
-    vertex_format* format = 0;
+    vertex_format* format = nullptr;
     assert(_device);
     return FAILED(_device->CreateInputLayout(desc, n, context->GetBufferPointer(), context->GetBufferSize(), &format)) ? 0 : format;
 }
@@ -323,13 +344,13 @@ render_vertex_buffer* rendersys_d3d11::create_vertex_buffer(uint stride, uint co
         desc.CPUAccessFlags |= D3D11_CPU_ACCESS_READ;
     if(write != false)
         desc.CPUAccessFlags |= D3D11_CPU_ACCESS_WRITE;
-    D3D11_SUBRESOURCE_DATA* psd = 0, sd;
+    D3D11_SUBRESOURCE_DATA* psd = nullptr, sd;
     if(ptr) {
         memset(&sd, 0, sizeof(sd));
         sd.pSysMem = ptr;
         psd = &sd;
     }
-    vertex_buffer* vb = 0;
+    vertex_buffer* vb = nullptr;
     return FAILED(_device->CreateBuffer(&desc, psd, &vb)) ? 0 : vb;
 }
 
@@ -345,7 +366,7 @@ render_index_buffer* rendersys_d3d11::create_index_buffer(uint count, bool read,
         desc.CPUAccessFlags |= D3D11_CPU_ACCESS_READ;
     if(write != false)
         desc.CPUAccessFlags |= D3D11_CPU_ACCESS_WRITE;
-    D3D11_SUBRESOURCE_DATA* psd = 0, sd;
+    D3D11_SUBRESOURCE_DATA* psd = nullptr, sd;
     if(ptr) {
         memset(&sd, 0, sizeof(sd));
         sd.pSysMem = ptr;
@@ -369,7 +390,7 @@ render_constant_buffer* rendersys_d3d11::create_constant_buffer(uint stride, boo
         desc.CPUAccessFlags |= D3D11_CPU_ACCESS_READ;
     if(write != false)
         desc.CPUAccessFlags |= D3D11_CPU_ACCESS_WRITE;
-    D3D11_SUBRESOURCE_DATA* psd = 0, sd;
+    D3D11_SUBRESOURCE_DATA* psd = nullptr, sd;
     if(ptr) {
         memset(&sd, 0, sizeof(sd));
         sd.pSysMem = ptr;
@@ -377,6 +398,87 @@ render_constant_buffer* rendersys_d3d11::create_constant_buffer(uint stride, boo
     }
     constant_buffer* cb;
     return FAILED(_device->CreateBuffer(&desc, psd, &cb)) ? 0 : cb;
+}
+
+shader_resource_view* rendersys_d3d11::create_shader_resource_view(render_resource* res)
+{
+    assert(res);
+    shader_resource_view* p = nullptr;
+    HRESULT hr = _device->CreateShaderResourceView(res, nullptr, &p);
+    if(FAILED(hr) || !p)
+        return nullptr;
+    return p;
+}
+
+render_sampler_state* rendersys_d3d11::create_sampler_state(sampler_state_filter filter)
+{
+    D3D11_SAMPLER_DESC desc;
+    desc.AddressU = D3D11_TEXTURE_ADDRESS_MIRROR;
+    desc.AddressV = D3D11_TEXTURE_ADDRESS_MIRROR;
+    desc.AddressW = D3D11_TEXTURE_ADDRESS_MIRROR;
+    desc.MipLODBias = 0.f;
+    desc.MaxAnisotropy = 1;
+    desc.ComparisonFunc = D3D11_COMPARISON_NEVER;
+    desc.BorderColor[0] = 0;
+    desc.BorderColor[1] = 0;
+    desc.BorderColor[2] = 0;
+    desc.BorderColor[3] = 0;
+    desc.MinLOD = 0.f;
+    desc.MaxLOD = D3D11_FLOAT32_MAX;
+    switch(filter)
+    {
+    case ssf_point:
+        desc.Filter = D3D11_FILTER_MIN_MAG_MIP_POINT;
+        break;
+    case ssf_anisotropic:
+        desc.Filter = D3D11_FILTER_ANISOTROPIC;
+        desc.MaxAnisotropy = 16;
+        break;
+    case ssf_linear:
+    default:
+        desc.Filter = D3D11_FILTER_MIN_MAG_MIP_LINEAR;
+        break;
+    }
+    ID3D11SamplerState* sstate = nullptr;
+    HRESULT hr = _device->CreateSamplerState(&desc, &sstate);
+    if(FAILED(hr))
+        return nullptr;
+    assert(sstate);
+    return sstate;
+}
+
+render_texture2d* rendersys_d3d11::create_texture2d(const image& img, uint mips, uint usage, uint bindflags, uint cpuflags)
+{
+    D3D11_TEXTURE2D_DESC desc;
+    desc.Width = img.get_width();
+    desc.Height = img.get_height();
+    desc.MipLevels = mips;
+    desc.ArraySize = 1;
+    switch(img.get_format())
+    {
+    case image::fmt_rgba:
+        desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+        break;
+    default:
+        assert(!"unexpected format.");
+        break;
+    }
+    desc.SampleDesc.Count = 1;
+    desc.SampleDesc.Quality = 0;
+    desc.Usage = (D3D11_USAGE)usage;
+    desc.BindFlags = bindflags;
+    desc.CPUAccessFlags = cpuflags;
+    desc.MiscFlags = 0;
+    D3D11_SUBRESOURCE_DATA subdata;
+    subdata.pSysMem = img.get_data(0, 0);
+    subdata.SysMemPitch = img.get_bytes_per_line();
+    subdata.SysMemSlicePitch = 0;
+    ID3D11Texture2D* tex = nullptr;
+    HRESULT hr = _device->CreateTexture2D(&desc, &subdata, &tex);
+    if(FAILED(hr))
+        return nullptr;
+    assert(tex);
+    return tex;
 }
 
 void rendersys_d3d11::update_buffer(void* buf, int size, const void* ptr)
@@ -460,7 +562,7 @@ void rendersys_d3d11::set_viewport(const viewport& vp)
     _context->RSSetViewports(1, &dvp);
 }
 
-void rendersys_d3d11::set_constant_buffers(uint slot, constant_buffer* cb, shader_type st)
+void rendersys_d3d11::set_constant_buffer(uint slot, constant_buffer* cb, shader_type st)
 {
     assert(cb);
     switch(st)
@@ -470,6 +572,38 @@ void rendersys_d3d11::set_constant_buffers(uint slot, constant_buffer* cb, shade
         break;
     case st_pixel_shader:
         _context->PSSetConstantBuffers(slot, 1, &cb);
+        break;
+    default:
+        assert(!"unknown shader type.");
+    }
+}
+
+void rendersys_d3d11::set_sampler_state(uint slot, sampler_state* sstate, shader_type st)
+{
+    assert(sstate);
+    switch(st)
+    {
+    case st_vertex_shader:
+        _context->VSSetSamplers(slot, 1, &sstate);
+        break;
+    case st_pixel_shader:
+        _context->PSSetSamplers(slot, 1, &sstate);
+        break;
+    default:
+        assert(!"unknown shader type.");
+    }
+}
+
+void rendersys_d3d11::set_shader_resource(uint slot, shader_resource_view* srv, shader_type st)
+{
+    assert(srv);
+    switch(st)
+    {
+    case st_vertex_shader:
+        _context->VSSetShaderResources(slot, 1, &srv);
+        break;
+    case st_pixel_shader:
+        _context->PSSetShaderResources(slot, 1, &srv);
         break;
     default:
         assert(!"unknown shader type.");

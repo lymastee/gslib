@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 lymastee, All rights reserved.
+ * Copyright (c) 2016-2018 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -63,6 +63,7 @@ extern void get_linear_coefficient(vec3& coef, const vec2& p, const vec2& d);
 extern void get_linear_parameter_equation(vec2 para[2], const vec2& a, const vec2& b);
 extern void get_quad_parameter_equation(vec3 para[2], const vec2& a, const vec2& b, const vec2& c);
 extern void get_cubic_parameter_equation(vec4 para[2], const vec2& a, const vec2& b, const vec2& c, const vec2& d);
+extern void get_first_derivate_factor(vec2 df1[2], const vec3 para[2]);
 extern void get_first_derivate_factor(vec3 df1[2], const vec4 para[2]);
 extern void get_second_derivate_factor(vec2 df2[2], const vec4 para[2]);
 extern void get_first_derivate_factor(vec3 df1[2], const vec2& p1, const vec2& p2, const vec2& p3, const vec2& p4);

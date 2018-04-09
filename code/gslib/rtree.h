@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 lymastee, All rights reserved.
+ * Copyright (c) 2016-2018 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -578,9 +578,7 @@ public:
         /* temporarily insert into p, then split */
         auto j = _mytree.birth_tail(p);
         *j = value(ba, rc);
-        rectf new_rc;
-        union_rect(new_rc, p->const_rect(), rc);
-        p->set_rect(new_rc);
+        update_rect_recursively(p, j);
         do { p = adjust_tree(p); }
         while(p.is_valid());
     }
@@ -752,9 +750,7 @@ public:
         /* temporarily insert into p, then split */
         auto j = _mytree.birth_tail(p);
         *j = value(ba, rc);
-        rectf new_rc;
-        union_rect(new_rc, p->const_rect(), rc);
-        p->set_rect(new_rc);
+        update_rect_recursively(p, j);
         do { p = adjust_tree(p); }
         while(p.is_valid());
     }
@@ -919,7 +915,7 @@ public:
 
 public:
     template<class _querier, class _cont>
-    int query(const _querier& q, _cont& out)
+    int query(const _querier& q, _cont& out) const
     {
         if(!is_valid())
             return 0;
@@ -951,7 +947,7 @@ public:
 
 protected:
     template<class _cont>
-    int query_overlapped(const_iterator i, const rectf& q, lookup_table& lookups, _cont& out)
+    int query_overlapped(const_iterator i, const rectf& q, lookup_table& lookups, _cont& out) const
     {
         assert(i.is_valid());
         const auto& rc = i->const_rect();
@@ -970,7 +966,7 @@ protected:
         return c;
     }
     template<class _cont>
-    int query_overlapped(const_iterator i, const pointf& q, lookup_table& lookups, _cont& out)
+    int query_overlapped(const_iterator i, const pointf& q, lookup_table& lookups, _cont& out) const
     {
         assert(i.is_valid());
         const auto& rc = i->const_rect();

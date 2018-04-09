@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 lymastee, All rights reserved.
+ * Copyright (c) 2016-2018 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -121,6 +121,7 @@ protected:
 
 public:
     painter_picture_data() { _image = 0; }
+    painter_picture_data(image* p) { _image = p; }
     void set_image(image* p) { _image = p; }
     image* get_image() const { return _image; }
 };

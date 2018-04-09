@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 lymastee, All rights reserved.
+ * Copyright (c) 2016-2018 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -56,6 +56,7 @@ __ariel_begin__
 
 define_select_type(render_device);
 define_select_type(render_context);
+define_select_type(render_resource);
 define_select_type(render_swap_chain);
 define_select_type(render_target_view);
 define_select_type(shader_resource_view);
@@ -73,9 +74,14 @@ define_select_type(vertex_format_desc);
 define_select_type(render_vertex_buffer);
 define_select_type(render_index_buffer);
 define_select_type(render_constant_buffer);
+define_select_type(render_texture1d);
+define_select_type(render_texture2d);
+define_select_type(render_texture3d);
+define_select_type(render_sampler_state);
 
 install_select_type(render_platform_d3d_11, render_device, ID3D11Device);
 install_select_type(render_platform_d3d_11, render_context, ID3D11DeviceContext);
+install_select_type(render_platform_d3d_11, render_resource, ID3D11Resource);
 install_select_type(render_platform_d3d_11, render_swap_chain, IDXGISwapChain);
 install_select_type(render_platform_d3d_11, render_target_view, ID3D11RenderTargetView);
 install_select_type(render_platform_d3d_11, shader_resource_view, ID3D11ShaderResourceView);
@@ -95,8 +101,14 @@ install_select_type(render_platform_d3d_11, render_vertex_buffer, ID3D11Buffer);
 install_select_type(render_platform_d3d_11, render_index_buffer, ID3D11Buffer);
 install_select_type(render_platform_d3d_11, render_constant_buffer, ID3D11Buffer);
 
+install_select_type(render_platform_d3d_11, render_texture1d, ID3D11Texture1D);
+install_select_type(render_platform_d3d_11, render_texture2d, ID3D11Texture2D);
+install_select_type(render_platform_d3d_11, render_texture3d, ID3D11Texture3D);
+install_select_type(render_platform_d3d_11, render_sampler_state, ID3D11SamplerState);
+
 config_select_type(select_render_platform, render_device);
 config_select_type(select_render_platform, render_context);
+config_select_type(select_render_platform, render_resource);
 config_select_type(select_render_platform, render_swap_chain);
 config_select_type(select_render_platform, render_target_view);
 config_select_type(select_render_platform, shader_resource_view);
@@ -112,6 +124,10 @@ config_select_type(select_render_platform, vertex_format);
 config_select_type(select_render_platform, render_vertex_buffer);
 config_select_type(select_render_platform, render_index_buffer);
 config_select_type(select_render_platform, render_constant_buffer);
+config_select_type(select_render_platform, render_texture1d);
+config_select_type(select_render_platform, render_texture2d);
+config_select_type(select_render_platform, render_texture3d);
+config_select_type(select_render_platform, render_sampler_state);
 
 enum render_option
 {

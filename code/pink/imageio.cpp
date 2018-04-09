@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 lymastee, All rights reserved.
+ * Copyright (c) 2016-2018 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -23,6 +23,7 @@
  * SOFTWARE.
  */
 
+#include <intrin.h>
 #include <pink/imageio.h>
 #include <pink/image.h>
 #include <gslib/file.h>
@@ -63,6 +64,19 @@ bool imageio::read_image(image& img, const string& path)
     }
     delete [] buf;
     return ret;
+}
+
+bool imageio::save_image(const image& img, const string& path)
+{
+    auto fmt = detect_image_format(path);
+    switch(fmt)
+    {
+    case image_format_bmp:
+        return save_bmp_image(img, path);
+    default:
+        assert(!"unknown image type.");
+        return false;
+    }
 }
 
 struct bmp_file_hdr
@@ -136,6 +150,8 @@ struct bmp_handler_args
     bool    has_alpha_channel;
 };
 
+const int BMP_FILEHDR_SIZE = 14;
+
 const int BMP_OLD  = 12;                        /* old Windows/OS2 BMP size */
 const int BMP_WIN  = 40;                        /* Windows BMP v3 size */
 const int BMP_OS2  = 64;                        /* new OS/2 BMP size */
@@ -155,7 +171,8 @@ static bool read_dib_fileheader(bmp_file_hdr& fileheader, const void* ptr, int s
     const char* bm = (const char*)ptr;
     if((bm[0] != 'B') || (bm[1] != 'M'))
         return false;
-    memcpy_s(&fileheader, sizeof(bmp_file_hdr), ptr, size);
+    memcpy_s(&fileheader.bf_type, 2, "BM", 2);
+    memcpy_s(&fileheader.bf_size, 12, (char*)ptr + 2, 12);
     return true;
 }
 
@@ -165,7 +182,7 @@ static bool read_dib_infoheader(_info_hdr& infoheader, const void* ptr, int size
     assert(ptr);
     if(size <= sizeof(_info_hdr))
         return false;
-    memcpy_s(&infoheader, sizeof(_info_hdr), ptr, size);
+    memcpy_s(&infoheader, sizeof(_info_hdr), ptr, sizeof(_info_hdr));
     int nbits = infoheader.bi_bit_count;
     int comp = infoheader.bi_compression;
     if (!(nbits == 1 || nbits == 4 || nbits == 8 || nbits == 16 || nbits == 24 || nbits == 32) ||
@@ -181,17 +198,17 @@ static bool read_dib_infoheader(_info_hdr& infoheader, const void* ptr, int size
 
 static inline int calc_shift(uint mask)
 {
-    int result = 0;
-    __asm {
-        bsf  eax, mask;
-        mov  result, eax;
-    }
-    return result;
+    unsigned long result = 0;
+    _BitScanForward(&result, mask);
+    return (int)result;
 }
 
 static bool setup_bmp_handler_args(bmp_handler_args& bhargs, const bmp_info_hdr& header, const byte* ptr, int size)
 {
     assert(ptr);
+    bhargs.width = header.bi_width;
+    bhargs.height = header.bi_height;
+    bhargs.comp = header.bi_compression;
     int nbits = header.bi_bit_count;
     int comp = header.bi_compression;
     switch(nbits)
@@ -296,11 +313,13 @@ static bool setup_bmp_handler_args(bmp_handler_args& bhargs, const bmp_info_hdr&
 
 static bool setup_bmp_handler_args_v4(bmp_handler_args& bhargs, const bmp_info_hdr_v4& header, const byte* ptr, int size)
 {
+    if(!setup_bmp_handler_args(bhargs, header, ptr, size))
+        return false;
     bhargs.red_mask = header.bi_red_mask;
     bhargs.green_mask = header.bi_green_mask;
     bhargs.blue_mask = header.bi_blue_mask;
     bhargs.alpha_mask = header.bi_alpha_mask;
-    return setup_bmp_handler_args(bhargs, header, ptr, size);
+    return true;
 }
 
 class image_data_stream
@@ -380,7 +399,7 @@ static bool read_dib_rle4(image& img, const bmp_handler_args& bhargs, const byte
 {
     assert(src && (size > 0));
     int w = bhargs.width, h = bhargs.height;
-    int bpl = ((w * sizeof(byte) + 31) >> 5) << 2;
+    int bpl = ((w * 32 + 31) >> 5) << 2;
     byte* data = new byte[bpl * h];
     int x = 0, y = 0, c, i;
     byte b;
@@ -463,7 +482,7 @@ static bool read_dib_uncomp4(image& img, const bmp_handler_args& bhargs, const b
 {
     assert(src && (size > 0));
     int w = bhargs.width, h = bhargs.height;
-    int bpl = ((w * sizeof(byte) + 31) >> 5) << 2;
+    int bpl = ((w * 32 + 31) >> 5) << 2;
     int datalen = bpl * h;
     byte* data = new byte[datalen];
     memset(data, 0, datalen);
@@ -492,7 +511,7 @@ static bool read_dib_rle8(image& img, const bmp_handler_args& bhargs, const byte
 {
     assert(src && (size > 0));
     int w = bhargs.width, h = bhargs.height;
-    int bpl = ((w * sizeof(byte) + 31) >> 5) << 2;
+    int bpl = ((w * 32 + 31) >> 5) << 2;
     byte* data = new byte[bpl * h];
     int x = 0, y = 0;
     byte b;
@@ -563,7 +582,7 @@ static bool read_dib_uncomp8(image& img, const bmp_handler_args& bhargs, const b
 {
     assert(src && (size > 0));
     int w = bhargs.width, h = bhargs.height;
-    int bpl = ((w * sizeof(byte) + 31) >> 5) << 2;
+    int bpl = ((w * 32 + 31) >> 5) << 2;
     byte* data = new byte[bpl * h];
     image_data_stream d(src, size);
     while(--h >= 0) {
@@ -612,8 +631,8 @@ static bool read_dib_colors(image& img, const bmp_handler_args& bhargs, const by
     }
     else {
         while(--h >= 0) {
-            register byte* p = data + h * bpl;
-            byte* end = p + w;
+            register uint* p = (uint*)(data + h * bpl);
+            uint* end = p + w;
             if(d.read_bytes(buf24, bpl24) != bpl24)
                 break;
             byte* b = buf24;
@@ -621,9 +640,12 @@ static bool read_dib_colors(image& img, const bmp_handler_args& bhargs, const by
                 uint c = *(byte*)b | (*(byte*)(b + 1) << 8);
                 if(nbits != 16)
                     c |= *(byte*)(b + 2) << 16;
-                *p++ = ((c & red_mask) >> red_shift) * red_scale;
-                *p++ = ((c & green_mask) >> green_shift) * green_scale;
-                *p++ = ((c & blue_mask) >> blue_shift) * blue_scale;
+                *p++ = color(
+                    ((c & red_mask) >> red_shift) * red_scale,
+                    ((c & green_mask) >> green_shift) * green_scale,
+                    ((c & blue_mask) >> blue_shift) * blue_scale,
+                    0xff
+                    ).data();
                 b += nbits / 8;
             }
         }
@@ -638,8 +660,8 @@ bool imageio::read_bmp_image(image& img, const void* ptr, int size)
     bmp_file_hdr bf;
     if(!read_dib_fileheader(bf, p, size))
         return false;
-    p += sizeof(bmp_file_hdr);
-    size -= sizeof(bmp_file_hdr);
+    p += BMP_FILEHDR_SIZE;
+    size -= BMP_FILEHDR_SIZE;
     bmp_info_hdr_v5 bi;
     if(!read_dib_infoheader(static_cast<bmp_info_hdr&>(bi), p, size))   /* pre-read a normal bmp header */
         return false;
@@ -675,10 +697,11 @@ bool imageio::read_bmp_image(image& img, const void* ptr, int size)
         if(!setup_bmp_handler_args(bhargs, bi, palasu_pos, pal_size))
             return false;
     }
-    p += bf.bf_off_bits;
-    size -= bf.bf_off_bits;
+    int offset = bf.bf_off_bits - BMP_FILEHDR_SIZE;
+    p += offset;
+    size -= offset;
     /* create image data here */
-    auto fmt = bhargs.has_alpha_channel ? image::fmt_rgba : image::fmt_rgb;
+    auto fmt = image::fmt_rgba;
     img.create(fmt, bhargs.width, bhargs.height);
     img._xpels_per_meter = bi.bi_xppm;
     img._ypels_per_meter = bi.bi_yppm;
@@ -717,6 +740,11 @@ bool imageio::read_bmp_image(image& img, const void* ptr, int size)
         return false;
     }
     return true;
+}
+
+bool imageio::save_bmp_image(const image& img, const string& path)
+{
+    return false;
 }
 
 __pink_end__

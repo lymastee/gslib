@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 lymastee, All rights reserved.
+ * Copyright (c) 2016-2018 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -26,7 +26,27 @@
 #include <ariel/rose.h>
 #include <ariel/rendersysd3d11.h>
 
+#include "rose_psf_cr.h"
+#include "rose_psf_klm_cr.h"
+#include "rose_psf_klm_tex.h"
+#include "rose_pss_coef_cr.h"
+#include "rose_pss_coef_tex.h"
+#include "rose_vsf_cr.h"
+#include "rose_vsf_klm_cr.h"
+#include "rose_vsf_klm_tex.h"
+#include "rose_vss_coef_cr.h"
+#include "rose_vss_coef_tex.h"
+
 __ariel_begin__
+
+template<class c>
+static void release_any(c& cptr)
+{
+    if(cptr) {
+        cptr->Release();
+        cptr = nullptr;
+    }
+}
 
 template<class stream_type>
 int rose_batch::template_buffering(stream_type& stm, rendersys* rsys)
@@ -71,24 +91,13 @@ void rose_fill_batch_klm_cr::draw(rendersys* rsys)
     rsys->draw(c, 0);
 }
 
-int rose_fill_batch_tex::buffering(rendersys* rsys)
-{
-    return template_buffering(_vertices, rsys);
-}
-
-void rose_fill_batch_tex::draw(rendersys* rsys)
-{
-    assert(rsys);
-    setup_vs_and_ps(rsys);
-    setup_vf_and_topology(rsys, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    rsys->set_vertex_buffer(_vertex_buffer, sizeof(vertex_info_tex), 0);
-    int c = (int)_vertices.size();
-    assert(c % 3 == 0);
-    rsys->draw(c, 0);
-}
-
 int rose_fill_batch_klm_tex::buffering(rendersys* rsys)
 {
+    assert(!_tex && !_srv);
+    _tex = _texbatch.create_texture(rsys);
+    assert(_tex);
+    _srv = rsys->create_shader_resource_view(convert_to_resource(_tex));
+    assert(_srv);
     return template_buffering(_vertices, rsys);
 }
 
@@ -98,9 +107,18 @@ void rose_fill_batch_klm_tex::draw(rendersys* rsys)
     setup_vs_and_ps(rsys);
     setup_vf_and_topology(rsys, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     rsys->set_vertex_buffer(_vertex_buffer, sizeof(vertex_info_klm_tex), 0);
+    rsys->set_sampler_state(0, _sstate, st_pixel_shader);
+    rsys->set_shader_resource(0, _srv, st_pixel_shader);
     int c = (int)_vertices.size();
     assert(c % 3 == 0);
     rsys->draw(c, 0);
+}
+
+void rose_fill_batch_klm_tex::destroy()
+{
+    release_any(_sstate);
+    release_any(_tex);
+    release_any(_srv);
 }
 
 int rose_stroke_batch_coef_cr::buffering(rendersys* rsys)
@@ -121,6 +139,11 @@ void rose_stroke_batch_coef_cr::draw(rendersys* rsys)
 
 int rose_stroke_batch_coef_tex::buffering(rendersys* rsys)
 {
+    assert(!_tex && !_srv);
+    _tex = _texbatch.create_texture(rsys);
+    assert(_tex);
+    _srv = rsys->create_shader_resource_view(convert_to_resource(_tex));
+    assert(_srv);
     return template_buffering(_vertices, rsys);
 }
 
@@ -130,9 +153,28 @@ void rose_stroke_batch_coef_tex::draw(rendersys* rsys)
     setup_vs_and_ps(rsys);
     setup_vf_and_topology(rsys, D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     rsys->set_vertex_buffer(_vertex_buffer, sizeof(vertex_info_coef_tex), 0);
+    rsys->set_sampler_state(0, _sstate, st_pixel_shader);
+    rsys->set_shader_resource(0, _srv, st_pixel_shader);
     int c = (int)_vertices.size();
     assert(c % 3 == 0);
     rsys->draw(c, 0);
+}
+
+void rose_stroke_batch_coef_tex::destroy()
+{
+    release_any(_sstate);
+    release_any(_tex);
+    release_any(_srv);
+}
+
+int rose_stroke_batch_assoc_with_klm_tex::buffering(rendersys* rsys)
+{
+    assert(!_tex && !_srv);
+    assert(_assoc);
+    _tex = _assoc->_tex;
+    _srv = _assoc->_srv;
+    assert(_tex && _srv);
+    return template_buffering(_vertices, rsys);
 }
 
 void rose::setup(rendersys* rsys)
@@ -156,40 +198,77 @@ void rose::setup(rendersys* rsys)
         { "TEXCOORD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
         { "COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
     };
+    rendersys::vertex_format_desc descf_klm_tex[] =
+    {
+        { "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "TEXCOORD", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "TEXCOORD", 1, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 }
+    };
+    rendersys::vertex_format_desc descs_coef_tex[] =
+    {
+        { "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "TEXCOORD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+        { "TEXCOORD", 1, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+    };
     rendersys::create_shader_context ctx;
     /* create shader cr */
-    _rsys->begin_create_shader(ctx, _t("rose.hlsl"), _t("rose_vsf_cr"), _t("vs_4_0"), 0);
+    _rsys->begin_create_shader(ctx, g_rose_vsf_cr, sizeof(g_rose_vsf_cr));
     _vsf_cr = _rsys->create_vertex_shader(ctx);
     assert(_vsf_cr);
     _vf_cr = _rsys->create_vertex_format(ctx, descf_cr, _countof(descf_cr));
     assert(_vf_cr);
     _rsys->end_create_shader(ctx);
-    _rsys->begin_create_shader(ctx, _t("rose.hlsl"), _t("rose_psf_cr"), _t("ps_4_0"), 0);
+    _rsys->begin_create_shader(ctx, g_rose_psf_cr, sizeof(g_rose_psf_cr));
     _psf_cr = _rsys->create_pixel_shader(ctx);
     assert(_psf_cr);
     _rsys->end_create_shader(ctx);
     /* create shader klm cr */
-    _rsys->begin_create_shader(ctx, _t("rose.hlsl"), _t("rose_vsf_klm_cr"), _t("vs_4_0"), 0);
+    _rsys->begin_create_shader(ctx, g_rose_vsf_klm_cr, sizeof(g_rose_vsf_klm_cr));
     _vsf_klm_cr = _rsys->create_vertex_shader(ctx);
     assert(_vsf_klm_cr);
     _vf_klm_cr = _rsys->create_vertex_format(ctx, descf_klm_cr, _countof(descf_klm_cr));
     assert(_vf_klm_cr);
     _rsys->end_create_shader(ctx);
-    _rsys->begin_create_shader(ctx, _t("rose.hlsl"), _t("rose_psf_klm_cr"), _t("ps_4_0"), 0);
+    _rsys->begin_create_shader(ctx, g_rose_psf_klm_cr, sizeof(g_rose_psf_klm_cr));
     _psf_klm_cr = _rsys->create_pixel_shader(ctx);
     assert(_psf_klm_cr);
     _rsys->end_create_shader(ctx);
     /* create shader coef cr */
-    _rsys->begin_create_shader(ctx, _t("rose.hlsl"), _t("rose_vss_coef_cr"), _t("vs_4_0"), 0);
+    _rsys->begin_create_shader(ctx, g_rose_vss_coef_cr, sizeof(g_rose_vss_coef_cr));
     _vss_coef_cr = _rsys->create_vertex_shader(ctx);
     assert(_vss_coef_cr);
     _vf_coef_cr = _rsys->create_vertex_format(ctx, descs_coef_cr, _countof(descs_coef_cr));
     assert(_vf_coef_cr);
     _rsys->end_create_shader(ctx);
-    _rsys->begin_create_shader(ctx, _t("rose.hlsl"), _t("rose_pss_coef_cr"), _t("ps_4_0"), 0);
+    _rsys->begin_create_shader(ctx, g_rose_pss_coef_cr, sizeof(g_rose_pss_coef_cr));
     _pss_coef_cr = _rsys->create_pixel_shader(ctx);
     assert(_pss_coef_cr);
     _rsys->end_create_shader(ctx);
+    /* create shader klm tex */
+    _rsys->begin_create_shader(ctx, g_rose_vsf_klm_tex, sizeof(g_rose_vsf_klm_tex));
+    _vsf_klm_tex = _rsys->create_vertex_shader(ctx);
+    assert(_vsf_klm_tex);
+    _vf_klm_tex = _rsys->create_vertex_format(ctx, descf_klm_tex, _countof(descf_klm_tex));
+    assert(_vf_klm_tex);
+    _rsys->end_create_shader(ctx);
+    _rsys->begin_create_shader(ctx, g_rose_psf_klm_tex, sizeof(g_rose_psf_klm_tex));
+    _psf_klm_tex = _rsys->create_pixel_shader(ctx);
+    assert(_psf_klm_tex);
+    _rsys->end_create_shader(ctx);
+    /* create shader coef tex */
+    _rsys->begin_create_shader(ctx, g_rose_vss_coef_tex, sizeof(g_rose_vss_coef_tex));
+    _vss_coef_tex = _rsys->create_vertex_shader(ctx);
+    assert(_vss_coef_tex);
+    _vf_coef_tex = _rsys->create_vertex_format(ctx, descs_coef_tex, _countof(descs_coef_tex));
+    assert(_vf_coef_tex);
+    _rsys->end_create_shader(ctx);
+    _rsys->begin_create_shader(ctx, g_rose_pss_coef_tex, sizeof(g_rose_pss_coef_tex));
+    _pss_coef_tex = _rsys->create_pixel_shader(ctx);
+    assert(_pss_coef_tex);
+    _rsys->end_create_shader(ctx);
+    /* create sampler state */
+    _sampler_state = _rsys->create_sampler_state(ssf_linear);
+    assert(_sampler_state);
     /* create cb_configs */
     assert(!_cb_configs);
     _cb_configs = _rsys->create_constant_buffer(pack_cb_size<rose_configs>(), false, true);
@@ -199,51 +278,38 @@ void rose::setup(rendersys* rsys)
 
 void rose::initialize()
 {
-    _vsf_cr = 0;
-    _vsf_klm_cr = 0;
-    _vsf_tex = 0;
-    _vsf_klm_tex = 0;
-    _psf_cr = 0;
-    _psf_klm_cr = 0;
-    _psf_tex = 0;
-    _psf_klm_tex = 0;
-    _vf_cr = 0;
-    _vf_klm_cr = 0;
-    _vf_tex = 0;
-    _vf_klm_tex = 0;
-    _vss_coef_cr = 0;
-    _vss_coef_tex = 0;
-    _pss_coef_cr = 0;
-    _pss_coef_tex = 0;
-    _vf_coef_cr = 0;
-    _vf_coef_tex = 0;
-    _cb_configs = 0;
+    _vsf_cr = nullptr;
+    _vsf_klm_cr = nullptr;
+    _vsf_klm_tex = nullptr;
+    _psf_cr = nullptr;
+    _psf_klm_cr = nullptr;
+    _psf_klm_tex = nullptr;
+    _vf_cr = nullptr;
+    _vf_klm_cr = nullptr;
+    _vf_klm_tex = nullptr;
+    _vss_coef_cr = nullptr;
+    _vss_coef_tex = nullptr;
+    _pss_coef_cr = nullptr;
+    _pss_coef_tex = nullptr;
+    _vf_coef_cr = nullptr;
+    _vf_coef_tex = nullptr;
+    _cb_configs = nullptr;
+    _sampler_state = nullptr;
     _cb_config_slot = 0;
-}
-
-template<class c>
-static void release_any(c& cptr)
-{
-    if(cptr) {
-        cptr->Release();
-        cptr = 0;
-    }
 }
 
 void rose::destroy_plugin()
 {
     release_constant_buffer(_cb_configs);
+    release_any(_sampler_state);
     release_any(_vf_cr);
     release_any(_vf_klm_cr);
-    release_any(_vf_tex);
     release_any(_vf_klm_tex);
     release_any(_vsf_cr);
     release_any(_vsf_klm_cr);
-    release_any(_vsf_tex);
     release_any(_vsf_klm_tex);
     release_any(_psf_cr);
     release_any(_psf_klm_cr);
-    release_any(_psf_tex);
     release_any(_psf_klm_tex);
     release_any(_vf_coef_cr);
     release_any(_vf_coef_tex);
@@ -252,6 +318,13 @@ void rose::destroy_plugin()
     release_any(_vss_coef_tex);
     release_any(_pss_coef_tex);
     _cb_configs = 0;
+}
+
+render_sampler_state* rose::acquire_default_sampler_state()
+{
+    assert(_sampler_state);
+    _sampler_state->AddRef();
+    return _sampler_state;
 }
 
 __ariel_end__

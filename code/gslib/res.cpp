@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 lymastee, All rights reserved.
+ * Copyright (c) 2016-2018 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -117,7 +117,7 @@ resnode::resnode()
 
 resnode::resnode(const gchar* key)
 {
-    _key = key;
+    _key.assign(key);
     _res = 0;
     _len = 0;
     _del = 0;

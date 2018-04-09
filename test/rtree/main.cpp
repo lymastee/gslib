@@ -42,7 +42,7 @@ int main()
 {
     const int test_area_width = 640;
     const int test_area_height = 480;
-    const int test_times = 50000;
+    const int test_times = 50;
 
     srand(GetTickCount());
 

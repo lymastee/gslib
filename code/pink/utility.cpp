@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 lymastee, All rights reserved.
+ * Copyright (c) 2016-2018 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -205,6 +205,18 @@ void get_cubic_parameter_equation(vec4 para[2], const vec2& a, const vec2& b, co
 {
     get_cubic_parameter_equation(para[0], a.x, b.x, c.x, d.x);
     get_cubic_parameter_equation(para[1], a.y, b.y, c.y, d.y);
+}
+
+static void get_first_derivate_coef(vec2& d, const vec3& coef)
+{
+    d.x = coef.x * 2.f;
+    d.y = coef.y;
+}
+
+void get_first_derivate_factor(vec2 df1[2], const vec3 para[2])
+{
+    get_first_derivate_coef(df1[0], para[0]);
+    get_first_derivate_coef(df1[1], para[1]);
 }
 
 static void get_first_derivate_coef(vec3& d, const vec4& coef)

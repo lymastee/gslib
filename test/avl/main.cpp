@@ -13,9 +13,9 @@ using namespace gs;
 struct test_tree_node
 {
     int num;
-    string str;
+    mutable string str;
     void operator =(const test_tree_node& n) { num = n.num; }
-    const string& to_string()
+    const string& to_string() const
     {
         str.format(_t("%d"), num);
         return str;
@@ -25,7 +25,7 @@ struct test_tree_node
 };
 
 typedef vector<int> test_value_set;
-typedef rbtree<test_tree_node> test_tree;       /* could be used to test red black tree or avl tree */
+typedef avltree<test_tree_node> test_tree;       /* could be used to test red black tree or avl tree */
 typedef std::set<test_tree_node> test_tree2;
 
 static test_value_set __test_values;

@@ -1,19 +1,19 @@
 /*
- * Copyright (c) 2016-2017 lymastee, All rights reserved.
+ * Copyright (c) 2016-2018 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -23,40 +23,42 @@
  * SOFTWARE.
  */
 
-#ifndef gobj_ae667559_1772_4e7b_a808_6f15e70fae88_h
-#define gobj_ae667559_1772_4e7b_a808_6f15e70fae88_h
+#ifndef texbatch_dfe6f3b4_430b_4424_98b6_d6b23235dc22_h
+#define texbatch_dfe6f3b4_430b_4424_98b6_d6b23235dc22_h
 
-#include <ariel/loopblinn.h>
+#include <gslib/std.h>
+#include <pink/type.h>
+#include <pink/image.h>
+#include <ariel/rectpack.h>
+#include <ariel/rendersys.h>
 
 __ariel_begin__
 
-class graphics_obj_entity:
-    public loop_blinn_processor
+using pink::rectf;
+using pink::image;
+
+class tex_batcher
 {
 public:
-    graphics_obj_entity(float w, float h): loop_blinn_processor(w, h) {}
-    void proceed_fill(const painter_path& path) { __super::proceed(path); }
-    void proceed_stroke(const painter_path& path);
+    typedef unordered_map<image*, rectf> location_map;
+
+public:
+    tex_batcher();
+    bool is_empty() const { return _rect_packer.is_empty(); }
+    float get_width() const { return _rect_packer.get_width() + _gap; }
+    float get_height() const { return _rect_packer.get_height() + _gap; }
+    void add_image(image* p);
+    void arrange();
+    const location_map& get_location_map() const { return _location_map; }
+    render_texture2d* create_texture(rendersys* rsys) const;
 
 protected:
-    int create_from_path(const painter_path& path, int start);
+    rect_packer         _rect_packer;
+    location_map        _location_map;
+    float               _gap;
 
-    struct path_seg
-    {
-        lb_line*        first;
-        lb_line*        last;
-        path_seg() { first = last = 0; }
-    };
-    void add_line_seg(path_seg& seg, const painter_path::line_to_node* node);
-    void add_quad_seg(path_seg& seg, const painter_node* node1, const painter_path::quad_to_node* node2);
-    void add_cubic_seg(path_seg& seg, const painter_node* node1, const painter_path::cubic_to_node* node2);
-};
-
-class graphics_obj:
-    public std::shared_ptr<graphics_obj_entity>
-{
-public:
-    graphics_obj(float w, float h);
+private:
+    void prepare_input_list(rp_input_list& inputs);
 };
 
 __ariel_end__

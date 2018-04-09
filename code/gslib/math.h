@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 lymastee, All rights reserved.
+ * Copyright (c) 2016-2018 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -133,8 +133,8 @@ float vec3dot(const vec3* v1, const vec3* v2);
 vec3* vec3cross(vec3* out, const vec3* v1, const vec3* v2);
 vec3* vec3add(vec3* out, const vec3* v1, const vec3* v2);
 vec3* vec3sub(vec3* out, const vec3* v1, const vec3* v2);
-vec3* vec3min(const vec3* v1, const vec3* v2);
-vec3* vec3max(const vec3* v1, const vec3* v2);
+vec3* vec3min(vec3* out, const vec3* v1, const vec3* v2);
+vec3* vec3max(vec3* out, const vec3* v1, const vec3* v2);
 vec3* vec3scale(vec3* out, const vec3* v, float s);
 vec3* vec3lerp(vec3* out, const vec3* v1, const vec3* v2, float s);
 vec3* vec3multiply(vec3* out, const vec3* v, const mat3* m);
@@ -147,8 +147,8 @@ float vec4lengthsq(const vec4* v);
 float vec4dot(const vec4* v1, const vec4* v2);
 vec4* vec4add(vec4* out, const vec4* v1, const vec4* v2);
 vec4* vec4sub(vec4* out, const vec4* v1, const vec4* v2);
-vec4* vec4min(const vec4* v1, const vec4* v2);
-vec4* vec4max(const vec4* v1, const vec4* v2);
+vec4* vec4min(vec4* out, const vec4* v1, const vec4* v2);
+vec4* vec4max(vec4* out, const vec4* v1, const vec4* v2);
 vec4* vec4scale(vec4* out, const vec4* v, float s);
 vec4* vec4lerp(vec4* out, const vec4* v1, const vec4* v2, float s);
 vec4* vec4multiply(vec4* out, const vec4* v, const matrix* m);

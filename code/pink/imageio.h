@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 lymastee, All rights reserved.
+ * Copyright (c) 2016-2018 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -46,8 +46,9 @@ class imageio
 {
 public:
     static bool read_image(image& img, const string& path);
+    static bool save_image(const image& img, const string& path);
     static bool read_bmp_image(image& img, const void* ptr, int size);
-    static bool save_bmp_image(image& img, const string& path);
+    static bool save_bmp_image(const image& img, const string& path);
     static bool read_png_image(image& img, const void* ptr, int size);
 };
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 lymastee, All rights reserved.
+ * Copyright (c) 2016-2018 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -59,9 +59,9 @@ struct _avltreenode_cpy_wrapper
     const value& const_ref() const { return _value; }
     void born() {}
     void kill() {}
-    template<class _cst>
+    template<class _ctor>
     void born() {}
-    template<class _cst>
+    template<class _ctor>
     void kill() {}
     void copy(const myref* a) { get_ref() = a->const_ref(); }
     void attach(myref* a) { assert(0); }
@@ -93,11 +93,11 @@ struct _avltreenode_wrapper
     const value& const_ref() const { return *_value; }
     void copy(const myref* a) { get_ref() = a->const_ref(); }
     void born() { !! }
-    template<class _cst>
-    void born() { _value = gs_new(_cst); }
+    template<class _ctor>
+    void born() { _value = gs_new(_ctor); }
     void kill() { if(_value) { gs_del(value, _value); _value = 0; } }
-    template<class _cst>
-    void kill() { if(_value) { gs_del(_cst, _value); _value = 0; } }
+    template<class _ctor>
+    void kill() { if(_value) { gs_del(_ctor, _value); _value = 0; } }
     void attach(myref* a)
     {
         assert(a && a->_value);
@@ -275,7 +275,7 @@ public:
     const value* operator->() const { return _cvptr->const_ptr(); }
     const value& operator*() const { return _cvptr->const_ref(); }
     iterator left() const { return iterator(vleft()); }
-    iterator right() const { return iterator(vright()) }
+    iterator right() const { return iterator(vright()); }
     iterator parent() const { return iterator(vparent()); }
     iterator sibling() const { return iterator(vsibling()); }
     iterator root() const { return iterator(vroot()); }
@@ -353,6 +353,7 @@ public:
         _vptr = w;
     }
     iterator get_root() const { return iterator(_vptr); }
+    const_iterator const_root() const { return const_iterator(_cvptr); }
     bool is_root(iterator i) const { return i.is_valid() ? (_cvptr == i.get_wrapper()) : false; }
     bool is_valid() const { return _cvptr != 0; }
     bool is_mine(iterator i) const
@@ -378,11 +379,11 @@ public:
         iterator n = (v < *i) ? i.left() : i.right();
         return n ? find(n, v) : i;
     }
-    template<class _cst = value>
+    template<class _ctor = value>
     iterator insert(const value& v)
     {
         iterator i = get_root();
-        return !i ? _init<_cst>(v) : _insert<_cst>(i, v);
+        return !i ? _init<_ctor>(v) : _insert<_ctor>(i, v);
     }
     void erase(iterator i)
     {
@@ -528,7 +529,7 @@ protected:
         w->kill();
         alloc::kill(w);
     }
-    template<class _cst>
+    template<class _ctor>
     iterator _insert(iterator i, const value& v)
     {
         assert(i);
@@ -536,15 +537,15 @@ protected:
             return iterator(0);     /* failed */
         if(v < *i) {
             if(i.left())
-                return _insert<_cst>(i.left(), v);
-            iterator j = _add_left<_cst>(i, v);
+                return _insert<_ctor>(i.left(), v);
+            iterator j = _add_left<_ctor>(i, v);
             _balance_insert(j);
             return j;
         }
         else {
             if(i.right())
-                return _insert<_cst>(i.right(), v);
-            iterator j = _add_right<_cst>(i, v);
+                return _insert<_ctor>(i.right(), v);
+            iterator j = _add_right<_ctor>(i, v);
             _balance_insert(j);
             return j;
         }
@@ -830,35 +831,35 @@ protected:
         return rl;
     }
 
-    template<class _cst>
+    template<class _ctor>
     iterator _init()
     {
         assert(!_vptr);
         _vptr = alloc::born();
-        _vptr->born<_cst>();
+        _vptr->born<_ctor>();
         return iterator(_vptr);
     }
-    template<class _cst>
+    template<class _ctor>
     iterator _init(const value& v)
     {
         assert(!_vptr);
-        _vptr = initval<_cst, wrapper::tsf_behavior>::run(alloc::born(), v);
+        _vptr = initval<_ctor, wrapper::tsf_behavior>::run(alloc::born(), v);
         assert(_vptr);
         return iterator(_vptr);
     }
-    template<class _cst>
+    template<class _ctor>
     iterator _add_left(iterator i, const value& v)
     {
         assert(i && !i.left());
-        wrapper* n = initval<_cst, wrapper::tsf_behavior>::run(alloc::born(), v);
+        wrapper* n = initval<_ctor, wrapper::tsf_behavior>::run(alloc::born(), v);
         connect_left_child(i.get_wrapper(), n);
         return iterator(n);
     }
-    template<class _cst>
+    template<class _ctor>
     iterator _add_right(iterator i, const value& v)
     {
         assert(i && !i.right());
-        wrapper* n = initval<_cst, wrapper::tsf_behavior>::run(alloc::born(), v);
+        wrapper* n = initval<_ctor, wrapper::tsf_behavior>::run(alloc::born(), v);
         connect_right_child(i.get_wrapper(), n);
         return iterator(n);
     }
@@ -871,10 +872,10 @@ protected:
 
 protected:
     friend struct initval;
-    template<class _cst, class _tsftrait>
+    template<class _ctor, class _tsftrait>
     struct initval;
-    template<class _cst>
-    struct initval<_cst, _avltree_trait_copy>
+    template<class _ctor>
+    struct initval<_ctor, _avltree_trait_copy>
     {
         static wrapper* run(wrapper* w, const value& v)
         {
@@ -883,8 +884,8 @@ protected:
             return w;
         }
     };
-    template<class _cst>
-    struct initval<_cst, _avltree_trait_detach>
+    template<class _ctor>
+    struct initval<_ctor, _avltree_trait_detach>
     {
         static wrapper* run(wrapper* w, const value& v)
         {

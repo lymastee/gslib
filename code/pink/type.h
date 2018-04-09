@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 lymastee, All rights reserved.
+ * Copyright (c) 2016-2018 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -67,14 +67,18 @@ public:
 
 struct color
 {
-    uint    red: 8, green: 8, blue: 8, alpha: 8;
+    union
+    {
+        struct { byte red, green, blue, alpha; };
+        uint _data;
+    };
 
 public:
     color() { data() = 0; }
     color(int r, int g, int b) { set_color(r, g, b); }
     color(int r, int g, int b, int a) { set_color(r, g, b, a); }
-    uint& data() { return *(uint*)this; }
-    uint data() const { return *(uint*)this; }
+    uint& data() { return _data; }
+    uint data() const { return _data; }
     void set_color(int r, int g, int b) { red = r, green = g, blue = b, alpha = 255; }
     void set_color(int r, int g, int b, int a) { red = r, green = g, blue = b, alpha = a; }
     void from_pixel(const pixel& p) { set_color(p.red, p.green, p.blue); }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 lymastee, All rights reserved.
+ * Copyright (c) 2016-2018 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -196,7 +196,11 @@ public:
 
 protected:
     void _stl_tidy(bool built, int newsize) { _Tidy(built, newsize); }
+#if defined(_MSC_VER) && (_MSC_VER >= 1910)
+    bool _stl_grow(int newsize, bool trim = false) { return _Grow(newsize); }
+#else
     bool _stl_grow(int newsize, bool trim = false) { return _Grow(newsize, trim); }
+#endif
     element* _stl_rawstr() { return _Myptr(); }
     const element* _stl_rawstr() const { return _Myptr(); }
 #if defined(_MSC_VER) && (_MSC_VER >= 1900)

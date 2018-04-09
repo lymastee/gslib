@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 lymastee, All rights reserved.
+ * Copyright (c) 2016-2018 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -29,6 +29,7 @@
 #include <ariel/config.h>
 #include <ariel/type.h>
 #include <gslib/std.h>
+#include <pink/image.h>
 
 __ariel_begin__
 
@@ -44,6 +45,15 @@ enum shader_type
     /* more.. */
 };
 
+enum sampler_state_filter
+{
+    ssf_point,
+    ssf_linear,
+    ssf_anisotropic,
+};
+
+using pink::image;
+
 class __gs_novtable rendersys abstract
 {
 public:
@@ -51,6 +61,10 @@ public:
     typedef render_vertex_buffer vertex_buffer;
     typedef render_index_buffer index_buffer;
     typedef render_constant_buffer constant_buffer;
+    typedef render_texture1d texture1d;
+    typedef render_texture2d texture2d;
+    typedef render_texture3d texture3d;
+    typedef render_sampler_state sampler_state;
     config_select_type(select_render_platform, create_shader_context);
     config_select_type(select_render_platform, vertex_format_desc);
 
@@ -58,8 +72,9 @@ public:
     virtual ~rendersys() {}
     virtual bool setup(uint hwnd, const configs& cfg) = 0;
     virtual void destroy() = 0;
-    virtual void begin_create_shader(create_shader_context& context, const gchar* file, const gchar* entry, const gchar* sm, render_include* inc) = 0;
-    virtual void begin_create_shader_mem(create_shader_context& context, const char* src, int len, const gchar* name, const gchar* entry, const gchar* sm, render_include* inc) = 0;
+    virtual void begin_create_shader(create_shader_context& context, const void* buf, int size) = 0;
+    virtual void begin_create_shader_from_file(create_shader_context& context, const gchar* file, const gchar* entry, const gchar* sm, render_include* inc) = 0;
+    virtual void begin_create_shader_from_memory(create_shader_context& context, const char* src, int len, const gchar* name, const gchar* entry, const gchar* sm, render_include* inc) = 0;
     virtual void end_create_shader(create_shader_context& context) = 0;
     virtual vertex_shader* create_vertex_shader(create_shader_context& context) = 0;
     virtual pixel_shader* create_pixel_shader(create_shader_context& context) = 0;
@@ -71,6 +86,9 @@ public:
     virtual vertex_buffer* create_vertex_buffer(uint stride, uint count, bool read, bool write, uint usage, const void* ptr = 0) = 0;
     virtual index_buffer* create_index_buffer(uint count, bool read, bool write, uint usage, const void* ptr = 0) = 0;
     virtual constant_buffer* create_constant_buffer(uint stride, bool read, bool write, const void* ptr = 0) = 0;
+    virtual shader_resource_view* create_shader_resource_view(render_resource* res) = 0;    /* texture view in GL */
+    virtual sampler_state* create_sampler_state(sampler_state_filter filter) = 0;
+    virtual texture2d* create_texture2d(const image& img, uint mips, uint usage, uint bindflags, uint cpuflags) = 0;
     virtual void update_buffer(void* buf, int size, const void* ptr) = 0;
     virtual void set_vertex_format(vertex_format* vfmt) = 0;
     virtual void set_vertex_buffer(vertex_buffer* vb, uint stride, uint offset) = 0;
@@ -82,7 +100,9 @@ public:
     virtual void set_pixel_shader(pixel_shader* ps) = 0;
     virtual void set_geometry_shader(geometry_shader* gs) = 0;
     virtual void set_viewport(const viewport& vp) = 0;
-    virtual void set_constant_buffers(uint slot, constant_buffer* cb, shader_type st) = 0;
+    virtual void set_constant_buffer(uint slot, constant_buffer* cb, shader_type st) = 0;
+    virtual void set_sampler_state(uint slot, sampler_state* sstate, shader_type st) = 0;
+    virtual void set_shader_resource(uint slot, shader_resource_view* srv, shader_type st) = 0;
     virtual void draw(uint count, uint start) = 0;
     virtual void draw_indexed(uint count, uint start, int base = 0) = 0;
 
@@ -94,6 +114,9 @@ public:
 extern void release_vertex_buffer(render_vertex_buffer* buf);
 extern void release_index_buffer(render_index_buffer* buf);
 extern void release_constant_buffer(render_constant_buffer* buf);
+
+template<class res_class>
+render_resource* convert_to_resource(res_class*);
 
 __ariel_end__
 

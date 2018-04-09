@@ -64,7 +64,7 @@ void parse_res_begin(file& f, const gchar* name)
 
     assert(name);
     string str;
-    str = _t("static struct ");
+    str.assign(_t("static struct "));
     str += name;
     str += _t(" {\n") indent4;
     str += name;
@@ -80,7 +80,7 @@ void parse_res_end(file& f, const gchar* name)
     string instname;
     instname.format(_t("m%s_inst"), name);
     string str;
-    str = indent4 _t("}\n} ");
+    str.assign(indent4 _t("}\n} "));
     str += instname;
     str += _t(";\n");
     f.write(str);
@@ -106,7 +106,7 @@ bool parse_res_node(const xml_node* node, gs::string& buf, int index)
     string srn;
     srn.format(_t("r%d"), index);
 
-    buf = indent8 _t("/* ");
+    buf.assign(_t("/* "));
     buf += *vdir;
     buf += _t(" */\n")
         indent8 _t("static res ");

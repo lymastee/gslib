@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 lymastee, All rights reserved.
+ * Copyright (c) 2016-2018 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -128,7 +128,6 @@ public:
     enum image_format
     {
         fmt_raw,                    /* raw8 */
-        fmt_rgb,                    /* rgb888 */
         fmt_rgba,                   /* rgba8888 */
     };
 
@@ -142,14 +141,16 @@ public:
     int get_depth() const { return _depth; }
     bool create(image_format fmt, int w, int h);
     void destroy();
+    void init(const color& cr);
     bool has_alpha() const;
     int get_width() const { return _width; }
     int get_height() const { return _height; }
     int get_bytes_per_line() const { return _bytes_per_line; }
-    //byte* get_color(int x, int y) const;
+    int get_size() const { return _color_bytes; }
     byte* get_data(int x, int y) const;
     bool load(const string& filepath);
     bool load(const gchar* filepath, int len) { return load(string(filepath, len)); }
+    bool save(const string& filepath) const;
 
 protected:
     image_format        _format;

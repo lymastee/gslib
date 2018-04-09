@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 lymastee, All rights reserved.
+ * Copyright (c) 2016-2018 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -26,7 +26,7 @@
 #include <assert.h>
 #include <pink/image.h>
 #include <pink/widget.h>
-#include <pink/imgloader.h>
+//#include <pink/imgloader.h>
 #include <pink/imageio.h>
 
 __pink_begin__
@@ -475,9 +475,6 @@ bool image::create(image_format fmt, int w, int h)
     case fmt_raw:
         _depth = 8;
         break;
-    case fmt_rgb:
-        _depth = 24;
-        break;
     case fmt_rgba:
         _depth = 32;
         break;
@@ -503,6 +500,14 @@ void image::destroy()
     _bytes_per_line = 0;
 }
 
+void image::init(const color& cr)
+{
+    if(!_data)
+        return;
+    assert(_format == fmt_rgba && _depth == 32);
+    memset(_data, cr.data(), _color_bytes);
+}
+
 bool image::has_alpha() const
 {
     if(_depth == 32) {
@@ -511,17 +516,6 @@ bool image::has_alpha() const
     }
     return false;
 }
-
-// byte* image::get_color(int x, int y) const
-// {
-//     assert(is_valid());
-//     if((x >= _width) || (y >= _height)) {
-//         assert(!"invalid position.");
-//         return 0;
-//     }
-//     int pos = _bytes_per_line * y + x;
-//     return _data + pos;
-// }
 
 byte* image::get_data(int x, int y) const
 {
@@ -537,6 +531,11 @@ byte* image::get_data(int x, int y) const
 bool image::load(const string& filepath)
 {
     return imageio::read_image(*this, filepath);
+}
+
+bool image::save(const string& filepath) const
+{
+    return imageio::save_image(*this, filepath);
 }
 
 __pink_end__

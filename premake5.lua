@@ -29,7 +29,16 @@ project "ariel"
 	language "C++"
 	kind "WindowedApp"
 	entrypoint ""
+	if _ACTION == "vs2017" then
+		sysincludedirs {
+			"C:/Program Files (x86)/Windows Kits/10/Include/10.0.15063.0/ucrt"
+		}
+		syslibdirs {
+			"C:/Program Files (x86)/Windows Kits/10/Lib/10.0.15063.0/ucrt/x86"
+		}
+	end
 	includedirs {
+		todir,
 		"code",
 		"code/ext"
 	}
@@ -40,6 +49,18 @@ project "ariel"
 		"dxgi.lib",
 		"d3d11.lib",
 		"d3dcompiler.lib"
+	}
+	prebuildcommands {
+		'fxc /T vs_4_0 /E "rose_vsf_cr" /Fd /Zi /Fh "rose_vsf_cr.h" "../../code/ariel/rose.hlsl"',
+		'fxc /T ps_4_0 /E "rose_psf_cr" /Fd /Zi /Fh "rose_psf_cr.h" "../../code/ariel/rose.hlsl"',
+		'fxc /T vs_4_0 /E "rose_vsf_klm_cr" /Fd /Zi /Fh "rose_vsf_klm_cr.h" "../../code/ariel/rose.hlsl"',
+		'fxc /T ps_4_0 /E "rose_psf_klm_cr" /Fd /Zi /Fh "rose_psf_klm_cr.h" "../../code/ariel/rose.hlsl"',
+		'fxc /T vs_4_0 /E "rose_vss_coef_cr" /Fd /Zi /Fh "rose_vss_coef_cr.h" "../../code/ariel/rose.hlsl"',
+		'fxc /T ps_4_0 /E "rose_pss_coef_cr" /Fd /Zi /Fh "rose_pss_coef_cr.h" "../../code/ariel/rose.hlsl"',
+		'fxc /T vs_4_0 /E "rose_vsf_klm_tex" /Fd /Zi /Fh "rose_vsf_klm_tex.h" "../../code/ariel/rose.hlsl"',
+		'fxc /T ps_4_0 /E "rose_psf_klm_tex" /Fd /Zi /Fh "rose_psf_klm_tex.h" "../../code/ariel/rose.hlsl"',
+		'fxc /T vs_4_0 /E "rose_vss_coef_tex" /Fd /Zi /Fh "rose_vss_coef_tex.h" "../../code/ariel/rose.hlsl"',
+		'fxc /T ps_4_0 /E "rose_pss_coef_tex" /Fd /Zi /Fh "rose_pss_coef_tex.h" "../../code/ariel/rose.hlsl"'
 	}
 	files {
 		"code/ariel/batch.cpp",
@@ -60,8 +81,9 @@ project "ariel"
 		"code/ariel/framesys.cpp",
 		"code/ariel/framesys.h",
 		"code/ariel/framesyswin32.cpp",
-		"code/ariel/gobj.cpp",
-		"code/ariel/gobj.h",
+		"code/ariel/mesh.cpp",
+		"code/ariel/mesh.h",
+		"code/ariel/mesh.hpp",
 		"code/pink/image.cpp",
 		"code/pink/image.h",
 		"code/pink/imageio.cpp",
@@ -77,8 +99,8 @@ project "ariel"
 		"code/pink/painter.h",
 		"code/gslib/pool.cpp",
 		"code/gslib/pool.h",
-		"code/ariel/quadpack.cpp",
-		"code/ariel/quadpack.h",
+		"code/ariel/rectpack.cpp",
+		"code/ariel/rectpack.h",
 		"code/pink/raster.cpp",
 		"code/pink/raster.h",
 		"code/ariel/rendersys.cpp",
@@ -89,6 +111,8 @@ project "ariel"
 		"code/ariel/rose.h",
 		"code/ariel/rose.hlsl",
 		"code/gslib/rtree.h",
+		"code/ariel/texbatch.h",
+		"code/ariel/texbatch.cpp",
 		"code/ariel/scene.cpp",
 		"code/ariel/scene.h",
 		"code/gslib/std.h",
@@ -106,10 +130,70 @@ project "ariel"
 		"code/pink/widget.h"
 	}
 	
+project "rathen"
+	language "C++"
+	kind "ConsoleApp"
+	entrypoint ""
+	if _ACTION == "vs2017" then
+		sysincludedirs {
+			"C:/Program Files (x86)/Windows Kits/10/Include/10.0.15063.0/ucrt"
+		}
+		syslibdirs {
+			"C:/Program Files (x86)/Windows Kits/10/Lib/10.0.15063.0/ucrt/x86"
+		}
+	end
+	includedirs {
+		"code",
+		"code/ext"
+	}
+	files {
+		"code/rathen/basis.cpp",
+		"code/rathen/basis.h",
+		"code/rathen/buildin.cpp",
+		"code/rathen/buildin.h",
+		"code/rathen/compiler.cpp",
+		"code/rathen/compiler.h",
+		"code/rathen/config.h",
+		"code/rathen/lexical.h",
+		"code/rathen/library.cpp",
+		"code/rathen/library.h",
+		"code/rathen/loader.cpp",
+		"code/rathen/loader.h",
+		"code/rathen/pack.cpp",
+		"code/rathen/pack.h",
+		"code/rathen/parser.cpp",
+		"code/rathen/parser.h",
+		"code/rathen/proc.cpp",
+		"code/rathen/proc.h",
+		"code/rathen/rasm.cpp",
+		"code/rathen/rasm.h",
+		"code/rathen/tuple.cpp",
+		"code/rathen/tuple.h",
+		"code/gslib/error.h",
+		"code/gslib/error.cpp",
+		"code/gslib/string.cpp",
+		"code/gslib/string.h",
+		"code/gslib/std.h",
+		"code/gslib/type.h",
+		"code/gslib/tree.h",
+		"code/gslib/pool.h",
+		"code/gslib/pool.cpp",
+		"proj/rathen/main.cpp"
+	}
+	
+-- following are tests
 project "avl"
 	language "C++"
 	kind "ConsoleApp"
 	entrypoint ""
+	if _ACTION == "vs2017" then
+		sysincludedirs {
+			"C:/Program Files (x86)/Windows Kits/10/Include/10.0.15063.0/ucrt"
+		}
+		syslibdirs {
+			"C:/Program Files (x86)/Windows Kits/10/Lib/10.0.15063.0/ucrt/x86"
+		}
+	end
 	includedirs {
 		"code",
 		"code/ext"
@@ -140,6 +224,14 @@ project "cdt"
 	language "C++"
 	kind "ConsoleApp"
 	entrypoint ""
+	if _ACTION == "vs2017" then
+		sysincludedirs {
+			"C:/Program Files (x86)/Windows Kits/10/Include/10.0.15063.0/ucrt"
+		}
+		syslibdirs {
+			"C:/Program Files (x86)/Windows Kits/10/Lib/10.0.15063.0/ucrt/x86"
+		}
+	end
 	includedirs {
 		"code",
 		"code/ext"
@@ -167,6 +259,14 @@ project "rtree"
 	language "C++"
 	kind "ConsoleApp"
 	entrypoint ""
+	if _ACTION == "vs2017" then
+		sysincludedirs {
+			"C:/Program Files (x86)/Windows Kits/10/Include/10.0.15063.0/ucrt"
+		}
+		syslibdirs {
+			"C:/Program Files (x86)/Windows Kits/10/Lib/10.0.15063.0/ucrt/x86"
+		}
+	end
 	includedirs {
 		"code",
 		"code/ext"
@@ -190,11 +290,56 @@ project "rtree"
 		"code/pink/type.h",
 		"test/rtree/main.cpp"
 	}
+	
+project "rectpack"
+	language "C++"
+	kind "ConsoleApp"
+	entrypoint ""
+	if _ACTION == "vs2017" then
+		sysincludedirs {
+			"C:/Program Files (x86)/Windows Kits/10/Include/10.0.15063.0/ucrt"
+		}
+		syslibdirs {
+			"C:/Program Files (x86)/Windows Kits/10/Lib/10.0.15063.0/ucrt/x86"
+		}
+	end
+	includedirs {
+		"code",
+		"code/ext"
+	}
+	files {
+		"code/gslib/config.h",
+		"code/gslib/error.cpp",
+		"code/gslib/error.h",
+		"code/gslib/pool.cpp",
+		"code/gslib/pool.h",
+		"code/gslib/std.h",
+		"code/gslib/string.cpp",
+		"code/gslib/string.h",
+		"code/gslib/tree.h",
+		"code/gslib/type.h",
+		"code/pink/type.cpp",
+		"code/pink/type.h",
+		"code/ariel/config.h",
+		"code/ariel/type.h",
+		"code/ariel/rectpack.cpp",
+		"code/ariel/rectpack.h",
+		"test/rectpack/main.cpp"
+	}
 
+-- following are tools
 project "mres"
 	language "C++"
 	kind "ConsoleApp"
 	entrypoint ""
+	if _ACTION == "vs2017" then
+		sysincludedirs {
+			"C:/Program Files (x86)/Windows Kits/10/Include/10.0.15063.0/ucrt"
+		}
+		syslibdirs {
+			"C:/Program Files (x86)/Windows Kits/10/Lib/10.0.15063.0/ucrt/x86"
+		}
+	end
 	includedirs {
 		"code",
 		"code/ext"
@@ -217,5 +362,25 @@ project "mres"
 		"code/gslib/xml.cpp",
 		"code/gslib/xml.h",
 		"proj/mres/main.cpp"
+	}
+	
+project "copyrighttool"
+	language "C++"
+	kind "ConsoleApp"
+	entrypoint ""
+	if _ACTION == "vs2017" then
+		sysincludedirs {
+			"C:/Program Files (x86)/Windows Kits/10/Include/10.0.15063.0/ucrt"
+		}
+		syslibdirs {
+			"C:/Program Files (x86)/Windows Kits/10/Lib/10.0.15063.0/ucrt/x86"
+		}
+	end
+	includedirs {
+		"code",
+		"code/ext"
+	}
+	files {
+		"proj/copyrighttool/main.cpp"
 	}
 	

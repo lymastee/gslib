@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 lymastee, All rights reserved.
+ * Copyright (c) 2016-2018 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -72,13 +72,20 @@ extern void reset_error();
 } while(0)
 
 extern void dumperr_file(void);
+extern void trace_hold(const gchar* fmt, ...);
+extern void _trace_to_clipboard();
 
-#if defined (DEBUG) || defined (_DEBUG)
+#ifdef _GS_TRACE_TO_CLIPBOARD
+#define trace(fmt, ...) do { trace_hold(fmt, __VA_ARGS__); } while(0)
+#define trace_to_clipboard _trace_to_clipboard
+#elif defined (DEBUG) || defined (_DEBUG)
 extern void trace(const gchar* fmt, ...);
 extern void trace_all(const gchar* str);
+#define trace_to_clipboard __noop
 #else
 #define trace(fmt, ...) __noop
 #define trace_all __noop;
+#define trace_to_clipboard __noop
 #endif
 
 __gslib_end__

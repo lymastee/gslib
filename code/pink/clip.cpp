@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 lymastee, All rights reserved.
+ * Copyright (c) 2016-2018 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -2065,9 +2065,17 @@ void clip_sweep_line_algorithm::replace_curve(clip_polygon& poly, clip_joint*& s
             pnf->get_points(cp, _countof(cp));
             auto* c1 = poly.create_final_joint(0);
             assert(c1);
-            c1->set_point(cp[1]);
-            fj1->set_point(cp[0]);
-            fj2->set_point(cp[2]);
+            bool is_reversed = (src1->get_point() != cp[0]);
+            if(!is_reversed) {
+                c1->set_point(cp[1]);
+                fj1->set_point(cp[0]);
+                fj2->set_point(cp[2]);
+            }
+            else {
+                c1->set_point(cp[1]);
+                fj1->set_point(cp[2]);
+                fj2->set_point(cp[0]);
+            }
             clip_connect(joint1->get_prev_line(), fj1);
             clip_connect(fj1, joint1->get_next_line(), fj2);
             poly.create_line(fj1, c1);
@@ -2079,10 +2087,19 @@ void clip_sweep_line_algorithm::replace_curve(clip_polygon& poly, clip_joint*& s
             auto* c1 = poly.create_final_joint(0);
             auto* c2 = poly.create_final_joint(0);
             assert(c1 && c2);
-            c1->set_point(cp[1]);
-            c2->set_point(cp[2]);
-            fj1->set_point(cp[0]);
-            fj2->set_point(cp[3]);
+            bool is_reversed = (src1->get_point() != cp[0]);
+            if(!is_reversed) {
+                c1->set_point(cp[1]);
+                c2->set_point(cp[2]);
+                fj1->set_point(cp[0]);
+                fj2->set_point(cp[3]);
+            }
+            else {
+                c1->set_point(cp[2]);
+                c2->set_point(cp[1]);
+                fj1->set_point(cp[3]);
+                fj2->set_point(cp[0]);
+            }
             clip_connect(joint1->get_prev_line(), fj1);
             clip_connect(fj1, joint1->get_next_line(), fj2);
             poly.create_line(fj1, c1);
@@ -3082,9 +3099,11 @@ void clip_assembler_exclude::finish_proceed_patches(iterator p)
 void clip_assembler_exclude::finish_proceed_sub_patches(iterator p)
 {
     assert(p.is_valid());
-    for(auto c = p.child(); c.is_valid(); c.to_next()) {
+    for(auto c = p.child(); c.is_valid(); ) {
+        auto next = c.next();
         if(c->is_patch())
             finish_proceed_patches(c);
+        c = next;
     }
     for(auto c = p.child(); c.is_valid();) {
         if(!c->is_patch()) {

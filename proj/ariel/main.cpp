@@ -19,6 +19,9 @@ using namespace gs;
 using namespace gs::pink;
 using namespace gs::ariel;
 
+
+image img;
+
 class sample_widget:
     public widget
 {
@@ -50,11 +53,18 @@ public:
 //         path.line_to(230.f, 210.f);
 
         painter_brush brush;
-        brush.set_tag(painter_brush::solid);
-        brush.set_color(color(255,0,0));
+
+        img.load(_t("666.bmp"));
+        painter_extra_data ext;
+        ext.reset(gs_new(painter_picture_data, &img), [](painter_picture_data* p) { gs_del(painter_picture_data, p); });
+        brush.set_tag(painter_brush::picture);
+        brush.set_extra(ext);
+
+        //brush.set_tag(painter_brush::solid);
+        //brush.set_color(color(255,0,0));
         painter_pen pen;
-        pen.set_tag(painter_pen::null);
-        pen.set_color(color(0,255,0));
+        pen.set_tag(painter_pen::none);
+        pen.set_color(color(255,255,0));
         pex->save();
         pex->set_brush(brush);
         pex->set_pen(pen);
@@ -62,8 +72,6 @@ public:
         pex->restore();
     }
 };
-
-
 
 int gs_main()
 {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2017 lymastee, All rights reserved.
+ * Copyright (c) 2016-2018 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -225,7 +225,7 @@ public:
     const value* get_ptr() const { return &_value; }
     value& get_ref() { return _value; }
     const value& get_ref() const { return _value; }
-    template<class _cst>
+    template<class _ctor>
     void born() {}
     void born() {}
     void kill() {}
@@ -250,14 +250,14 @@ public:
     wrapper() { _value = 0; }
     value* get_ptr() const { return _value; }
     value& get_ref() const { return *_value; }
-    template<class _cst>
-    void born() { _value = gs_new(_cst); }
-    template<class _cst, class _a1>
-    void born(_a1& a) { _value = gs_new(_cst, a); }
-    template<class _cst, class _a1, class _a2>
-    void born(_a1& a, _a2& b) { _value = gs_new(_cst, a, b); }
-    template<class _cst, class _a1, class _a2, class _a3>
-    void born(_a1& a, _a2& b, _a3& c) { _value = gs_new(_cst, a, b, c); }
+    template<class _ctor>
+    void born() { _value = gs_new(_ctor); }
+    template<class _ctor, class _a1>
+    void born(_a1& a) { _value = gs_new(_ctor, a); }
+    template<class _ctor, class _a1, class _a2>
+    void born(_a1& a, _a2& b) { _value = gs_new(_ctor, a, b); }
+    template<class _ctor, class _a1, class _a2, class _a3>
+    void born(_a1& a, _a2& b, _a3& c) { _value = gs_new(_ctor, a, b, c); }
     void born() { _value = gs_new(value); }
     void kill() { gs_del(value, _value); }
     void copy(const wrapper* a) { assert(!"prevent."); }
@@ -498,52 +498,52 @@ public:
             _erase(i);
         }
     }
-    template<class _cst>
+    template<class _ctor>
     iterator insert(iterator i)
     {
         if(!i.is_valid())
-            return _cvptr ? get_root() : _init<_cst>();
+            return _cvptr ? get_root() : _init<_ctor>();
         wrapper* w = i._vptr;
         wrapper* p = w->_parent;
         wrapper* n = alloc::born();
-        n->born<_cst>();
+        n->born<_ctor>();
         p->birth_before(w, n);
         n->_parent = p;
         return iterator(n);
     }
-    template<class _cst>
+    template<class _ctor>
     iterator insert_after(iterator i)
     {
         if(!i.is_valid())
-            return _cvptr ? get_root() : _init<_cst>();
+            return _cvptr ? get_root() : _init<_ctor>();
         wrapper* w = i._vptr;
         wrapper* p = w->_parent;
         wrapper* n = alloc::born();
-        n->born<_cst>();
+        n->born<_ctor>();
         p->birth_after(w, n);
         n->_parent = p;
         return iterator(n);
     }
-    template<class _cst>
+    template<class _ctor>
     iterator birth(iterator i)
     {
         if(!i.is_valid())
-            return _cvptr ? get_root() : _init<_cst>();
+            return _cvptr ? get_root() : _init<_ctor>();
         wrapper* w = i._vptr;
         wrapper* n = alloc::born();
-        n->born<_cst>();
+        n->born<_ctor>();
         w->birth_before(w->child(), n);
         n->_parent = w;
         return iterator(n);
     }
-    template<class _cst>
+    template<class _ctor>
     iterator birth_tail(iterator i)
     {
         if(!i.is_valid())
-            return _cvptr ? get_root() : _init<_cst>();
+            return _cvptr ? get_root() : _init<_ctor>();
         wrapper* w = i._vptr;
         wrapper* n = alloc::born();
-        n->born<_cst>();
+        n->born<_ctor>();
         w->birth_after(w->last_child(), n);
         n->_parent = w;
         return iterator(n);
@@ -596,7 +596,7 @@ public:
         for(wrapper* c = w->child(); c; c = c->next())
             c->_parent = w;
     }
-    template<class _cst>
+    template<class _ctor>
     iterator swap(iterator p, myref& that)
     {
         assert(this != &that);
@@ -610,7 +610,7 @@ public:
         assert(prevsib || grand);
         myref t;
         detach(t, p);
-        auto pos = prevsib ? insert_after<_cst>(prevsib) : birth<_cst>(grand);
+        auto pos = prevsib ? insert_after<_ctor>(prevsib) : birth<_ctor>(grand);
         assert(pos);
         attach(that, pos);
         that.swap(t);
@@ -655,11 +655,11 @@ protected:
         w->kill();
         alloc::kill(w);
     }
-    template<class _cst>
+    template<class _ctor>
     iterator _init()
     {
         _vptr = alloc::born();
-        _vptr->born<_cst>();
+        _vptr->born<_ctor>();
         _vptr->_parent = 0;
         return iterator(_vptr);
     }
@@ -702,7 +702,7 @@ public:
     }
 
 protected:
-    string decorate(iterator i, int level)
+    string decorate(const_iterator i, int level)
     {
         if(!i.is_valid())
             return string();
@@ -716,7 +716,7 @@ protected:
         r.append(_t(")\n"));
         return r;
     }
-    void append(iterator i, int level)
+    void append(const_iterator i, int level)
     {
         if(!i.is_valid())
             return;

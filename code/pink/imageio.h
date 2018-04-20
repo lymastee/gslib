@@ -50,6 +50,9 @@ public:
     static bool read_bmp_image(image& img, const void* ptr, int size);
     static bool save_bmp_image(const image& img, const string& path);
     static bool read_png_image(image& img, const void* ptr, int size);
+    static bool save_png_image(const image& img, const string& path);
+    static bool read_jpg_image(image& img, const void* ptr, int size);
+    static bool save_jpg_image(const image& img, const string& path);
 };
 
 __pink_end__

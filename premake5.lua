@@ -43,12 +43,17 @@ project "ariel"
 		"code/ext"
 	}
 	libdirs {
-		"code"
+		"code",
+		"code/ext/zlib",
+		"code/ext/libjpeg",
+		"code/ext/libpng"
 	}
 	links {
 		"dxgi.lib",
 		"d3d11.lib",
-		"d3dcompiler.lib"
+		"zlib.lib",
+		"libjpeg.lib",
+		"libpng.lib"
 	}
 	prebuildcommands {
 		'fxc /T vs_4_0 /E "rose_vsf_cr" /Fd /Zi /Fh "rose_vsf_cr.h" "../../code/ariel/rose.hlsl"',

@@ -24,9 +24,17 @@
  */
 
 #include <intrin.h>
+#include <stdio.h>
 #include <pink/imageio.h>
 #include <pink/image.h>
 #include <gslib/file.h>
+#include <gslib/error.h>
+
+extern "C" {
+#include <libjpeg/jpeglib.h>
+#include <libpng/png.h>
+#include <libpng/pngconf.h>
+}
 
 __pink_begin__
 
@@ -40,6 +48,13 @@ static image_format_type detect_image_format(const string& path)
         strtool::compare_cl(pf, _t("dib"), 3) == 0
         )
         return image_format_bmp;
+    else if(strtool::compare_cl(pf, _t("jpg"), 3) == 0 ||
+        strtool::compare_cl(pf, _t("jpeg"), 4) == 0 ||
+        strtool::compare_cl(pf, _t("jfif"), 4) == 0
+        )
+        return image_format_jpg;
+    else if(strtool::compare_cl(pf, _t("png"), 3) == 0)
+        return image_format_png;
     return image_format_unknown;
 }
 
@@ -58,6 +73,12 @@ bool imageio::read_image(image& img, const string& path)
     case image_format_bmp:
         ret = read_bmp_image(img, buf, size);
         break;
+    case image_format_png:
+        ret = read_png_image(img, buf, size);
+        break;
+    case image_format_jpg:
+        ret = read_jpg_image(img, buf, size);
+        break;
     default:
         assert(!"unknown format.");
         ret = false;
@@ -73,6 +94,10 @@ bool imageio::save_image(const image& img, const string& path)
     {
     case image_format_bmp:
         return save_bmp_image(img, path);
+    case image_format_png:
+        return save_png_image(img, path);
+    case image_format_jpg:
+        return save_jpg_image(img, path);
     default:
         assert(!"unknown image type.");
         return false;
@@ -162,6 +187,16 @@ const int BMP_RGB  = 0;                         /* no compression */
 const int BMP_RLE8 = 1;                         /* run-length encoded, 8 bits */
 const int BMP_RLE4 = 2;                         /* run-length encoded, 4 bits */
 const int BMP_BITFIELDS = 3;                    /* RGB values encoded in data as bit-fields */
+
+static int convert_dpi_to_dpm(int dpi)
+{
+    return (int)((float)dpi / 0.0254f + 0.5f);
+}
+
+static int convert_dpm_to_dpi(int dpm)
+{
+    return (int)((float)dpm * 0.0254f + 0.5f);
+}
 
 static bool read_dib_fileheader(bmp_file_hdr& fileheader, const void* ptr, int size)
 {
@@ -349,10 +384,14 @@ public:
             return 0;
         if(size > left)
             size = left;
-        memcpy_s(p, size, _ptr + _pos, size);
+        memcpy(p, _ptr + _pos, size);
         _pos += size;
         return size;
     }
+    void seek(int p) { _pos = p; }
+    int current_pos() const { return _pos; }
+    const byte* get_data() const { return _ptr; }
+    int get_size() const { return _size; }
 
 protected:
     const byte*             _ptr;
@@ -703,8 +742,8 @@ bool imageio::read_bmp_image(image& img, const void* ptr, int size)
     /* create image data here */
     auto fmt = image::fmt_rgba;
     img.create(fmt, bhargs.width, bhargs.height);
-    img._xpels_per_meter = bi.bi_xppm;
-    img._ypels_per_meter = bi.bi_yppm;
+    img._xdpi = convert_dpm_to_dpi(bi.bi_xppm);
+    img._ydpi = convert_dpm_to_dpi(bi.bi_yppm);
     if(nbits == 4) {
         if(comp == BMP_RLE4) {
             if(!read_dib_rle4(img, bhargs, p, size))
@@ -739,12 +778,679 @@ bool imageio::read_bmp_image(image& img, const void* ptr, int size)
         assert(!"bad image format.");
         return false;
     }
+    img.enable_alpha_channel(bhargs.has_alpha_channel);
     return true;
 }
 
 bool imageio::save_bmp_image(const image& img, const string& path)
 {
+    assert(img.get_depth() == 32 && "currently support 32 bits only.");
+    /* write file header */
+    int bpl = img.get_bytes_per_line();
+    int bpl_bmp = bpl;
+    if(!img.has_alpha())
+        bpl_bmp = ((img.get_width() * 24 + 31) / 32) * 4;
+    int nbits = img.has_alpha() ? 32 : 24;
+    bmp_file_hdr fileheader;
+    memcpy(fileheader.bf_type, "BM", 2);
+    fileheader.bf_reserved1 = fileheader.bf_reserved2 = 0;
+    fileheader.bf_off_bits = BMP_FILEHDR_SIZE + BMP_WIN;        /* no color table */
+    fileheader.bf_size = fileheader.bf_off_bits + bpl_bmp * img.get_height();
+    file f;
+    f.open(path.c_str(), _t("wb"));
+    f.put((byte*)"BM", 2);
+    f.put(reinterpret_cast<byte*>(&fileheader.bf_size), sizeof(fileheader) - 4);
+    /* write image header */
+    bmp_info_hdr bmpheader;
+    bmpheader.bi_size = BMP_WIN;
+    bmpheader.bi_width = img.get_width();
+    bmpheader.bi_height = img.get_height();
+    bmpheader.bi_planes = 1;
+    bmpheader.bi_bit_count = nbits;
+    bmpheader.bi_compression = BMP_RGB;
+    bmpheader.bi_size_image = bpl_bmp * img.get_height();
+    bmpheader.bi_xppm = convert_dpi_to_dpm(img.get_xdpi());
+    bmpheader.bi_yppm = convert_dpi_to_dpm(img.get_ydpi());
+    bmpheader.bi_clr_used = bmpheader.bi_clr_important = 0;
+    f.put(reinterpret_cast<byte*>(&bmpheader), sizeof(bmpheader));
+    /* write image data */
+    if(img.has_alpha()) {
+        f.put(img.get_data(0, 0), img.get_size());
+        return true;
+    }
+    /* convert to 24bit bmp */
+    byte* buf = new byte[bpl_bmp];
+    for(int y = img.get_height() - 1; y >= 0; y --) {
+        byte* p = img.get_data(0, y);
+        byte* end = p + (img.get_width() * 4);
+        byte* b = buf;
+        while(p < end) {
+            *b++ = p[2], *b++ = p[1], *b++ = p[0];
+            p += 4;
+        }
+        f.put(buf, bpl_bmp);
+    }
+    delete [] buf;
+    return true;
+}
+
+void my_jpeg_init_source(j_decompress_ptr);
+boolean my_jpeg_fill_input_buffer(j_decompress_ptr cinfo);
+void my_jpeg_skip_input_data(j_decompress_ptr cinfo, long num_bytes);
+void my_jpeg_term_source(j_decompress_ptr cinfo);
+
+struct my_jpeg_source_mgr:
+    public jpeg_source_mgr
+{
+    static const int max_buf = 4096;
+    image_data_stream*  device;
+    JOCTET  buffer[max_buf];
+
+public:
+    my_jpeg_source_mgr(image_data_stream* p)
+    {
+        assert(p);
+        jpeg_source_mgr::init_source = my_jpeg_init_source;
+        jpeg_source_mgr::fill_input_buffer = my_jpeg_fill_input_buffer;
+        jpeg_source_mgr::skip_input_data = my_jpeg_skip_input_data;
+        jpeg_source_mgr::resync_to_restart = jpeg_resync_to_restart;
+        jpeg_source_mgr::term_source = my_jpeg_term_source;
+        device = p;
+        bytes_in_buffer = 0;
+        next_input_byte = buffer;
+    }
+};
+
+static void my_jpeg_init_source(j_decompress_ptr)
+{
+}
+
+static boolean my_jpeg_fill_input_buffer(j_decompress_ptr cinfo)
+{
+    auto* src = reinterpret_cast<my_jpeg_source_mgr*>(cinfo->src);
+    src->next_input_byte = (const JOCTET*)(src->device->get_data() + src->device->current_pos());
+    int num_read = src->device->get_size() - src->device->current_pos();
+    src->device->seek(src->device->get_size());
+    if(num_read <= 0) {
+        /* Insert a fake EOI marker - as per jpeglib recommendation */
+        src->next_input_byte = src->buffer;
+        src->buffer[0] = (JOCTET)0xff;
+        src->buffer[1] = (JOCTET)JPEG_EOI;
+        src->bytes_in_buffer = 2;
+    }
+    else {
+        src->bytes_in_buffer = num_read;
+    }
+    return true;
+}
+
+static void my_jpeg_skip_input_data(j_decompress_ptr cinfo, long num_bytes)
+{
+    auto* src = reinterpret_cast<my_jpeg_source_mgr*>(cinfo->src);
+    if(num_bytes > 0) {
+        while(num_bytes > (long)src->bytes_in_buffer) {
+            num_bytes -= (long)src->bytes_in_buffer;
+            (void)my_jpeg_fill_input_buffer(cinfo);
+        }
+        src->next_input_byte += (size_t)num_bytes;
+        src->bytes_in_buffer -= (size_t)num_bytes;
+    }
+}
+
+static void my_jpeg_term_source(j_decompress_ptr cinfo)
+{
+    auto* src = reinterpret_cast<my_jpeg_source_mgr*>(cinfo->src);
+    assert(src);
+    src->device->seek(src->device->current_pos() - src->bytes_in_buffer);
+}
+
+struct my_jpeg_error_mgr:
+    public jpeg_error_mgr
+{
+    jmp_buf setjmp_buffer;
+};
+
+static void my_jpeg_error_exit(j_common_ptr cinfo)
+{
+    my_jpeg_error_mgr* myerr = reinterpret_cast<my_jpeg_error_mgr*>(cinfo->err);
+    char buffer[JMSG_LENGTH_MAX];
+    (*cinfo->err->format_message)(cinfo, buffer);
+    longjmp(myerr->setjmp_buffer, 1);
+}
+
+static bool read_jpeg_size(int &w, int &h, j_decompress_ptr cinfo)
+{
+    (void)jpeg_calc_output_dimensions(cinfo);
+    w = cinfo->output_width;
+    h = cinfo->output_height;
+    return true;
+}
+
+static bool read_jpeg_format(image::image_format& format, j_decompress_ptr cinfo)
+{
+    bool result = true;
+    switch(cinfo->output_components)
+    {
+    case 1:
+        format = image::fmt_gray;
+        break;
+    case 3:
+    case 4:
+        format = image::fmt_rgba;
+        break;
+    default:
+        result = false;
+        break;
+    }
+    cinfo->output_scanline = cinfo->output_height;
+    return result;
+}
+
+class jpeg_reader
+{
+public:
+    jpeg_reader():
+        quality(75), iod_src(nullptr), width(0), height(0), format(image::fmt_rgba)
+    {
+    }
+    ~jpeg_reader()
+    {
+        if(iod_src) {
+            jpeg_destroy_decompress(&info);
+            delete iod_src;
+            iod_src = nullptr;
+        }
+    }
+    bool read_header(image_data_stream& ds);
+    bool read(image_data_stream& ds, image& img);
+
+    int quality;
+    int width;
+    int height;
+    image::image_format format;
+    jpeg_decompress_struct info;
+    my_jpeg_source_mgr* iod_src;
+    my_jpeg_error_mgr err;
+};
+
+bool jpeg_reader::read_header(image_data_stream& ds)
+{
+    iod_src = new my_jpeg_source_mgr(&ds);
+    jpeg_create_decompress(&info);
+    info.src = iod_src;
+    info.err = jpeg_std_error(&err);
+    err.error_exit = my_jpeg_error_exit;
+    if(!setjmp(err.setjmp_buffer)) {
+        (void)jpeg_read_header(&info, true);
+        width = height = 0;
+        return read_jpeg_size(width, height, &info) && read_jpeg_format(format, &info);
+    }
     return false;
+}
+
+static bool ensure_valid_image(image& img, jpeg_decompress_struct* info, int width, int height)
+{
+    image::image_format format;
+    switch(info->output_components)
+    {
+    case 1:
+        format = image::fmt_gray;
+        break;
+    case 3:
+    case 4:
+        format = image::fmt_rgba;
+        break;
+    default:
+        return false;
+    }
+    if(img.is_valid()) {
+        if((img.get_width() != width) || (img.get_height() != height) ||
+            (img.get_format() != format)
+            )
+            img.destroy();
+    }
+    if(!img.is_valid())
+        img.create(format, width, height);
+    return img.is_valid();
+}
+
+static void convert_rgb888_to_rgb32(uint* dst, const byte* src, int len)
+{
+    for(int i = 0; i < len; i ++) {
+        *dst++ = color(src[0], src[1], src[2]).data();
+        src += 3;
+    }
+}
+
+bool jpeg_reader::read(image_data_stream& ds, image& img)
+{
+    if(!read_header(ds))
+        return false;
+    if(!setjmp(err.setjmp_buffer)) {
+        /* disable scaling */
+        info.scale_num = info.scale_denom = 1;
+        /* if high quality not required, use fast decompression */
+        if(quality < 50) {
+            info.dct_method = JDCT_IFAST;
+            info.do_fancy_upsampling = false;
+        }
+        (void)jpeg_calc_output_dimensions(&info);
+        if((width != info.output_width) || (height != info.output_height))
+            longjmp(err.setjmp_buffer, 1);
+        if(!ensure_valid_image(img, &info, width, height))
+            longjmp(err.setjmp_buffer, 1);
+        if(info.output_components != 1) {
+            JSAMPARRAY rows = (info.mem->alloc_sarray)((j_common_ptr)&info, JPOOL_IMAGE, width * info.output_components, 1);
+            (void)jpeg_start_decompress(&info);
+            while(info.output_scanline < info.output_height) {
+                int y = info.output_scanline;
+                (void)jpeg_read_scanlines(&info, rows, 1);
+                byte* in = rows[0];
+                uint* out = (uint*)img.get_data(0, y);
+                if(info.output_components == 3)
+                    convert_rgb888_to_rgb32(out, in, width);
+                else if(info.out_color_space == JCS_CMYK) {
+                    /* convert CMYK to RGB */
+                    for(int i = 0; i < width; i ++) {
+                        int k = in[3];
+                        *out ++ = color(k * in[0] / 255, k * in[1] / 255, k * in[2] / 255).data();
+                        in += 4;
+                    }
+                }
+            }
+        }
+        else {      /* info.output_components == 1 */
+            (void)jpeg_start_decompress(&info);
+            while(info.output_scanline < info.output_height) {
+                byte* row = img.get_data(0, info.output_scanline);
+                (void)jpeg_read_scanlines(&info, &row, 1);
+            }
+        }
+        (void)jpeg_finish_decompress(&info);
+        if(info.density_unit <= 1) {
+            img.set_xdpi(info.X_density);
+            img.set_ydpi(info.Y_density);
+        }
+        else if(info.density_unit == 2) {
+            img.set_xdpi((int)(2.54f * info.X_density + 0.5f));
+            img.set_ydpi((int)(2.54f * info.Y_density + 0.5f));
+        }
+        img.enable_alpha_channel(false);    /* jpeg DOESNOT have alpha channel */
+        return img.is_valid();
+    }
+    return false;
+}
+
+bool imageio::read_jpg_image(image& img, const void* ptr, int size)
+{
+    image_data_stream ds(reinterpret_cast<const byte*>(ptr), size);
+    jpeg_reader reader;
+    return reader.read(ds, img);
+}
+
+void my_jpeg_init_destination(j_compress_ptr);
+boolean my_jpeg_empty_output_buffer(j_compress_ptr);
+void my_jpeg_term_destination(j_compress_ptr);
+
+struct my_jpeg_destination_mgr:
+    public jpeg_destination_mgr
+{
+    static const int max_buf = 4096;
+    file&   device;
+    JOCTET  buffer[max_buf];
+
+public:
+    my_jpeg_destination_mgr(file& f): device(f)
+    {
+        jpeg_destination_mgr::init_destination = my_jpeg_init_destination;
+        jpeg_destination_mgr::empty_output_buffer = my_jpeg_empty_output_buffer;
+        jpeg_destination_mgr::term_destination = my_jpeg_term_destination;
+        next_output_byte = buffer;
+        free_in_buffer = max_buf;
+    }
+};
+
+static void my_jpeg_init_destination(j_compress_ptr)
+{
+}
+
+static boolean my_jpeg_empty_output_buffer(j_compress_ptr cinfo)
+{
+    auto* dest = reinterpret_cast<my_jpeg_destination_mgr*>(cinfo->dest);
+    int written = dest->device.put((byte*)dest->buffer, my_jpeg_destination_mgr::max_buf);
+    if(written != my_jpeg_destination_mgr::max_buf)
+        (*cinfo->err->error_exit)((j_common_ptr)cinfo);
+    dest->next_output_byte = dest->buffer;
+    dest->free_in_buffer = my_jpeg_destination_mgr::max_buf;
+    return true;
+}
+
+static void my_jpeg_term_destination(j_compress_ptr cinfo)
+{
+    auto* dest = reinterpret_cast<my_jpeg_destination_mgr*>(cinfo->dest);
+    int n = my_jpeg_destination_mgr::max_buf - dest->free_in_buffer;
+    int written = dest->device.put((byte*)dest->buffer, n);
+    if(written != n)
+        (*cinfo->err->error_exit)((j_common_ptr)cinfo);
+}
+
+bool imageio::save_jpg_image(const image& img, const string& path)
+{
+    bool success;
+    jpeg_compress_struct cinfo;
+    JSAMPROW row_pointer[1];
+    row_pointer[0] = nullptr;
+    file f;
+    f.open(path.c_str(), _t("wb"));
+    my_jpeg_destination_mgr* iod_dest = new my_jpeg_destination_mgr(f);
+    my_jpeg_error_mgr jerr;
+    cinfo.err = jpeg_std_error(&jerr);
+    jerr.error_exit = my_jpeg_error_exit;
+    if(!setjmp(jerr.setjmp_buffer)) {
+        jpeg_create_compress(&cinfo);
+        cinfo.dest = iod_dest;
+        cinfo.image_width = img.get_width();
+        cinfo.image_height = img.get_height();
+        bool gray = false;
+        switch(img.get_format())
+        {
+        case image::fmt_gray:
+            gray = true;
+            cinfo.input_components = 1;
+            cinfo.in_color_space = JCS_GRAYSCALE;
+            break;
+        case image::fmt_rgba:
+        default:
+            cinfo.input_components = 3;
+            cinfo.in_color_space = JCS_RGB;
+            break;
+        }
+        jpeg_set_defaults(&cinfo);
+        cinfo.density_unit = 1;
+        cinfo.X_density = img.get_xdpi();
+        cinfo.Y_density = img.get_ydpi();
+        int quality = 75;   /* default quality */
+        jpeg_set_quality(&cinfo, quality, true);
+        jpeg_start_compress(&cinfo, true);
+        row_pointer[0] = new byte[cinfo.image_width * cinfo.input_components];
+        int w = cinfo.image_width;
+        while(cinfo.next_scanline < cinfo.image_height) {
+            byte* row = row_pointer[0];
+            switch(img.get_format())
+            {
+            case image::fmt_gray:
+                memcpy(row, img.get_data(0, cinfo.next_scanline), w);
+                break;
+            case image::fmt_rgba:
+            default:
+                {
+                    const color* cr = (const color*)img.get_data(0, cinfo.next_scanline);
+                    for(int i = 0; i < w; i ++) {
+                        *row++ = cr->red;
+                        *row++ = cr->green;
+                        *row++ = cr->blue;
+                        ++ cr;
+                    }
+                    break;
+                }
+            }
+            jpeg_write_scanlines(&cinfo, row_pointer, 1);
+        }
+        jpeg_finish_compress(&cinfo);
+        jpeg_destroy_compress(&cinfo);
+        success = true;
+    }
+    else {
+        jpeg_destroy_compress(&cinfo);
+        success = false;
+    }
+    delete iod_dest;
+    delete [] row_pointer[0];
+    return success;
+}
+
+static void my_png_warning(png_structp, png_const_charp message)
+{
+    string str;
+    str.from(message);
+    trace(_t("libpng warning: %s\n"), str.c_str());
+}
+
+void my_png_read_fn(png_structp png_ptr, png_bytep data, png_size_t length);
+void my_png_setup_image(image& img, png_structp png_ptr, png_infop info_ptr, float gamma);
+
+struct png_reader
+{
+    enum read_state
+    {
+        rs_read_header,
+        rs_reading_end,
+        rs_error,
+    };
+
+    float               gamma;
+    int                 quality;
+    png_struct*         png_ptr;
+    png_info*           info_ptr;
+    png_info*           end_info;
+    png_byte**          row_pointers;
+    read_state          state;
+    image_data_stream&  device;
+
+public:
+    png_reader(image_data_stream& ds):
+        device(ds)
+    {
+        gamma = 0.f;
+        quality = 2;
+        png_ptr = nullptr;
+        info_ptr = nullptr;
+        end_info = nullptr;
+        row_pointers = nullptr;
+    }
+    ~png_reader()
+    {
+        if(png_ptr) {
+            png_destroy_read_struct(&png_ptr, 0, 0);
+            png_ptr = nullptr;
+        }
+        if(row_pointers) {
+            delete [] row_pointers;
+            row_pointers = nullptr;
+        }
+    }
+    bool read_header()
+    {
+        state = rs_error;
+        png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, 0, 0, 0);
+        if(!png_ptr)
+            return false;
+        png_set_error_fn(png_ptr, 0, 0, my_png_warning);
+        info_ptr = png_create_info_struct(png_ptr);
+        if(!info_ptr)
+            return false;
+        end_info = png_create_info_struct(png_ptr);
+        if(!end_info)
+            return false;
+        if(setjmp(png_jmpbuf(png_ptr)))
+            return false;
+        png_set_read_fn(png_ptr, this, my_png_read_fn);
+        png_read_info(png_ptr, info_ptr);
+        state = rs_read_header;
+        return true;
+    }
+    bool read(image& img)
+    {
+        if(!read_header())
+            return false;
+        row_pointers = nullptr;
+        if(setjmp(png_jmpbuf(png_ptr))) {
+            state = rs_error;
+            return false;
+        }
+        my_png_setup_image(img, png_ptr, info_ptr, gamma);
+        if(!img.is_valid()) {
+            state = rs_error;
+            return false;
+        }
+        png_uint_32 width;
+        png_uint_32 height;
+        int bit_depth;
+        int color_type;
+        png_get_IHDR(png_ptr, info_ptr, &width, &height, &bit_depth, &color_type, 0, 0, 0);
+        byte* data = img.get_data(0, 0);
+        int bpl = img.get_bytes_per_line();
+        row_pointers = new png_bytep[height];
+        for(uint y = 0; y < height; y ++)
+            row_pointers[y] = data + y * bpl;
+        png_read_image(png_ptr, row_pointers);
+        img.set_xdpi(convert_dpm_to_dpi(png_get_x_pixels_per_meter(png_ptr, info_ptr)));
+        img.set_ydpi(convert_dpm_to_dpi(png_get_y_pixels_per_meter(png_ptr, info_ptr)));
+        state = rs_reading_end;
+        png_read_end(png_ptr, end_info);
+        return true;
+    }
+};
+
+static void my_png_read_fn(png_structp png_ptr, png_bytep data, png_size_t length)
+{
+    png_reader* d = (png_reader*)png_get_io_ptr(png_ptr);
+    image_data_stream& ds = d->device;
+    if((d->state == png_reader::rs_reading_end) && (ds.get_size() - ds.current_pos() < 4) && (length == 4)) {
+        /* workaround for certain malformed PNGs that lack the final crc bytes */
+        byte endcrc[4] = { 0xae, 0x42, 0x60, 0x82 };
+        memcpy(data, endcrc, 4);
+        ds.seek(ds.get_size());
+        return;
+    }
+    ds.read_bytes(data, length);
+}
+
+static void my_png_setup_image(image& img, png_structp png_ptr, png_infop info_ptr, float gamma)
+{
+    if(gamma != 0.f && png_get_valid(png_ptr, info_ptr, PNG_INFO_gAMA)) {
+        double file_gamma;
+        png_get_gAMA(png_ptr, info_ptr, &file_gamma);
+        png_set_gamma(png_ptr, gamma, file_gamma);
+    }
+    png_uint_32 width;
+    png_uint_32 height;
+    int bit_depth;
+    int color_type;
+    png_get_IHDR(png_ptr, info_ptr, &width, &height, &bit_depth, &color_type, 0, 0, 0);
+    png_set_interlace_handling(png_ptr);
+    image::image_format format;
+    bool has_alpha = false;
+    if(color_type == PNG_COLOR_TYPE_GRAY) {
+        if(bit_depth == 16)
+            png_set_strip_16(png_ptr);
+        else if(bit_depth < 8)
+            png_set_packing(png_ptr);
+        png_read_update_info(png_ptr, info_ptr);
+        format = image::fmt_gray;
+    }
+    else {
+        if(bit_depth == 16)
+            png_set_strip_16(png_ptr);
+        png_set_expand(png_ptr);
+        if(color_type == PNG_COLOR_TYPE_GRAY_ALPHA)
+            png_set_gray_to_rgb(png_ptr);
+        format = image::fmt_rgba;
+        has_alpha = true;
+        if(!(color_type & PNG_COLOR_MASK_ALPHA) && !png_get_valid(png_ptr, info_ptr, PNG_INFO_tRNS)) {
+            png_set_filler(png_ptr, 0xff, PNG_FILLER_AFTER);
+            has_alpha = false;
+        }
+        png_read_update_info(png_ptr, info_ptr);
+    }
+    if(!img.is_valid() || (img.get_width() != width) || (img.get_height() != height) || (img.get_format() != format)) {
+        if(img.is_valid())
+            img.destroy();
+        img.create(format, width, height);
+        img.enable_alpha_channel(has_alpha);
+    }
+}
+
+bool imageio::read_png_image(image& img, const void* ptr, int size)
+{
+    image_data_stream ds((const byte*)ptr, size);
+    png_reader reader(ds);
+    return reader.read(img);
+}
+
+static void my_png_write_fn(png_structp png_ptr, png_bytep data, png_size_t length)
+{
+    assert(png_ptr);
+    file* device = (file*)png_get_io_ptr(png_ptr);
+    assert(device);
+    int n = device->put((byte*)data, length);
+    if((uint)n != length) {
+        png_error(png_ptr, "write error");
+        return;
+    }
+}
+
+static void my_png_flush_fn(png_structp)
+{
+}
+
+bool imageio::save_png_image(const image& img, const string& path)
+{
+    file f;
+    f.open(path.c_str(), _t("wb"));
+    png_structp png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, 0, 0, 0);
+    if(!png_ptr)
+        return false;
+    png_set_error_fn(png_ptr, 0, 0, my_png_warning);
+    png_infop info_ptr = png_create_info_struct(png_ptr);
+    if(!info_ptr || setjmp(png_jmpbuf(png_ptr))) {
+        png_destroy_write_struct(&png_ptr, 0);
+        return false;
+    }
+    png_set_compression_level(png_ptr, 9);
+    png_set_write_fn(png_ptr, &f, my_png_write_fn, my_png_flush_fn);
+    int color_type = 0;
+    png_color_8 sig_bit;
+    memset(&sig_bit, 0, sizeof(sig_bit));
+    switch(img.get_format())
+    {
+    case image::fmt_gray:
+        color_type = PNG_COLOR_TYPE_GRAY;
+        sig_bit.gray = 8;
+        break;
+    case image::fmt_rgba:
+        sig_bit.red = 8;
+        sig_bit.green = 8;
+        sig_bit.blue = 8;
+        if(img.has_alpha()) {
+            color_type = PNG_COLOR_TYPE_RGB_ALPHA;
+            sig_bit.alpha = 8;
+        }
+        else {
+            color_type = PNG_COLOR_TYPE_RGB;
+        }
+        break;
+    default:
+        assert(!"unexpected format.");
+        break;
+    }
+    png_set_IHDR(png_ptr, info_ptr, img.get_width(), img.get_height(), 8, color_type, 0, 0, 0);
+    png_set_sBIT(png_ptr, info_ptr, &sig_bit);
+    png_set_pHYs(png_ptr, info_ptr, convert_dpi_to_dpm(img.get_xdpi()), convert_dpi_to_dpm(img.get_ydpi()), PNG_RESOLUTION_METER);
+    png_write_info(png_ptr, info_ptr);
+    png_set_packing(png_ptr);
+    if(color_type == PNG_COLOR_TYPE_RGB)
+        png_set_filler(png_ptr, 0, PNG_FILLER_AFTER);
+    int width = img.get_width();
+    int height = img.get_height();
+    png_bytep* row_pointers = new png_bytep[height];
+    for(int i = 0; i < height; i ++)
+        row_pointers[i] = img.get_data(0, i);
+    png_write_image(png_ptr, row_pointers);
+    delete [] row_pointers;
+    png_write_end(png_ptr, info_ptr);
+    png_destroy_write_struct(&png_ptr, &info_ptr);
+    return true;
 }
 
 __pink_end__

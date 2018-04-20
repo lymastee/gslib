@@ -234,14 +234,38 @@ void rendersys_d3d11::begin_create_shader_from_file(create_shader_context& conte
     sbsmodel.from(sm);
     _string<wchar> mbfile;
     mbfile.from(file);
-    hr = D3DCompileFromFile(mbfile.c_str(), 0, inc, sbentry.c_str(), sbsmodel.c_str(), flags, 0, &context, &err_blob);
+    HMODULE hmod = LoadLibraryA("d3dcompiler_47.dll");
+    if(!hmod) {
+        assert(!"LoadLibrary(\"d3dcompiler_47.dll\") failed.");
+        return;
+    }
+    /* use dynamic link to avoid d3dcompiler.dll missing failure. */
+    typedef HRESULT(__stdcall* fnD3DCompileFromFile)(LPCWSTR pFileName,
+        const D3D_SHADER_MACRO* pDefines,
+        ID3DInclude* pInclude,
+        LPCSTR pEntrypoint,
+        LPCSTR pTarget,
+        UINT Flags1,
+        UINT Flags2,
+        ID3DBlob** ppCode,
+        ID3DBlob** ppErrorMsgs
+        );
+    fnD3DCompileFromFile fn = (fnD3DCompileFromFile)GetProcAddress(hmod, "D3DCompileFromFile");
+    if(!fn) {
+        assert(!"GetProcAddress(\"D3DCompileFromFile\") failed.");
+        FreeLibrary(hmod);
+        return;
+    }
+    hr = fn(mbfile.c_str(), 0, inc, sbentry.c_str(), sbsmodel.c_str(), flags, 0, &context, &err_blob);
     if(FAILED(hr)) {
         if(err_blob)
             OutputDebugStringA((char*)err_blob->GetBufferPointer());
         SafeRelease(err_blob);
+        FreeLibrary(hmod);
         return;
     }
     SafeRelease(err_blob);
+    FreeLibrary(hmod);
 }
 
 void rendersys_d3d11::begin_create_shader_from_memory(create_shader_context& context, const char* src, int len, const gchar* name, const gchar* entry, const gchar* sm, render_include* inc)
@@ -256,14 +280,28 @@ void rendersys_d3d11::begin_create_shader_from_memory(create_shader_context& con
     sbentry.from(entry);
     sbsmodel.from(sm);
     sbname.from(name);
-    hr = D3DCompile(src, len, sbname.c_str(), 0, inc, sbentry.c_str(), sbsmodel.c_str(), flags, 0, &context, &err_blob);
+    HMODULE hmod = LoadLibraryA("d3dcompiler_47.dll");
+    if(!hmod) {
+        assert(!"LoadLibrary(\"d3dcompiler_47.dll\") failed.");
+        return;
+    }
+    /* use dynamic link to avoid d3dcompiler.dll missing failure. */
+    pD3DCompile fn = (pD3DCompile)GetProcAddress(hmod, "D3DCompile");
+    if(!fn) {
+        assert(!"GetProcAddress(\"D3DCompile\") failed.");
+        FreeLibrary(hmod);
+        return;
+    }
+    hr = fn(src, len, sbname.c_str(), 0, inc, sbentry.c_str(), sbsmodel.c_str(), flags, 0, &context, &err_blob);
     if(FAILED(hr)) {
         if(err_blob)
             OutputDebugStringA((char*)err_blob->GetBufferPointer());
         SafeRelease(err_blob);
+        FreeLibrary(hmod);
         return;
     }
     SafeRelease(err_blob);
+    FreeLibrary(hmod);
 }
 
 void rendersys_d3d11::end_create_shader(create_shader_context& context)

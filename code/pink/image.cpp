@@ -447,7 +447,8 @@ image::image()
     _color_bytes = 0;
     _bytes_per_line = 0;
     _data = 0;
-    _xpels_per_meter = _ypels_per_meter = 96;
+    _xdpi = _ydpi = 96;
+    _is_alpha_channel_valid = false;
 }
 
 bool image::is_valid() const
@@ -472,7 +473,7 @@ bool image::create(image_format fmt, int w, int h)
     _format = fmt;
     switch(fmt)
     {
-    case fmt_raw:
+    case fmt_gray:
         _depth = 8;
         break;
     case fmt_rgba:
@@ -481,7 +482,7 @@ bool image::create(image_format fmt, int w, int h)
     default:
         return false;
     }
-    _xpels_per_meter = _ypels_per_meter = 96;
+    _xdpi = _ydpi = 96;
     _bytes_per_line = (int)(((uint)(_depth * w + 31)) >> 5 << 2);
     _color_bytes = _bytes_per_line * h;
     _data = new byte[_color_bytes];
@@ -506,15 +507,6 @@ void image::init(const color& cr)
         return;
     assert(_format == fmt_rgba && _depth == 32);
     memset(_data, cr.data(), _color_bytes);
-}
-
-bool image::has_alpha() const
-{
-    if(_depth == 32) {
-        assert(_format == fmt_rgba);
-        return true;
-    }
-    return false;
 }
 
 byte* image::get_data(int x, int y) const

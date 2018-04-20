@@ -102,10 +102,6 @@ void rect_packer::pack_automatically(rp_input_list& inputs)
         if(pack_compactly(inputs))
             return;
         expand_ratio += step;
-        /* there might be a rare situation like: a set of inputs have two or three super big rects, and a thousand of very small rects.
-         * this will make the approach very inefficient, here we prefer speed than quality
-         */
-        step += step;
         totals = sum_area * expand_ratio;
     }
 }

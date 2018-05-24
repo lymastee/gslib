@@ -164,60 +164,60 @@ void ui_stage::draw()
 
 bool ui_stage::on_frame_event(const frame_event& event)
 {
-    assert(event.id != feid_invalid);
-    switch(event.id)
+    assert(event.get_id() != feid_invalid);
+    switch(event.get_id())
     {
     case feid_timer:
         {
-            auto p = static_cast<frame_pack_timer*>(event.ptr);
+            auto p = static_cast<const frame_timer_event*>(&event);
             _wsys_manager.on_timer(p->timerid);
             return true;
         }
     case feid_paint:
         {
-            auto p = static_cast<frame_pack_size*>(event.ptr);
+            auto p = static_cast<const frame_resize_event*>(&event);
             _wsys_manager.on_paint(p->boundary);
             return true;
         }
     case feid_mouse_down:
         {
-            auto p = static_cast<frame_pack_mouse_down*>(event.ptr);
+            auto p = static_cast<const frame_mouse_down_event*>(&event);
             return _wsys_manager.on_mouse_down(p->modifier, p->key, p->position);
         }
     case feid_mouse_up:
         {
-            auto p = static_cast<frame_pack_mouse_up*>(event.ptr);
+            auto p = static_cast<const frame_mouse_up_event*>(&event);
             return _wsys_manager.on_mouse_up(p->modifier, p->key, p->position);
         }
-    case feid_move:
+    case feid_mouse_move:
         {
-            auto p = static_cast<frame_pack_move*>(event.ptr);
-            return _wsys_manager.on_move(p->modifier, p->position);
+            auto p = static_cast<const frame_mouse_move_event*>(&event);
+            return _wsys_manager.on_mouse_move(p->modifier, p->position);
         }
     case feid_key_down:
         {
-            auto p = static_cast<frame_pack_key_down*>(event.ptr);
+            auto p = static_cast<const frame_key_down_event*>(&event);
             return _wsys_manager.on_key_down(p->modifier, p->key);
         }
     case feid_key_up:
         {
-            auto p = static_cast<frame_pack_key_up*>(event.ptr);
+            auto p = static_cast<const frame_key_up_event*>(&event);
             return _wsys_manager.on_key_up(p->modifier, p->key);
         }
     case feid_char:
         {
-            auto p = static_cast<frame_pack_char*>(event.ptr);
+            auto p = static_cast<const frame_char_event*>(&event);
             return _wsys_manager.on_char(p->modifier, p->charactor);
         }
     case feid_show:
         {
-            auto p = static_cast<frame_pack_show*>(event.ptr);
+            auto p = static_cast<const frame_show_event*>(&event);
             _wsys_manager.on_show(p->show);
             return true;
         }
     case feid_create:
         {
-            auto p = static_cast<frame_pack_create*>(event.ptr);
+            auto p = static_cast<const frame_create_event*>(&event);
             _wsys_manager.on_create(p->driver, p->boundary);
             return true;
         }
@@ -226,10 +226,10 @@ bool ui_stage::on_frame_event(const frame_event& event)
             _wsys_manager.on_close();
             return true;
         }
-    case feid_size:
+    case feid_resize:
         {
-            auto p = static_cast<frame_pack_size*>(event.ptr);
-            _wsys_manager.on_size(p->boundary);
+            auto p = static_cast<const frame_resize_event*>(&event);
+            _wsys_manager.on_resize(p->boundary);
             return true;
         }
     case feid_halt:
@@ -416,11 +416,11 @@ void scene::on_frame_end()
 
 bool scene::on_frame_event(const frame_event& event)
 {
-    if(event.id == feid_draw) {
+    if(event.get_id() == feid_draw) {
         draw();
         return true;
     }
-    else if(event.id == feid_paint) {
+    else if(event.get_id() == feid_paint) {
         if(!_rendersys || !_rose || !_present)
             return false;
         draw();

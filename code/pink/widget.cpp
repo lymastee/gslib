@@ -31,38 +31,28 @@ __pink_begin__
 #define tid_refresh 0
 #define tid_caret   1
 
+vtable_ops<widget>& widget_vtable_ops()
+{
+    static vtable_ops<widget> inst(nullptr);
+    return inst;
+}
+
 widget::widget(wsys_manager* m)
 {
     _manager = m;
-    _last = 0;
-    _next = 0;
-    _parent = 0;
-    _child = 0;
+    _last = _next = _child = _parent = nullptr;
     _style = 0;
     _show = false;
     _enable = true;
+    _backvt = nullptr;
 }
 
 widget::~widget()
 {
-}
-
-handle* widget::query(int msgid)
-{
-    switch(msgid)
-    {
-    case hid_zr:
-    case hid_press:
-    case hid_click:
-    case hid_hover:
-    case hid_leave:
-    case hid_keydown:
-    case hid_keyup:
-    case hid_char:
-    case hid_timer:
-        return this;
+    if(_backvt) {
+        widget_vtable_ops().destroy_per_instance_vtable(this, _backvt);
+        _backvt = nullptr;
     }
-    return 0;
 }
 
 bool widget::create(widget* ptr, const gchar* name, const rect& rc, uint style)
@@ -157,6 +147,12 @@ void widget::refresh(const rect& rc, bool imm)
     _manager->refresh(rc1, imm);
 }
 
+void widget::make_individual_vtable()
+{
+    assert(!_backvt);
+    _backvt = widget_vtable_ops().create_per_instance_vtable(this);
+}
+
 int widget::run_proc(int msgid, ...)
 {
     va_list ptr;
@@ -166,65 +162,65 @@ int widget::run_proc(int msgid, ...)
 
 int widget::proceed(int msgid, va_list vlst)
 {
-    /* deal with the reflection */
-    for(reflect_list::iterator i = _reflect_list.begin(); i != _reflect_list.end(); ++ i) {
-        if(i->reflect_id == msgid) {
-            i->reflect_to->on_reflect(this, msgid, vlst);
-            break;
-        }
-    }
-    /* default handles */
-    if(msgid == hid_press) {
-        uint um = va_arg(vlst, uint);
-        unikey uk = va_arg(vlst, unikey);
-        point* pt = va_arg(vlst, point*);
-        on_press(um, uk, *pt);
-        return rid_ok;
-    }
-    else if(msgid == hid_click) {
-        uint um = va_arg(vlst, uint);
-        unikey uk = va_arg(vlst, unikey);
-        point* pt = va_arg(vlst, point*);
-        on_click(um, uk, *pt);
-        return rid_ok;
-    }
-    else if(msgid == hid_hover) {
-        uint um = va_arg(vlst, uint);
-        point* pt = va_arg(vlst, point*);
-        on_hover(um, *pt);
-        return rid_ok;
-    }
-    else if(msgid == hid_leave) {
-        uint um = va_arg(vlst, uint);
-        point* pt = va_arg(vlst, point*);
-        on_leave(um, *pt);
-        return rid_ok;
-    }
-    else if(msgid == hid_keydown) {
-        uint um = va_arg(vlst, uint);
-        unikey uk = va_arg(vlst, unikey);
-        on_keydown(um, uk);
-        return rid_ok;
-    }
-    else if(msgid == hid_keyup) {
-        uint um = va_arg(vlst, uint);
-        unikey uk = va_arg(vlst, unikey);
-        on_keyup(um, uk);
-        return rid_ok;
-    }
-    else if(msgid == hid_char) {
-        uint um = va_arg(vlst, uint);
-        uint ch = va_arg(vlst, uint);
-        on_char(um, ch);
-        return rid_ok;
-    }
-    else if(msgid == hid_scroll) {
-        point* pt = va_arg(vlst, point*);
-        real scr = va_arg(vlst, real);
-        bool vert = va_arg(vlst, bool);
-        on_scroll(*pt, scr, vert);
-        return rid_ok;
-    }
+//     /* deal with the reflection */
+//     for(reflect_list::iterator i = _reflect_list.begin(); i != _reflect_list.end(); ++ i) {
+//         if(i->reflect_id == msgid) {
+//             i->reflect_to->on_reflect(this, msgid, vlst);
+//             break;
+//         }
+//     }
+//     /* default handles */
+//     if(msgid == hid_press) {
+//         uint um = va_arg(vlst, uint);
+//         unikey uk = va_arg(vlst, unikey);
+//         point* pt = va_arg(vlst, point*);
+//         on_press(um, uk, *pt);
+//         return rid_ok;
+//     }
+//     else if(msgid == hid_click) {
+//         uint um = va_arg(vlst, uint);
+//         unikey uk = va_arg(vlst, unikey);
+//         point* pt = va_arg(vlst, point*);
+//         on_click(um, uk, *pt);
+//         return rid_ok;
+//     }
+//     else if(msgid == hid_hover) {
+//         uint um = va_arg(vlst, uint);
+//         point* pt = va_arg(vlst, point*);
+//         on_hover(um, *pt);
+//         return rid_ok;
+//     }
+//     else if(msgid == hid_leave) {
+//         uint um = va_arg(vlst, uint);
+//         point* pt = va_arg(vlst, point*);
+//         on_leave(um, *pt);
+//         return rid_ok;
+//     }
+//     else if(msgid == hid_keydown) {
+//         uint um = va_arg(vlst, uint);
+//         unikey uk = va_arg(vlst, unikey);
+//         on_keydown(um, uk);
+//         return rid_ok;
+//     }
+//     else if(msgid == hid_keyup) {
+//         uint um = va_arg(vlst, uint);
+//         unikey uk = va_arg(vlst, unikey);
+//         on_keyup(um, uk);
+//         return rid_ok;
+//     }
+//     else if(msgid == hid_char) {
+//         uint um = va_arg(vlst, uint);
+//         uint ch = va_arg(vlst, uint);
+//         on_char(um, ch);
+//         return rid_ok;
+//     }
+//     else if(msgid == hid_scroll) {
+//         point* pt = va_arg(vlst, point*);
+//         real scr = va_arg(vlst, real);
+//         bool vert = va_arg(vlst, bool);
+//         on_scroll(*pt, scr, vert);
+//         return rid_ok;
+//     }
     return rid_undone;
 }
 
@@ -240,12 +236,12 @@ widget* widget::focus()
     return _manager->set_focus(this);
 }
 
-void widget::reflect(widget* w, int msgid)
-{
-    assert(w);
-    reflect_node n = { this, msgid };
-    w->_reflect_list.push_back(n);
-}
+// void widget::reflect(widget* w, int msgid)
+// {
+//     assert(w);
+//     reflect_node n = { this, msgid };
+//     w->_reflect_list.push_back(n);
+// }
 
 void widget::lay(widget* ptr, laytag t)
 {
@@ -322,8 +318,8 @@ button::button(wsys_manager* m): widget(m)
 
 void button::draw(painter* paint)
 {
-    if(_bkground.is_valid())
-        paint->draw(&_bkground, 0, 0);
+    //if(_bkground.is_valid())
+    //    paint->draw(&_bkground, 0, 0);
 }
 
 void button::enable(bool b)
@@ -448,13 +444,13 @@ bool edit::create(widget* ptr, const gchar* name, const rect& rc, uint style)
 
 void edit::draw(painter* paint)
 {
-    if(_bkground)
-        paint->draw(_bkground, 0, 0);
+    //if(_bkground)
+    //    paint->draw(_bkground, 0, 0);
     fontsys* pfs = _manager->get_fontsys();
     assert(pfs);
     _font_idx = pfs->set_font(_font, _font_idx);
-    if(_sel_start < 0)
-        paint->draw_text(_textbuf.c_str(), 0, 0, _txtcolor);
+    if(_sel_start < 0);
+    //    paint->draw_text(_textbuf.c_str(), 0, 0, _txtcolor);
     else {
         /* 0-start, start-end, end-last */
         int start, end;
@@ -473,18 +469,18 @@ void edit::draw(painter* paint)
         if(start) {
             s.assign(_textbuf.c_str(), start);
             pfs->get_size(s.c_str(), w, h);
-            paint->draw_text(s.c_str(), bias, 0, _txtcolor);
+            //paint->draw_text(s.c_str(), bias, 0, _txtcolor);
             bias = w;
         }
         if(start != end) {
             s.assign(_textbuf.c_str()+start, end-start);
             pfs->get_size(s.c_str(), w, h);
-            paint->draw_rect(rect(bias,0,w,h), _selcolor);
-            paint->draw_text(s.c_str(), bias, 0, pixel(255,255,255));
+            //paint->draw_rect(rect(bias,0,w,h), _selcolor);
+            //paint->draw_text(s.c_str(), bias, 0, pixel(255,255,255));
             bias += w;
         }
-        if(end < _textbuf.length())
-            paint->draw_text(_textbuf.c_str()+end, bias, 0, _txtcolor);
+        //if(end < _textbuf.length())
+        //    paint->draw_text(_textbuf.c_str()+end, bias, 0, _txtcolor);
     }
     /* draw caret */
     if(_caret_on) {
@@ -492,7 +488,7 @@ void edit::draw(painter* paint)
         s.assign(_textbuf.c_str(), _caretpos);
         int w, h;
         pfs->get_size(s.c_str(), w, h);
-        paint->draw_line(point(w,0), point(w,_font.height), _crtcolor);
+        //paint->draw_line(point(w,0), point(w,_font.height), _crtcolor);
     }
 }
 
@@ -924,12 +920,12 @@ void scroller::set_scroller(int r1, int r2, bool vts, const image* img, bool as)
     move(pt);
 }
 
-void scroller::set_scroll(real s)
+void scroller::set_scroll(real32 s)
 {
-    assert(s >= 0 && s <= 1.0);
+    assert(s >= 0.f && s <= 1.f);
     int n = (int)(s * (_rangemax - _rangemin));
     n += _rangemin;
-    move(_vtscroll ? point(_pos.left,n) : point(n,_pos.top));
+    move(_vtscroll ? point(_pos.left, n) : point(n, _pos.top));
 }
 
 bool scroller::create(widget* ptr, const gchar* name, const rect& rc, uint style)
@@ -948,257 +944,29 @@ void scroller::on_hover(uint um, const point& pt)
             mt.x = _pos.left;
             if(mt.y < _rangemin) mt.y = _rangemin;
             else if(mt.y > _rangemax) mt.y = _rangemax;
-            _scrpos = (real)(mt.x - _rangemin);
+            _scrpos = (real32)(mt.x - _rangemin);
             _scrpos /= _rangemax - _rangemin;
         }
         else {
             mt.y = _pos.top;
             if(mt.x < _rangemin) mt.x = _rangemin;
             else if(mt.x > _rangemax) mt.x = _rangemax;
-            _scrpos = (real)(mt.y - _rangemin);
+            _scrpos = (real32)(mt.y - _rangemin);
             _scrpos /= _rangemax - _rangemin;
         }
         move(mt);
-        run_proc(hid_scroll, &pt, _scrpos, _vtscroll);
+        on_scroll(pt, _scrpos, _vtscroll);
     }
-}
-
-sharpfit::sharpfit(rect& b): _bound(b)
-{
-    memset(_grid, 0, sizeof(_grid));
-    _gridsrc = 0;
-}
-
-void sharpfit::set_grid_src(image* ptr)
-{
-    assert(ptr);
-    _gridsrc = ptr;
-    if(_bound.width() < ptr->get_width())
-        _bound.right = _bound.left + ptr->get_width();
-    if(_bound.height() < ptr->get_height())
-        _bound.bottom = _bound.top + ptr->get_height();
-    if(!_grid[0] && !_grid[1] && !_grid[2] && !_grid[3]) {
-        _grid[0] = ptr->get_width() >> 1;
-        _grid[1] = _grid[0] + 1;
-        _grid[2] = ptr->get_height() >> 1;
-        _grid[3] = _grid[2] + 1;
-    }
-}
-
-void sharpfit::set_grid(const int n[])
-{
-    assert(n[0] < n[1] && n[2] < n[3]);
-    if(_gridsrc && (n[1] >= _gridsrc->get_width() || n[3] >= _gridsrc->get_height()))
-        return;
-    memcpy_s(_grid, sizeof(_grid), n, sizeof(_grid));
-}
-
-rect sharpfit::get_src_grid(int x, int y)
-{
-    assert(_gridsrc);
-    x %= 3, y %= 3;
-    rect rc;
-    switch((x << 8) + y)
-    {
-    case 0x0000:
-        rc.set_ltrb(0,0,_grid[0],_grid[2]);
-        return rc;
-    case 0x0100:
-        rc.set_ltrb(_grid[0],0,_grid[1],_grid[2]);
-        return rc;
-    case 0x0200:
-        rc.set_ltrb(_grid[1],0,_gridsrc->get_width(),_grid[2]);
-        return rc;
-    case 0x0001:
-        rc.set_ltrb(0,_grid[2],_grid[0],_grid[3]);
-        return rc;
-    case 0x0101:
-        rc.set_ltrb(_grid[0],_grid[2],_grid[1],_grid[3]);
-        return rc;
-    case 0x0201:
-        rc.set_ltrb(_grid[1],_grid[2],_gridsrc->get_width(),_grid[3]);
-        return rc;
-    case 0x0002:
-        rc.set_ltrb(0,_grid[3],_grid[0],_gridsrc->get_height());
-        return rc;
-    case 0x0102:
-        rc.set_ltrb(_grid[0],_grid[3],_grid[1],_gridsrc->get_height());
-        return rc;
-    case 0x0202:
-        rc.set_ltrb(_grid[1],_grid[3],_gridsrc->get_width(),_gridsrc->get_height());
-        return rc;
-    default:
-        assert(0);
-        return rc;
-    }
-}
-
-rect sharpfit::get_dest_grid(int x, int y)
-{
-    assert(_gridsrc);
-    x %= 3, y %= 3;
-    rect rc;
-
-#define udsdiff (get_width() - _gridsrc->get_width())
-#define vdsdiff (get_height() - _gridsrc->get_height())
-
-    switch((x << 8) + y)
-    {
-    case 0x0000:
-        rc.set_ltrb(0,0,_grid[0],_grid[2]);
-        return rc;
-    case 0x0100:
-        rc.set_ltrb(_grid[0],0,_grid[1]+udsdiff,_grid[2]);
-        return rc;
-    case 0x0200:
-        rc.set_ltrb(_grid[1]+udsdiff,0,get_width(),_grid[2]);
-        return rc;
-    case 0x0001:
-        rc.set_ltrb(0,_grid[2],_grid[0],_grid[3]+vdsdiff);
-        return rc;
-    case 0x0101:
-        rc.set_ltrb(_grid[0],_grid[2],_grid[1]+udsdiff,_grid[3]+vdsdiff);
-        return rc;
-    case 0x0201:
-        rc.set_ltrb(_grid[1]+udsdiff,_grid[2],get_width(),_grid[3]+vdsdiff);
-        return rc;
-    case 0x0002:
-        rc.set_ltrb(0,_grid[3]+vdsdiff,_grid[0],get_height());
-        return rc;
-    case 0x0102:
-        rc.set_ltrb(_grid[0],_grid[3]+vdsdiff,_grid[1]+udsdiff,get_height());
-        return rc;
-    case 0x0202:
-        rc.set_ltrb(_grid[1]+udsdiff,_grid[3]+vdsdiff,get_width(),get_height());
-        return rc;
-    default:
-        assert(0);
-        return rc;
-    }
-
-#undef udsdiff
-#undef vdsdiff
-}
-
-image* sharpfit::get_grid_map()
-{
-    if(!_gridsrc)
-        return 0;
-    if(!_gridmap.is_valid() || _gridmap.get_width() != get_width() || 
-        _gridmap.get_height() != get_height() ) {
-        _gridmap.destroy();
-        //_gridmap.create(get_width(), get_height(), true);
-        /* angles */
-        rect rcs = get_src_grid(0, 0);
-        rect rcd = get_dest_grid(0, 0);
-        //_gridmap.copy(_gridsrc, rcd.left, rcd.top, rcd.width(), rcd.height(), rcs.left, rcs.top);
-        rcs = get_src_grid(2, 0);
-        rcd = get_dest_grid(2, 0);
-        //_gridmap.copy(_gridsrc, rcd.left, rcd.top, rcd.width(), rcd.height(), rcs.left, rcs.top);
-        rcs = get_src_grid(0, 2);
-        rcd = get_dest_grid(0, 2);
-        //_gridmap.copy(_gridsrc, rcd.left, rcd.top, rcd.width(), rcd.height(), rcs.left, rcs.top);
-        rcs = get_src_grid(2, 2);
-        rcd = get_dest_grid(2, 2);
-        //_gridmap.copy(_gridsrc, rcd.left, rcd.top, rcd.width(), rcd.height(), rcs.left, rcs.top);
-        /* edges */
-        rcs = get_src_grid(1, 0);
-        rcd = get_dest_grid(1, 0);
-        draw_horizontal(rcs, rcd);
-        rcs = get_src_grid(0, 1);
-        rcd = get_dest_grid(0, 1);
-        draw_vertical(rcs, rcd);
-        rcs = get_src_grid(1, 2);
-        rcd = get_dest_grid(1, 2);
-        draw_horizontal(rcs, rcd);
-        rcs = get_src_grid(2, 1);
-        rcd = get_dest_grid(2, 1);
-        draw_vertical(rcs, rcd);
-        /* center */
-        draw_center(get_src_grid(1, 1), get_dest_grid(1, 1));
-    }
-    return &_gridmap;
-}
-
-void sharpfit::draw_horizontal(const rect& src, const rect& des)
-{
-    if(!src.width())
-        return;
-    if(src.width() == 1) {
-        for(int i = src.top, j = des.top; i < src.bottom; i ++, j ++) {
-            //pixel p = _gridsrc->get_color(i)[src.left];
-            //byte a = _gridsrc->get_alpha(i)[src.left];
-            //pixel* pd = _gridmap.get_color(j) + des.left;
-            //byte* ad = _gridmap.get_alpha(j) + des.left;
-            //for(int k = 0; k < des.width(); k ++) {
-            //    *pd ++ = p;
-            //    *ad ++ = a;
-            //}
-        }
-    }
-    else {
-        int m = src.width();
-        for(int i = src.top, j = des.top; i < src.bottom; i ++, j ++) {
-            //const pixel* p = _gridsrc->get_color(i) + src.left;
-            //const byte* a = _gridsrc->get_alpha(i) + src.left;
-            //pixel* pd = _gridmap.get_color(j) + des.left;
-            //byte* ad = _gridmap.get_alpha(j) + des.left;
-            //for(int k = 0; k < des.width(); k ++) {
-            //    int l = k % m;
-            //    pd[k] = p[l];
-            //    ad[k] = a[l];
-            //}
-        }
-    }
-}
-
-void sharpfit::draw_vertical(const rect& src, const rect& des)
-{
-    if(!src.height())
-        return;
-    if(src.height() == 1) {
-        for(int i = src.left, j = des.left; i < src.right; i ++, j ++) {
-            //pixel p = _gridsrc->get_color(src.top)[i];
-            //byte a = _gridsrc->get_alpha(src.top)[i];
-            //for(int k = des.top; k < des.bottom; k ++) {
-            //    _gridmap.get_color(k)[j] = p;
-            //    _gridmap.get_alpha(k)[j] = a;
-            //}
-        }
-    }
-    else {
-        int m = src.height();
-        for(int i = src.left, j = des.left; i < src.right; i ++, j ++) {
-            for(int k = 0; k < des.height(); k ++) {
-                //int l = k % m;
-                //_gridmap.get_color(des.top+k)[j] = _gridsrc->get_color(src.top+l)[i];
-                //_gridmap.get_alpha(des.top+k)[j] = _gridsrc->get_alpha(src.top+l)[i];
-            }
-        }
-    }
-}
-
-void sharpfit::draw_center(const rect& src, const rect& des)
-{
-    if(!src.width() || !src.height())
-        return;
-    //pixel p = _gridsrc->get_color(src.top)[src.left];
-    //byte a = _gridsrc->get_alpha(src.top)[src.left];
-    //_gridmap.clear(p, &des);
-    //_gridmap.set_alpha(a, &des);
 }
 
 wsys_manager::wsys_manager()
 {
-    _driver = 0;
-    _fontsys = 0;
-    _capture = 0;
-    _focus = 0;
-    _hover = 0;
-    _root = 0;
+    _driver = nullptr;
+    _fontsys = nullptr;
+    _capture = _focus = _hover = _root = nullptr;
     _width = 0;
     _height = 0;
-    _painter = &select_software_painter::get_painter();
+    _painter = nullptr;
     _next_tid = tid_refresh;
 }
 
@@ -1254,8 +1022,8 @@ void wsys_manager::set_dimension(int w, int h)
         /* deal with the canvas */
         image* img = gs_new(image);
         //img->create(w, h);
-        if(image* oldimg = _painter->select(img))
-            gs_del(image, oldimg);
+        //if(image* oldimg = _painter->select(img))
+        //    gs_del(image, oldimg);
     }
 }
 
@@ -1286,9 +1054,9 @@ void wsys_manager::update(widget* w)
     w->top_level(rc);
     if(!w->is_visible() || !_dirty.is_dirty(rc))
         return;
-    _painter->lock(rc);
+    //_painter->lock(rc);
     w->draw(_painter);
-    _painter->unlock();
+    //_painter->unlock();
     if(widget* c = w->_child) {
         while(c->_next)
             c = c->_next;
@@ -1300,10 +1068,10 @@ void wsys_manager::update(widget* w)
 widget* wsys_manager::hit_test(widget* ptr, point pt)
 {
     if(ptr == 0 || !ptr->is_visible() || !ptr->is_enable())
-        return 0;
+        return nullptr;
     const rect& rc = ptr->get_rect();
     if(!rc.in_rect(pt) || !ptr->hit_test(pt))
-        return 0;
+        return nullptr;
     point p = pt;
     p.offset(-rc.left, -rc.top);
     for(widget* c = ptr->_child; c; c = c->_next) {
@@ -1331,7 +1099,7 @@ widget* wsys_manager::set_capture(widget* ptr, bool b)
     if(b == true)
         _capture = ptr;
     else if(_capture == ptr)
-        _capture = 0;
+        _capture = nullptr;
     return r;
 }
 
@@ -1360,11 +1128,11 @@ void wsys_manager::on_close()
     _focus = 0;
     _capture = 0;
     if(_root) remove_widget(_root);
-    if(image* oldimg = _painter->select(0))
-        gs_del(image, oldimg);
+    //if(image* oldimg = _painter->select(0))
+    //    gs_del(image, oldimg);
 }
 
-void wsys_manager::on_size(const rect& rc)
+void wsys_manager::on_resize(const rect& rc)
 {
     /* unsupported */
 }
@@ -1390,7 +1158,7 @@ bool wsys_manager::on_mouse_down(uint um, unikey uk, const point& pt)
 {
     point pt1;
     if(widget* ptr = hit_proc(pt, pt1)) {
-        ptr->run_proc(hid_press, um, uk, &pt1);
+        ptr->on_press(um, uk, pt1);
         return true;
     }
     return false;
@@ -1400,13 +1168,13 @@ bool wsys_manager::on_mouse_up(uint um, unikey uk, const point& pt)
 {
     point pt1;
     if(widget* ptr = hit_proc(pt, pt1)) {
-        ptr->run_proc(hid_click, um, uk, &pt1);
+        ptr->on_click(um, uk, pt1);
         return true;
     }
     return false;
 }
 
-bool wsys_manager::on_move(uint um, const point& pt)
+bool wsys_manager::on_mouse_move(uint um, const point& pt)
 {
     point pt1;
     widget* ptr = hit_proc(pt, pt1);
@@ -1415,31 +1183,31 @@ bool wsys_manager::on_move(uint um, const point& pt)
         _hover->top_level(pt2);
         pt2.x = pt.x - pt2.x;
         pt2.y = pt.y - pt2.y;
-        _hover->run_proc(hid_leave, um, &pt2);
+        _hover->on_leave(um, pt2);
     }
     if(_hover = ptr)
-        ptr->run_proc(hid_hover, um, &pt1);
-    return ptr != 0;
+        ptr->on_hover(um, pt1);
+    return ptr != nullptr;
 }
 
 bool wsys_manager::on_key_down(uint um, unikey uk)
 {
     if(_focus && _focus->is_enable() && _focus->is_visible())
-        _focus->run_proc(hid_keydown, um, uk);
+        _focus->on_keydown(um, uk);
     return true;
 }
 
 bool wsys_manager::on_key_up(uint um, unikey uk)
 {
     if(_focus && _focus->is_enable() && _focus->is_visible())
-        _focus->run_proc(hid_keyup, um, uk);
+        _focus->on_keyup(um, uk);
     return true;
 }
 
 bool wsys_manager::on_char(uint um, uint ch)
 {
     if(_focus && _focus->is_enable() && _focus->is_visible())
-        _focus->run_proc(hid_char, um, ch);
+        _focus->on_char(um, ch);
     return true;
 }
 
@@ -1494,11 +1262,11 @@ bool wsys_manager::remove_widget(widget* ptr)
     }
     gs_del(widget, ptr);
     if(_root == ptr)
-        _root = 0;
+        _root = nullptr;
     if(_capture == ptr)
-        _capture = 0;
+        _capture = nullptr;
     if(_focus == ptr)
-        _focus = 0;
+        _focus = nullptr;
     return true;
 }
 
@@ -1525,11 +1293,11 @@ bool wsys_manager::remove_widget(widget_map::iterator i)
     _widget_map.erase(i);
     gs_del(widget, ptr);
     if(_root == ptr)
-        _root = 0;
+        _root = nullptr;
     if(_capture == ptr)
-        _capture = 0;
+        _capture = nullptr;
     if(_focus == ptr)
-        _focus = 0;
+        _focus = nullptr;
     return true;
 }
 

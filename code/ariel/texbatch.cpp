@@ -39,8 +39,8 @@ static bool is_image_transposed(const image& img, const rectf& rc)
 static void write_image_non_transposed(image& img, const image& src, const rectf& rc)
 {
     assert(src.get_width() == rc.width() && src.get_height() == rc.height());
-    int left = (int)(rc.left + 0.5f);
-    int top = (int)(rc.top + 0.5f);
+    int left = round(rc.left);
+    int top = round(rc.top);
     int width = src.get_width();
     int height = src.get_height();
     int right = left + width;
@@ -56,7 +56,17 @@ static void write_image_non_transposed(image& img, const image& src, const rectf
 static void write_image_transposed(image& img, const image& src, const rectf& rc)
 {
     assert(src.get_width() == rc.height() && src.get_height() == rc.width());
-    // todo
+    int left = round(rc.left);
+    int top = round(rc.top);
+    int width = src.get_height();
+    int height = src.get_width();
+    int right = left + width;
+    int bottom = top + height;
+    for(int i = left; i < right; i ++) {
+        auto* srcptr = (pink::color*)src.get_data(0, i - left);
+        for(int j = top; j < bottom; j ++)
+            *(pink::color*)img.get_data(i, j) = srcptr[j - top];
+    }
 }
 
 static void write_image_source(image& img, const image& src, const rectf& rc)

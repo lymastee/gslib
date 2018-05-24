@@ -32,7 +32,7 @@ __ariel_begin__
 
 void frame_dispatcher::on_show(bool b)
 {
-    frame_pack_table<feid_show>::type event;
+    frame_event_table<feid_show>::type event;
     event.show = b;
     assert(_listener);
     _listener->on_frame_event(event);
@@ -40,7 +40,7 @@ void frame_dispatcher::on_show(bool b)
 
 void frame_dispatcher::on_create(system_driver* ptr, const rect& rc)
 {
-    frame_pack_table<feid_create>::type event;
+    frame_event_table<feid_create>::type event;
     event.driver = ptr;
     event.boundary = rc;
     assert(_listener);
@@ -49,14 +49,14 @@ void frame_dispatcher::on_create(system_driver* ptr, const rect& rc)
 
 void frame_dispatcher::on_close()
 {
-    frame_pack_table<feid_close>::type event;
+    frame_event_table<feid_close>::type event;
     assert(_listener);
     _listener->on_frame_event(event);
 }
 
-void frame_dispatcher::on_size(const rect& rc)
+void frame_dispatcher::on_resize(const rect& rc)
 {
-    frame_pack_table<feid_size>::type event;
+    frame_event_table<feid_resize>::type event;
     event.boundary = rc;
     assert(_listener);
     _listener->on_frame_event(event);
@@ -64,7 +64,7 @@ void frame_dispatcher::on_size(const rect& rc)
 
 void frame_dispatcher::on_paint(const rect& rc)
 {
-    frame_pack_table<feid_paint>::type event;
+    frame_event_table<feid_paint>::type event;
     event.boundary = rc;
     assert(_listener);
     _listener->on_frame_event(event);
@@ -72,21 +72,21 @@ void frame_dispatcher::on_paint(const rect& rc)
 
 void frame_dispatcher::on_halt()
 {
-    frame_pack_table<feid_halt>::type event;
+    frame_event_table<feid_halt>::type event;
     assert(_listener);
     _listener->on_frame_event(event);
 }
 
 void frame_dispatcher::on_resume()
 {
-    frame_pack_table<feid_resume>::type event;
+    frame_event_table<feid_resume>::type event;
     assert(_listener);
     _listener->on_frame_event(event);
 }
 
 bool frame_dispatcher::on_mouse_down(uint um, unikey uk, const point& pt)
 {
-    frame_pack_table<feid_mouse_down>::type event;
+    frame_event_table<feid_mouse_down>::type event;
     event.modifier = um;
     event.key = uk;
     event.position = pt;
@@ -96,7 +96,7 @@ bool frame_dispatcher::on_mouse_down(uint um, unikey uk, const point& pt)
 
 bool frame_dispatcher::on_mouse_up(uint um, unikey uk, const point& pt)
 {
-    frame_pack_table<feid_mouse_up>::type event;
+    frame_event_table<feid_mouse_up>::type event;
     event.modifier = um;
     event.key = uk;
     event.position = pt;
@@ -104,9 +104,9 @@ bool frame_dispatcher::on_mouse_up(uint um, unikey uk, const point& pt)
     return _listener->on_frame_event(event);
 }
 
-bool frame_dispatcher::on_move(uint um, const point& pt)
+bool frame_dispatcher::on_mouse_move(uint um, const point& pt)
 {
-    frame_pack_table<feid_move>::type event;
+    frame_event_table<feid_mouse_move>::type event;
     event.modifier = um;
     event.position = pt;
     assert(_listener);
@@ -115,7 +115,7 @@ bool frame_dispatcher::on_move(uint um, const point& pt)
 
 bool frame_dispatcher::on_key_down(uint um, unikey uk)
 {
-    frame_pack_table<feid_key_down>::type event;
+    frame_event_table<feid_key_down>::type event;
     event.modifier = um;
     event.key = uk;
     assert(_listener);
@@ -124,7 +124,7 @@ bool frame_dispatcher::on_key_down(uint um, unikey uk)
 
 bool frame_dispatcher::on_key_up(uint um, unikey uk)
 {
-    frame_pack_table<feid_key_up>::type event;
+    frame_event_table<feid_key_up>::type event;
     event.modifier = um;
     event.key = uk;
     assert(_listener);
@@ -133,7 +133,7 @@ bool frame_dispatcher::on_key_up(uint um, unikey uk)
 
 bool frame_dispatcher::on_char(uint um, uint ch)
 {
-    frame_pack_table<feid_char>::type event;
+    frame_event_table<feid_char>::type event;
     event.modifier = um;
     event.charactor = ch;
     assert(_listener);
@@ -142,7 +142,7 @@ bool frame_dispatcher::on_char(uint um, uint ch)
 
 void frame_dispatcher::on_timer(uint tid)
 {
-    frame_pack_table<feid_timer>::type event;
+    frame_event_table<feid_timer>::type event;
     event.timerid = tid;
     assert(_listener);
     _listener->on_frame_event(event);
@@ -150,7 +150,7 @@ void frame_dispatcher::on_timer(uint tid)
 
 void frame_dispatcher::do_draw()
 {
-    frame_pack_table<feid_draw>::type event;
+    frame_event_table<feid_draw>::type event;
     assert(_listener);
     _listener->on_frame_event(event);
 }

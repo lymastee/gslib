@@ -268,7 +268,7 @@ struct painter_helper
 };
 
 class __gs_novtable raster abstract:
-    public painterex
+    public painter
 {
 public:
     typedef painter_context context;
@@ -276,7 +276,6 @@ public:
 
 public:
     virtual ~raster() {}
-    virtual painter_version get_version() const override { return painter_ver2; }
     virtual void draw_line(const vec2& p1, const vec2& p2) override
     {
         painter_path path;
@@ -307,7 +306,11 @@ public:
     }
 
 public:
-    raster() { _width = _height = 0; }
+    raster()
+    {
+        _width = _height = 0;
+        _hints = 0;
+    }
     void setup_dimensions(int w, int h)
     {
         _width = w;
@@ -319,14 +322,17 @@ protected:
     context_stack       _ctxst;
     int                 _width;
     int                 _height;
+    uint                _hints;
 
 public:
     virtual void save() override;
     virtual void restore() override;
     virtual void set_brush(const painter_brush& b) override { _context.set_brush(b); }
     virtual void set_pen(const painter_pen& p) override { _context.set_pen(p); }
+    virtual void set_hints(uint hints, bool enable) override;
     virtual void set_clip(const rectf& rc) override { _context.set_clip(rc); }
     virtual void set_no_clip() override { _context._clip = 0; }
+    virtual bool query_hints(uint hints) const override { return (_hints & hints) == hints; }
     virtual context& get_context() override { return _context; }
 
 public:
@@ -335,19 +341,9 @@ public:
     virtual int get_height() const override { return _height; }
     virtual void set_dirty(dirty_list* dirty) override {}
     virtual dirty_list* get_dirty() const override { return 0; }
-    virtual image* select(image* img) override { return 0; }
-    virtual image* get_image() const override { return 0; }
-    virtual bool lock(const rect& rc) override { return false; }
-    virtual const rect& unlock() override
-    {
-        static rect rc;
-        return rc;
-    }
-    virtual void draw(const image* img, int x, int y) override {}
-    virtual void draw(const image* img, int x, int y, int cx, int cy, int sx, int sy) override {}
-    virtual void draw_text(const gchar* str, int x, int y, const pixel& p) override {}
-    virtual void draw_line(const point& start, const point& end, const pixel& p) override {}
-    virtual void draw_rect(const rect& rc, const pixel& p) override {}
+
+public:
+    bool query_antialias() const { return query_hints(hint_anti_alias); }
 };
 
 __pink_end__

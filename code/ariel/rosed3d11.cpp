@@ -298,7 +298,7 @@ void rose::initialize()
     _cb_config_slot = 0;
 }
 
-void rose::destroy_plugin()
+void rose::destroy_miscs()
 {
     release_constant_buffer(_cb_configs);
     release_any(_sampler_state);

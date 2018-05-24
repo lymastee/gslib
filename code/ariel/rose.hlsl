@@ -30,9 +30,9 @@ struct rose_vsf_coef_cr_input
 
 struct rose_vsf_klm_tex_input
 {
-    float2		position : POSITION;
-    float3		klm : TEXCOORD0;
-    float2		tex : TEXCOORD1;
+    float2      position : POSITION;
+    float3      klm : TEXCOORD0;
+    float2      tex : TEXCOORD1;
 };
 
 struct rose_vsf_coef_tex_input

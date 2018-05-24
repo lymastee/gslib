@@ -23,8 +23,8 @@
  * SOFTWARE.
  */
 
-#ifndef mclass_109a4180_a67d_47da_b8ab_2bb1c667bbfe_h
-#define mclass_109a4180_a67d_47da_b8ab_2bb1c667bbfe_h
+#ifndef mcls_109a4180_a67d_47da_b8ab_2bb1c667bbfe_h
+#define mcls_109a4180_a67d_47da_b8ab_2bb1c667bbfe_h
 
 #include <gslib/type.h>
 

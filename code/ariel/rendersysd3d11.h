@@ -85,6 +85,9 @@ protected:
 
 protected:
     void install_configs(const configs& cfg);
+
+public:
+    render_device* get_device() const { return _device; }
 };
 
 template<class res_class>

@@ -28,6 +28,7 @@
 
 #include <gslib/std.h>
 #include <gslib/sysop.h>
+#include <gslib/dvt.h>
 #include <pink/painter.h>
 
 __pink_begin__
@@ -88,39 +89,123 @@ struct clipboard_bitmap:
     virtual int get_size() const { return -1; }
 };
 
-enum hid
-{
-    hid_zr  =   0,
-    hid_press,
-    hid_click,
-    hid_hover,
-    hid_leave,
-    hid_keydown,
-    hid_keyup,
-    hid_char,
-    hid_timer,
-    hid_scroll,
-};
+// enum hid
+// {
+//     hid_zr  =   0,
+//     hid_press,
+//     hid_click,
+//     hid_hover,
+//     hid_leave,
+//     hid_keydown,
+//     hid_keyup,
+//     hid_char,
+//     hid_timer,
+//     hid_scroll,
+// };
+// 
+// class __gs_novtable handle abstract
+// {
+// public:
+//     /* if hid = 0, then it's a widget */
+//     virtual int get_id() const = 0;
+// };
 
-class __gs_novtable handle abstract
-{
-public:
-    /* if hid = 0, then it's a widget */
-    virtual int get_id() const = 0;
-};
+class widget;
+extern vtable_ops<widget>& widget_vtable_ops();
+
+#define reflect_widget_notify(target, trigger, host, action) { \
+    static byte replaced_func[] = { \
+        0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:old_func */ \
+        0xff, 0xd0,                             /* call eax */ \
+        0x8d, 0x0d, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea ecx, 0xcccccccc:host */ \
+        0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:action */ \
+        0xff, 0xd0,                             /* call eax */ \
+        0xc3                                    /* ret */ \
+    }; \
+    vtable_ops<widget>& vo = widget_vtable_ops(); \
+    uint old_func = vo.replace_vtable_method(target, vo.get_virtual_method_index(method_address(trigger)), replaced_func); \
+    *(uint*)(&replaced_func[2]) = old_func; \
+    *(uint*)(&replaced_func[10]) = (uint)host; \
+    *(uint*)(&replaced_func[16]) = method_address(action); \
+    DWORD oldpro; \
+    VirtualProtect(replaced_func, sizeof(replaced_func), PAGE_EXECUTE_READ, &oldpro); \
+}
+
+#define reflect_widget_notify1(target, trigger, host, action) { \
+    static byte replaced_func[] = { \
+        0xff, 0x74, 0x24, 0x04,                 /* push dword ptr[esp+4] */ \
+        0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:old_func */ \
+        0xff, 0xd0,                             /* call eax */ \
+        0xff, 0x74, 0x24, 0x04,                 /* push dword ptr[esp+4] */ \
+        0x8d, 0x0d, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea ecx, 0xcccccccc:host */ \
+        0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:action */ \
+        0xff, 0xd0,                             /* call eax */ \
+        0xc2, 0x04, 0x00                        /* ret 4 */ \
+    }; \
+    vtable_ops<widget>& vo = widget_vtable_ops(); \
+    uint old_func = vo.replace_vtable_method(target, vo.get_virtual_method_index(method_address(trigger)), replaced_func); \
+    *(uint*)(&replaced_func[6]) = old_func; \
+    *(uint*)(&replaced_func[18]) = (uint)host; \
+    *(uint*)(&replaced_func[24]) = method_address(action); \
+    DWORD oldpro; \
+    VirtualProtect(replaced_func, sizeof(replaced_func), PAGE_EXECUTE_READ, &oldpro); \
+}
+
+#define reflect_widget_notify2(target, trigger, host, action) { \
+    static byte replaced_func[] = { \
+        0xff, 0x74, 0x24, 0x08,                 /* push dword ptr[esp+8] */ \
+        0xff, 0x74, 0x24, 0x08,                 /* push dword ptr[esp+8] */ \
+        0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:old_func */ \
+        0xff, 0xd0,                             /* call eax */ \
+        0xff, 0x74, 0x24, 0x08,                 /* push dword ptr[esp+8] */ \
+        0xff, 0x74, 0x24, 0x08,                 /* push dword ptr[esp+8] */ \
+        0x8d, 0x0d, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea ecx, 0xcccccccc:host */ \
+        0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:action */ \
+        0xff, 0xd0,                             /* call eax */ \
+        0xc2, 0x08, 0x00                        /* ret 8 */ \
+    }; \
+    vtable_ops<widget>& vo = widget_vtable_ops(); \
+    uint old_func = vo.replace_vtable_method(target, vo.get_virtual_method_index(method_address(trigger)), replaced_func); \
+    *(uint*)(&replaced_func[10]) = old_func; \
+    *(uint*)(&replaced_func[26]) = (uint)host; \
+    *(uint*)(&replaced_func[32]) = method_address(action); \
+    DWORD oldpro; \
+    VirtualProtect(replaced_func, sizeof(replaced_func), PAGE_EXECUTE_READ, &oldpro); \
+}
+
+#define reflect_widget_notify3(target, trigger, host, action) { \
+    static byte replaced_func[] = { \
+        0xff, 0x74, 0x24, 0x0c,                 /* push dword ptr[esp+12] */ \
+        0xff, 0x74, 0x24, 0x0c,                 /* push dword ptr[esp+12] */ \
+        0xff, 0x74, 0x24, 0x0c,                 /* push dword ptr[esp+12] */ \
+        0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:old_func */ \
+        0xff, 0xd0,                             /* call eax */ \
+        0xff, 0x74, 0x24, 0x0c,                 /* push dword ptr[esp+12] */ \
+        0xff, 0x74, 0x24, 0x0c,                 /* push dword ptr[esp+12] */ \
+        0xff, 0x74, 0x24, 0x0c,                 /* push dword ptr[esp+12] */ \
+        0x8d, 0x0d, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea ecx, 0xcccccccc:host */ \
+        0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:action */ \
+        0xff, 0xd0,                             /* call eax */ \
+        0xc2, 0x0c, 0x00                        /* ret 12 */ \
+    }; \
+    vtable_ops<widget>& vo = widget_vtable_ops(); \
+    uint old_func = vo.replace_vtable_method(target, vo.get_virtual_method_index(method_address(trigger)), replaced_func); \
+    *(uint*)(&replaced_func[14]) = old_func; \
+    *(uint*)(&replaced_func[34]) = (uint)host; \
+    *(uint*)(&replaced_func[40]) = method_address(action); \
+    DWORD oldpro; \
+    VirtualProtect(replaced_func, sizeof(replaced_func), PAGE_EXECUTE_READ, &oldpro); \
+}
 
 class wsys_manager;
 
-class widget:
-    public handle
+class widget
 {
     friend class wsys_manager;
 
 public:
     widget(wsys_manager* m);
     virtual ~widget();
-    virtual int get_id() const { return hid_zr; }
-    virtual handle* query(int msgid);
     virtual bool create(widget* ptr, const gchar* name, const rect& rc, uint style);
     virtual void close();
     virtual void show(bool b);
@@ -131,13 +216,7 @@ public:
     virtual int proceed(int msgid, va_list vlst);
     virtual widget* capture(bool b);
     virtual widget* focus();
-    virtual void reflect(widget* w, int msgid);
-    virtual bool hit_test(const point& pt) { return (_style&sm_hitable) != 0; }
-
-protected:
-    struct reflect_node { widget* reflect_to; int reflect_id; };
-    typedef vector<reflect_node> reflect_list;
-    reflect_list    _reflect_list;
+    virtual bool hit_test(const point& pt) { return (_style & sm_hitable) != 0; }
 
 public:
     enum laytag
@@ -161,7 +240,7 @@ public:
     virtual void on_timer(uint tid) {}
     virtual void on_caret() {}
     virtual void on_focus(bool b) {}
-    virtual void on_scroll(const point& pt, real scr, bool vert) {}
+    virtual void on_scroll(const point& pt, real32 scr, bool vert) {}
 
 protected:
     wsys_manager*   _manager;
@@ -171,6 +250,7 @@ protected:
     bool            _show;
     bool            _enable;
     point           _htpos;
+    void*           _backvt;
 
 public:
     const string& get_name() const { return _name; }
@@ -183,6 +263,7 @@ public:
     void refresh(bool imm);
     int get_width() const { return _pos.width(); }
     int get_height() const { return _pos.height(); }
+    void make_individual_vtable();
     int run_proc(int msgid, ...);
 
 protected:
@@ -307,60 +388,19 @@ public:
 public:
     scroller(wsys_manager* m);
     void set_scroller(int r1, int r2, bool vts, const image* img, bool as = false);
-    void set_scroll(real s);
-    real get_scroll() const { return _scrpos; }
+    void set_scroll(real32 s);
+    real32 get_scroll() const { return _scrpos; }
     virtual bool create(widget* ptr, const gchar* name, const rect& rc, uint style) override;
     virtual void on_hover(uint um, const point& pt) override;
 
 protected:
     int             _rangemin, _rangemax;
-    real            _scrpos;
+    real32          _scrpos;
     bool            _vtscroll;
-};
-
-class sharpfit
-{
-public:
-    sharpfit(rect& b);
-    void set_grid_src(image* ptr);
-    void set_grid(const int n[]);
-    rect get_src_grid(int x, int y);
-    rect get_dest_grid(int x, int y);
-    int get_width() const { return _bound.width(); }
-    int get_height() const { return _bound.height(); }
-    image* get_grid_map();
-
-protected:
-    void draw_horizontal(const rect& src, const rect& des);
-    void draw_vertical(const rect& src, const rect& des);
-    void draw_center(const rect& src, const rect& des);
-
-protected:
-    rect&           _bound;
-    int             _grid[4];
-    image*          _gridsrc;
-    image           _gridmap;
 };
 
 typedef system_driver wsys_driver;
 typedef system_notify wsys_notify;
-
-// class __gnvt wsys_driver abstract
-// {
-// public:
-//     virtual void initialize(wsys_notify* ptr, const rect& rc) = 0;
-//     virtual void close() = 0;
-//     virtual void set_timer(uint tid, int t) = 0;
-//     virtual void kill_timer(uint tid) = 0;
-//     virtual void update(const canvas& cvs) = 0;
-//     virtual void emit(int msgid, void* msg, int size) = 0;
-//     virtual void set_ime(point pt, const font& ft) = 0;
-//     virtual void set_clipboard(const gchar* fmt, const void* ptr, int size) = 0;
-//     virtual int get_clipboard(const gchar* fmt, const void*& ptr) = 0;
-// //     virtual clipfmt enum_clipboard() = 0;
-// //     virtual int get_clipboard(void* ptr, int size) = 0;
-//     virtual int get_clipboard(clipboard_list& cl, int c) = 0;
-// };
 
 class __gs_novtable fontsys abstract
 {
@@ -412,13 +452,13 @@ public:
     virtual void on_show(bool b) override;
     virtual void on_create(wsys_driver* ptr, const rect& rc) override;
     virtual void on_close() override;
-    virtual void on_size(const rect& rc) override;
+    virtual void on_resize(const rect& rc) override;
     virtual void on_paint(const rect& rc) override;
     virtual void on_halt() override;
     virtual void on_resume() override;
     virtual bool on_mouse_down(uint um, unikey uk, const point& pt) override;
     virtual bool on_mouse_up(uint um, unikey uk, const point& pt) override;
-    virtual bool on_move(uint um, const point& pt) override;
+    virtual bool on_mouse_move(uint um, const point& pt) override;
     virtual bool on_key_down(uint um, unikey uk) override;
     virtual bool on_key_up(uint um, unikey uk) override;
     virtual bool on_char(uint um, uint ch) override;

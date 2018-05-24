@@ -52,14 +52,6 @@ struct rose_configs
     /* more.. */
 };
 
-template<class _pack>
-uint pack_cb_size()
-{
-    uint s = sizeof(_pack);
-    uint m = s % 16;
-    return !m ? s : s + (16 - m);
-}
-
 struct rose_bind_info_cr
 {
     vec4                color;      /* RGBA */
@@ -162,6 +154,10 @@ public:
 
 protected:
     vertex_stream_cr    _vertices;
+
+private:
+    void create_from_fill(bat_fill_batch* bat);
+    void create_from_stroke(bat_stroke_batch* bat);
 };
 
 class rose_fill_batch_klm_cr:
@@ -199,6 +195,10 @@ protected:
     render_sampler_state* _sstate;
     shader_resource_view* _srv;
     render_texture2d*   _tex;
+
+private:
+    void create_from_fill(bat_fill_batch* bat);
+    void create_from_stroke(bat_stroke_batch* bat);
 };
 
 class rose_stroke_batch_coef_cr:
@@ -354,7 +354,7 @@ protected:
 #if use_rendersys_d3d_11
 protected:
     void initialize();
-    void destroy_plugin();
+    void destroy_miscs();
     sampler_state* acquire_default_sampler_state();
 
 protected:

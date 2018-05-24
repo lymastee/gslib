@@ -175,6 +175,8 @@ public:
 public:
     batch_processor();
     ~batch_processor();
+    void set_antialias(bool b) { _antialias = b; }
+    bool is_aa_enabled() const { return _antialias; }
     void add_non_tex_polygon(lb_polygon* poly, float z, uint brush_tag);
     bat_batch* add_tex_polygons(lb_polygon_list& polys, float z);
     bat_line* add_line(lb_joint* i, lb_joint* j, float w, float z, uint pen_tag);
@@ -187,6 +189,7 @@ protected:
     bat_triangles       _triangles;
     bat_lines           _lines;
     bat_batches         _batches;
+    bool                _antialias;
 
 protected:
     template<class _batch>

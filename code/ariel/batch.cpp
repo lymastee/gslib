@@ -461,6 +461,7 @@ bat_line* bat_line::create_half_line(lb_joint* i, lb_joint* j, const vec2& p1, c
 
 batch_processor::batch_processor()
 {
+    _antialias = false;
 }
 
 batch_processor::~batch_processor()
@@ -508,8 +509,10 @@ bat_batch* batch_processor::add_tex_polygons(lb_polygon_list& polys, float z)
     auto* f = find_containable_tex_batch(triangles);
     if(!f) {
         f = create_batch<bat_fill_batch>(bf_klm_tex);
-        /* for every bf_klm_tex batch, will have a bs_coef_tex batch for boundary anti-aliasing. */
-        create_batch<bat_stroke_batch>(bs_coef_tex);
+        if(is_aa_enabled()) {
+            /* for every bf_klm_tex batch, will have a bs_coef_tex batch for boundary anti-aliasing. */
+            create_batch<bat_stroke_batch>(bs_coef_tex);
+        }
     }
     assert(f && (f->get_type() == bf_klm_tex));
     /* insert all the triangles into the batch */
@@ -786,6 +789,7 @@ bat_batch* batch_processor::find_containable_tex_batch(const bat_triangles& tria
 
 bat_stroke_batch* batch_processor::find_associated_tex_stroke_batch(const bat_batch* bat)
 {
+    assert(is_aa_enabled());
     assert(bat && (bat->get_type() == bf_klm_tex));
     auto f = _batches.begin();
     for(; f != _batches.end(); ++ f) {

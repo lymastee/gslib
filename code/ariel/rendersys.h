@@ -52,6 +52,11 @@ enum sampler_state_filter
     ssf_anisotropic,
 };
 
+struct render_device_info
+{
+    uint            vendor_id;
+};
+
 using pink::image;
 
 class __gs_novtable rendersys abstract
@@ -109,6 +114,12 @@ public:
 public:
     static bool is_vsync_enabled(const configs& cfg);
     static bool is_full_screen(const configs& cfg);
+
+protected:
+    render_device_info      _device_info;
+
+public:
+    const render_device_info& get_device_info() const { return _device_info; }
 };
 
 extern void release_vertex_buffer(render_vertex_buffer* buf);
@@ -117,6 +128,14 @@ extern void release_constant_buffer(render_constant_buffer* buf);
 
 template<class res_class>
 render_resource* convert_to_resource(res_class*);
+
+template<class _pack>
+inline uint pack_cb_size()
+{
+    uint s = sizeof(_pack);
+    uint m = s % 16;
+    return !m ? s : s + (16 - m);
+}
 
 __ariel_end__
 

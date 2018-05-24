@@ -143,13 +143,13 @@ public:
     virtual void on_show(bool b) = 0;
     virtual void on_create(system_driver* ptr, const rect& rc) = 0;
     virtual void on_close() = 0;
-    virtual void on_size(const rect& rc) = 0;
+    virtual void on_resize(const rect& rc) = 0;
     virtual void on_paint(const rect& rc) = 0;
     virtual void on_halt() = 0;
     virtual void on_resume() = 0;
     virtual bool on_mouse_down(uint um, unikey uk, const point& pt) = 0;
     virtual bool on_mouse_up(uint um, unikey uk, const point& pt) = 0;
-    virtual bool on_move(uint um, const point& pt) = 0;
+    virtual bool on_mouse_move(uint um, const point& pt) = 0;
     virtual bool on_key_down(uint um, unikey uk) = 0;
     virtual bool on_key_up(uint um, unikey uk) = 0;
     virtual bool on_char(uint um, uint ch) = 0;

@@ -1176,4 +1176,12 @@ void raster::restore()
     _ctxst.pop();
 }
 
+void raster::set_hints(uint hints, bool enable)
+{
+    if(enable)
+        _hints |= hints;
+    else
+        _hints &= ~hints;
+}
+
 __pink_end__

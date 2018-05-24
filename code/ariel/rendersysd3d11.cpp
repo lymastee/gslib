@@ -59,6 +59,15 @@ inline void SafeRelease(Interface*& pInterface)
 
 __ariel_begin__
 
+static void setup_device_info(render_device_info& info, IDXGIAdapter* adapter)
+{
+    assert(adapter);
+    DXGI_ADAPTER_DESC desc;
+    if(FAILED(adapter->GetDesc(&desc)))
+        return;
+    info.vendor_id = desc.VendorId;
+}
+
 rendersys_d3d11::rendersys_d3d11()
 {
     _drvtype = D3D_DRIVER_TYPE_NULL;
@@ -132,6 +141,8 @@ bool rendersys_d3d11::setup(uint hwnd, const configs& cfg)
         }
     }
     delete [] display_modes;
+    /* setup device info */
+    setup_device_info(_device_info, adapter);
     /* create swap chain */
     DXGI_SWAP_CHAIN_DESC sd;
     memset(&sd, 0, sizeof(sd));
@@ -374,7 +385,7 @@ render_vertex_buffer* rendersys_d3d11::create_vertex_buffer(uint stride, uint co
 {
     D3D11_BUFFER_DESC desc;
     memset(&desc, 0, sizeof(desc));
-    desc.Usage = D3D11_USAGE_DEFAULT;
+    desc.Usage = (D3D11_USAGE)usage;
     desc.ByteWidth = stride * count;
     desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
     desc.CPUAccessFlags = 0;

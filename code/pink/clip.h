@@ -28,7 +28,7 @@
 
 #include <gslib/std.h>
 #include <gslib/tree.h>
-#include <gslib/mclass.h>
+#include <gslib/mcls.h>
 #include <pink/utility.h>
 #include <pink/raster.h>
 

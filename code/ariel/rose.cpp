@@ -177,7 +177,14 @@ static void rose_filling_klm_coords(bat_triangle* triangle, _vf pt[3])
     }
 }
 
-// todo: transposed
+static bool is_image_transposed(const image& img, const rectf& rc)
+{
+    assert((img.get_width() == rc.width() && img.get_height() == rc.height()) ||
+        (img.get_width() == rc.height() && img.get_height() == rc.width())
+    );
+    return !(img.get_width() == rc.width() && img.get_height() == rc.height());
+}
+
 static vec2 rose_calc_tex_coords(image* img, const vec2& p, const tex_batcher& batch)
 {
     assert(img);
@@ -189,7 +196,8 @@ static vec2 rose_calc_tex_coords(image* img, const vec2& p, const tex_batcher& b
     ms.scaling(1.f / batch.get_width(), 1.f / batch.get_height());
     m.multiply(mt, ms);
     vec3 pt;
-    pt.multiply(vec3(p.x, p.y, 1.f), m);
+    is_image_transposed(*img, f->second) ? pt.multiply(vec3(p.y, p.x, 1.f), m) :
+        pt.multiply(vec3(p.x, p.y, 1.f), m);
     return vec2(pt.x / pt.z, pt.y / pt.z);
 }
 
@@ -237,7 +245,39 @@ void rose_batch::setup_vf_and_topology(rendersys* rsys, uint topo)
 void rose_fill_batch_cr::create(bat_batch* bat)
 {
     assert(bat);
-    auto& rtr = static_cast<bat_fill_batch*>(bat)->get_rtree();
+    switch(bat->get_type())
+    {
+    case bf_cr:
+        return create_from_fill(static_cast<bat_fill_batch*>(bat));
+    case bs_coef_cr:
+        return create_from_stroke(static_cast<bat_stroke_batch*>(bat));
+    default:
+        assert(!"unexpected.");
+        break;
+    }
+}
+
+void rose_fill_batch_cr::tracing() const
+{
+    trace(_t("#start tracing fill batch cr:\n"));
+    trace(_t("@!\n"));
+    int i = 0, cap = (int)_vertices.size();
+    for(; i != cap; i += 3) {
+        auto& p1 = _vertices.at(i);
+        auto& p2 = _vertices.at(i + 1);
+        auto& p3 = _vertices.at(i + 2);
+        trace(_t("@moveTo %f, %f;\n"), p1.pos.x, p1.pos.y);
+        trace(_t("@lineTo %f, %f;\n"), p2.pos.x, p2.pos.y);
+        trace(_t("@lineTo %f, %f;\n"), p3.pos.x, p3.pos.y);
+        trace(_t("@lineTo %f, %f;\n"), p1.pos.x, p1.pos.y);
+    }
+    trace(_t("@@\n"));
+}
+
+void rose_fill_batch_cr::create_from_fill(bat_fill_batch* bat)
+{
+    assert(bat);
+    auto& rtr = bat->get_rtree();
     rtr.for_each([this](bat_rtree_entity* ent) {
         assert(ent);
         if(!ent->get_bind_arg())
@@ -256,21 +296,44 @@ void rose_fill_batch_cr::create(bat_batch* bat)
     });
 }
 
-void rose_fill_batch_cr::tracing() const
+void rose_fill_batch_cr::create_from_stroke(bat_stroke_batch* bat)
 {
-    trace(_t("#start tracing fill batch cr:\n"));
-    trace(_t("@!\n"));
-    int i = 0, cap = (int)_vertices.size();
-    for(; i != cap; i += 3) {
-        auto& p1 = _vertices.at(i);
-        auto& p2 = _vertices.at(i + 1);
-        auto& p3 = _vertices.at(i + 2);
-        trace(_t("@moveTo %f, %f;\n"), p1.pos.x, p1.pos.y);
-        trace(_t("@lineTo %f, %f;\n"), p2.pos.x, p2.pos.y);
-        trace(_t("@lineTo %f, %f;\n"), p3.pos.x, p3.pos.y);
-        trace(_t("@lineTo %f, %f;\n"), p1.pos.x, p1.pos.y);
+    assert(bat);
+    auto& lines = bat->get_lines();
+    for(auto* line : lines) {
+        assert(line);
+        /* point */
+        auto& p1 = line->get_start_point();
+        auto& p2 = line->get_end_point();
+        if(line->need_recalc())
+            line->calc_contour_points();
+        auto* p = &line->get_contour_point(0);
+        /* color */
+        auto* sj1 = line->get_source_joint(0);
+        auto* sj2 = line->get_source_joint(1);
+        assert(sj1 && sj2);
+        auto* os1 = reinterpret_cast<rose_bind_info_cr*>(sj1->get_binding());
+        auto* os2 = reinterpret_cast<rose_bind_info_cr*>(sj2->get_binding());
+        assert(os1 && os2);
+        float t1 = gs_clamp(pink::linear_reparameterize(sj1->get_point(), sj2->get_point(), p1), 0.f, 1.f);
+        float t2 = gs_clamp(pink::linear_reparameterize(sj1->get_point(), sj2->get_point(), p2), 0.f, 1.f);
+        vec4 cr1, cr2;
+        cr1.lerp(os1->color, os2->color, t1);
+        cr2.lerp(os1->color, os2->color, t2);
+        vertex_info_cr pt[] =
+        {
+            { p[0], cr1 },
+            { p[1], cr2 },
+            { p[2], cr1 },
+            { p[3], cr2 },
+        };
+        _vertices.push_back(pt[0]);
+        _vertices.push_back(pt[1]);
+        _vertices.push_back(pt[2]);
+        _vertices.push_back(pt[2]);
+        _vertices.push_back(pt[1]);
+        _vertices.push_back(pt[3]);
     }
-    trace(_t("@@\n"));
 }
 
 void rose_fill_batch_klm_cr::create(bat_batch* bat)
@@ -331,7 +394,26 @@ rose_fill_batch_klm_tex::rose_fill_batch_klm_tex(render_sampler_state* ss)
 void rose_fill_batch_klm_tex::create(bat_batch* bat)
 {
     assert(bat);
-    auto& rtr = static_cast<bat_fill_batch*>(bat)->get_rtree();
+    switch(bat->get_type())
+    {
+    case bf_klm_tex:
+        return create_from_fill(static_cast<bat_fill_batch*>(bat));
+    case bs_coef_tex:
+        return create_from_stroke(static_cast<bat_stroke_batch*>(bat));
+    default:
+        assert(!"unexpected.");
+        break;
+    }
+}
+
+void rose_fill_batch_klm_tex::tracing() const
+{
+}
+
+void rose_fill_batch_klm_tex::create_from_fill(bat_fill_batch* bat)
+{
+    assert(bat);
+    auto& rtr = bat->get_rtree();
     /* deal with texture batch */
     assert(_texbatch.is_empty());
     rtr.for_each([this](bat_rtree_entity* ent) {
@@ -385,8 +467,62 @@ void rose_fill_batch_klm_tex::create(bat_batch* bat)
     });
 }
 
-void rose_fill_batch_klm_tex::tracing() const
+void rose_fill_batch_klm_tex::create_from_stroke(bat_stroke_batch* bat)
 {
+    assert(bat);
+    auto& lines = bat->get_lines();
+    /* deal with texture batch */
+    for(auto* line : lines) {
+        assert(line);
+        auto* sj1 = line->get_source_joint(0);
+        auto* sj2 = line->get_source_joint(1);
+        assert(sj1 && sj2);
+        auto* os1 = reinterpret_cast<rose_bind_info_tex*>(sj1->get_binding());
+        auto* os2 = reinterpret_cast<rose_bind_info_tex*>(sj2->get_binding());
+        assert(os1 && os2);
+        _texbatch.add_image(os1->img);
+        _texbatch.add_image(os2->img);
+    }
+    /* arrange texture batch */
+    _texbatch.arrange();
+    /* create vertices */
+    for(auto* line : lines) {
+        assert(line);
+        /* point */
+        auto& p1 = line->get_start_point();
+        auto& p2 = line->get_end_point();
+        if(line->need_recalc())
+            line->calc_contour_points();
+        auto* p = &line->get_contour_point(0);
+        /* tex */
+        auto* sj1 = line->get_source_joint(0);
+        auto* sj2 = line->get_source_joint(1);
+        assert(sj1 && sj2);
+        auto* os1 = reinterpret_cast<rose_bind_info_tex*>(sj1->get_binding());
+        auto* os2 = reinterpret_cast<rose_bind_info_tex*>(sj2->get_binding());
+        assert(os1 && os2);
+        float t1 = gs_clamp(pink::linear_reparameterize(sj1->get_point(), sj2->get_point(), p1), 0.f, 1.f);
+        float t2 = gs_clamp(pink::linear_reparameterize(sj1->get_point(), sj2->get_point(), p2), 0.f, 1.f);
+        assert(os1->img == os2->img);
+        vec2 tex1, tex2;
+        tex1.lerp(os1->tex, os2->tex, t1);
+        tex2.lerp(os1->tex, os2->tex, t2);
+        tex1 = rose_calc_tex_coords(os1->img, tex1, _texbatch);
+        tex2 = rose_calc_tex_coords(os2->img, tex2, _texbatch);
+        vertex_info_klm_tex pt[] =
+        {
+            { p[0], vec3(1.f, 0.f, 0.f), tex1 },
+            { p[1], vec3(1.f, 0.f, 0.f), tex2 },
+            { p[2], vec3(1.f, 0.f, 0.f), tex1 },
+            { p[3], vec3(1.f, 0.f, 0.f), tex2 },
+        };
+        _vertices.push_back(pt[0]);
+        _vertices.push_back(pt[1]);
+        _vertices.push_back(pt[2]);
+        _vertices.push_back(pt[2]);
+        _vertices.push_back(pt[1]);
+        _vertices.push_back(pt[3]);
+    }
 }
 
 void rose_stroke_batch_coef_cr::create(bat_batch* bat)
@@ -719,7 +855,7 @@ rose::rose()
 rose::~rose()
 {
     clear_batches();
-    destroy_plugin();
+    destroy_miscs();
 }
 
 void rose::draw_path(const painter_path& path)
@@ -735,6 +871,7 @@ void rose::on_draw_begin()
 {
     _nextz = 0.f;
     _bp.clear_batches();
+    _bp.set_antialias(query_antialias());
     _bindings.clear_binding_cache();
 }
 
@@ -763,7 +900,7 @@ bat_batch* rose::fill_picture_graphics_obj(graphics_obj& gfx)
 
 void rose::stroke_graphics_obj(graphics_obj& gfx, uint pen_tag)
 {
-    static const float line_width = 2.4f;
+    float line_width = query_antialias() ? 2.4f : 2.f;
     auto z = _nextz ++;
     meta_stroke_graphics_obj(gfx, [&](lb_joint* i, lb_joint* j)-> bat_line* {
         assert(i && j);
@@ -837,6 +974,8 @@ void rose::prepare_fill(const painter_path& path, const painter_brush& brush)
     rose_paint_non_picture_brush(gfx, _bindings, brush);
     fill_non_picture_graphics_obj(gfx, brush.get_tag());
     _gocache.push_back(gfx);
+    if(!query_antialias())
+        return;
     /* anti-aliasing */
     auto z = _nextz ++;
     graphics_obj gfxaa((float)get_width(), (float)get_height());
@@ -877,6 +1016,8 @@ void rose::prepare_picture_fill(const painter_path& path, const painter_brush& b
     auto* fill_bat = fill_picture_graphics_obj(gfx);
     assert(fill_bat);
     _gocache.push_back(gfx);
+    if(!query_antialias())
+        return;
     /* anti-aliasing */
     auto z = _nextz ++;
     graphics_obj gfxaa((float)get_width(), (float)get_height());
@@ -939,6 +1080,8 @@ rose_batch* rose::create_fill_batch_klm_tex()
 
 rose_batch* rose::create_stroke_batch_cr()
 {
+    if(!query_antialias())
+        return create_fill_batch_cr();
     auto* ptr = gs_new(rose_stroke_batch_coef_cr);
     ptr->set_vertex_shader(_vss_coef_cr);
     ptr->set_pixel_shader(_pss_coef_cr);
@@ -949,6 +1092,8 @@ rose_batch* rose::create_stroke_batch_cr()
 
 rose_batch* rose::create_stroke_batch_tex()
 {
+    if(!query_antialias())
+        return create_fill_batch_klm_tex();
     auto* sstate = acquire_default_sampler_state();
     auto* ptr = gs_new(rose_stroke_batch_coef_tex, sstate);
     ptr->set_vertex_shader(_vss_coef_tex);
@@ -992,14 +1137,16 @@ void rose::prepare_batches()
             break;
         case bf_klm_tex:
             bat = create_fill_batch_klm_tex();
-            assert(bat);
-            bat->create(p);
-            bat->buffering(_rsys);
-            /* should have an associated stroke batch after. */
-            p = *++ i;
-            assert(i != batches.end());
-            assert(p->get_type() == bs_coef_tex);
-            bat = create_stroke_batch_assoc(static_cast<rose_fill_batch_klm_tex*>(bat));
+            if(query_antialias()) {
+                assert(bat);
+                bat->create(p);
+                bat->buffering(_rsys);
+                /* should have an associated stroke batch after. */
+                p = *++ i;
+                assert(i != batches.end());
+                assert(p->get_type() == bs_coef_tex);
+                bat = create_stroke_batch_assoc(static_cast<rose_fill_batch_klm_tex*>(bat));
+            }
             break;
         case bs_coef_cr:
             bat = create_stroke_batch_cr();

@@ -32,33 +32,33 @@
 
 __pink_begin__
 
-enum painter_version
-{
-    painter_ver1,       /* software painter */
-    painter_ver2,       /* rose painter */
-    painter_ver3,       /* not used. */
-};
-
-class __gs_novtable painter abstract
-{
-public:
-    virtual painter_version get_version() const = 0;
-    virtual int get_width() const = 0;
-    virtual int get_height() const = 0;
-    virtual void set_dirty(dirty_list* dirty) = 0;
-    virtual dirty_list* get_dirty() const = 0;
-    virtual image* select(image* img) = 0;
-    virtual image* get_image() const = 0;
-    virtual bool lock(const rect& rc) = 0;
-    virtual const rect& unlock() = 0;
-    virtual void on_draw_begin() = 0;
-    virtual void on_draw_end() = 0;
-    virtual void draw(const image* img, int x, int y) = 0;
-    virtual void draw(const image* img, int x, int y, int cx, int cy, int sx, int sy) = 0;
-    virtual void draw_text(const gchar* str, int x, int y, const pixel& p) = 0;
-    virtual void draw_line(const point& start, const point& end, const pixel& p) = 0;
-    virtual void draw_rect(const rect& rc, const pixel& p) = 0;
-};
+// enum painter_version
+// {
+//     painter_ver1,       /* software painter */
+//     painter_ver2,       /* rose painter */
+//     painter_ver3,       /* not used. */
+// };
+// 
+// class __gs_novtable painter abstract
+// {
+// public:
+//     virtual painter_version get_version() const = 0;
+//     virtual int get_width() const = 0;
+//     virtual int get_height() const = 0;
+//     virtual void set_dirty(dirty_list* dirty) = 0;
+//     virtual dirty_list* get_dirty() const = 0;
+//     virtual image* select(image* img) = 0;
+//     virtual image* get_image() const = 0;
+//     virtual bool lock(const rect& rc) = 0;
+//     virtual const rect& unlock() = 0;
+//     virtual void on_draw_begin() = 0;
+//     virtual void on_draw_end() = 0;
+//     virtual void draw(const image* img, int x, int y) = 0;
+//     virtual void draw(const image* img, int x, int y, int cx, int cy, int sx, int sy) = 0;
+//     virtual void draw_text(const gchar* str, int x, int y, const pixel& p) = 0;
+//     virtual void draw_line(const point& start, const point& end, const pixel& p) = 0;
+//     virtual void draw_rect(const rect& rc, const pixel& p) = 0;
+// };
 
 class painter_linestrip
 {
@@ -148,11 +148,6 @@ protected:
     color           _color;
     extra_data      _extra;
 
-    typedef void (*fn_fill)(image& img, linestrips& c, const pixel& cr, uint ext);
-    typedef void (*fn_fill_alpha)(image& img, linestrips& c, const pixel& cr, float alpha, uint ext);
-    static bool preprocess_linestrips(linestrips& c);
-    static void solid_fill(image& img, linestrips& c, const pixel& cr, uint ext);
-
 public:
     painter_brush() { _tag = solid; }
     void set_tag(uint tag) { _tag = tag; }
@@ -161,7 +156,6 @@ public:
     const color& get_color() const { return _color; }
     void set_extra(const extra_data& ext) { _extra = ext; }
     const extra_data& get_extra() const { return _extra; }
-    void fill(image& img, linestrips& c, float alpha = 1.f) const;
 };
 
 struct painter_pen
@@ -179,12 +173,6 @@ protected:
     uint            _tag;
     color           _color;
     extra_data      _extra;
-
-    typedef void (*fn_stroke)(image& img, const pointf& p1, const pointf& p2, const pixel& cr, uint ext);
-    typedef void (*fn_stroke_alpha)(image& img, const pointf& p1, const pointf& p2, const pixel& cr, float alpha, uint ext);
-    static void solid_stroke(image& img, const pointf& p1, const pointf& p2, const pixel& cr, uint ext);
-    static void solid_stroke_alpha(image& img, const pointf& p1, const pointf& p2, const pixel& cr, float alpha, uint ext);
-    // more to come...
 
 public:
     painter_pen() { _tag = solid; }
@@ -219,11 +207,23 @@ struct painter_context
 
 class painter_path;
 
-class __gs_novtable painterex abstract:
-    public painter
+class __gs_novtable painter abstract
 {
 public:
+    enum painter_hints
+    {
+        hint_anti_alias     = 0x1,
+    };
+
+public:
+    virtual int get_width() const = 0;
+    virtual int get_height() const = 0;
+    virtual void set_dirty(dirty_list* dirty) = 0;
+    virtual dirty_list* get_dirty() const = 0;
+    virtual void on_draw_begin() = 0;
+    virtual void on_draw_end() = 0;
     virtual void resize(int w, int h) = 0;
+    virtual void set_hints(uint hints, bool enable) = 0;
     virtual void set_clip(const rectf& rc) = 0;
     virtual void set_no_clip() = 0;
     virtual void set_brush(const painter_brush& b) = 0;
@@ -235,6 +235,7 @@ public:
     virtual void draw_arc(const vec2& p1, const vec2& p2, float r, bool inv = false) = 0;
     virtual void save() = 0;
     virtual void restore() = 0;
+    virtual bool query_hints(uint hints) const = 0;
     virtual painter_context& get_context() = 0;
 };
 
@@ -275,45 +276,6 @@ protected:
 public:
     virtual ~painter_obj();
     virtual void draw() = 0;
-};
-
-class software_painter:
-    public painter
-{
-protected:
-    rect            _lock;
-    bool            _locked;
-    image*          _image;
-    dirty_list*     _dirty;
-
-public:
-    software_painter();
-    virtual ~software_painter();
-    virtual painter_version get_version() const override { return painter_ver1; }
-    virtual int get_width() const override { return _image->get_width(); }
-    virtual int get_height() const override { return _image->get_height(); }
-    virtual void set_dirty(dirty_list* dirty) override { _dirty = dirty; }
-    virtual dirty_list* get_dirty() const override { return _dirty; }
-    virtual image* select(image* ptr) override;
-    virtual image* get_image() const override { return _image; }
-    virtual bool lock(const rect& rc) override;
-    virtual const rect& unlock() override;
-    virtual void on_draw_begin() override {}
-    virtual void on_draw_end() override {}
-    virtual void draw(const image* img, int x, int y) override { draw(img, x, y, img->get_width(), img->get_height(), 0, 0); }
-    virtual void draw(const image* img, int x, int y, int cx, int cy, int sx, int sy) override;
-    virtual void draw_text(const gchar* str, int x, int y, const pixel& p) override;
-    virtual void draw_line(const point& start, const point& end, const pixel& p) override;
-    virtual void draw_rect(const rect& rc, const pixel& p) override;
-};
-
-struct select_software_painter
-{
-    static painter& get_painter()
-    {
-        static software_painter inst;
-        return inst;
-    }
 };
 
 __pink_end__

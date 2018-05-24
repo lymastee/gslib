@@ -302,7 +302,7 @@ static LRESULT __stdcall frame_window_proc(HWND hwnd, UINT msg, WPARAM wparam, L
             uint um;
             framesys_getpos(lparam, pt);
             framesys_getmskkey(wparam, um);
-            get_frame_notify()->on_move(um, pt);
+            get_frame_notify()->on_mouse_move(um, pt);
             ret = DefWindowProc(hwnd, msg, wparam, lparam);
             break;
         }
@@ -352,7 +352,7 @@ static LRESULT __stdcall frame_window_proc(HWND hwnd, UINT msg, WPARAM wparam, L
             ret = DefWindowProc(hwnd, msg, wparam, lparam);
             rect rc;
             framesys_getsize(lparam, rc);
-            get_frame_notify()->on_size(rc);
+            get_frame_notify()->on_resize(rc);
             break;
         }
     case WM_KEYDOWN:

@@ -56,121 +56,200 @@ enum frame_event_id
     feid_paint,
     feid_mouse_down,
     feid_mouse_up,
-    feid_move,
+    feid_mouse_move,
     feid_key_down,
     feid_key_up,
     feid_char,
     feid_show,
     feid_create,
     feid_close,
-    feid_size,
+    feid_resize,
     feid_halt,
     feid_resume,
     feid_custom,
 };
 
-struct frame_event
+struct __gs_novtable frame_event abstract
 {
-    uint                id;
-    uint                size;
-    void*               ptr;
-
-public:
-    frame_event()
-    {
-        id = feid_invalid;
-        size = 0;
-        ptr = 0;
-    }
-    frame_event(uint i, uint s, void* p)
-    {
-        id = i;
-        size = s;
-        ptr = p;
-    }
+    virtual uint get_id() const = 0;
+    virtual uint get_event_size() const = 0;
 };
 
-template<uint _feid, class _fepk>
-struct frame_pack:
-    public frame_event,
-    public _fepk
+struct frame_draw_event:
+    public frame_event
 {
 public:
-    frame_pack()
-    {
-        id = _feid;
-        size = sizeof(_fepk);
-        ptr = static_cast<_fepk*>(this);
-    }
+    virtual uint get_id() const override { return feid_draw; }
+    virtual uint get_event_size() const override { return sizeof(*this); }
 };
 
-struct frame_pack_void {};
-struct frame_pack_paint { rect boundary; };
-struct frame_pack_timer { uint timerid; };
-struct frame_pack_show { bool show; };
-struct frame_pack_size { rect boundary; };
-struct frame_pack_mouse_down
+struct frame_close_event:
+    public frame_event
+{
+public:
+    virtual uint get_id() const override { return feid_close; }
+    virtual uint get_event_size() const override { return sizeof(*this); }
+};
+
+struct frame_halt_event:
+    public frame_event
+{
+public:
+    virtual uint get_id() const override { return feid_halt; }
+    virtual uint get_event_size() const override { return sizeof(*this); }
+};
+
+struct frame_resume_event:
+    public frame_event
+{
+public:
+    virtual uint get_id() const override { return feid_resume; }
+    virtual uint get_event_size() const override { return sizeof(*this); }
+};
+
+struct frame_paint_event:
+    public frame_event
+{
+    rect            boundary;
+
+public:
+    virtual uint get_id() const override { return feid_paint; }
+    virtual uint get_event_size() const override { return sizeof(*this); }
+};
+
+struct frame_timer_event:
+    public frame_event
+{
+    uint            timerid;
+
+public:
+    virtual uint get_id() const override { return feid_timer; }
+    virtual uint get_event_size() const override { return sizeof(*this); }
+};
+
+struct frame_show_event:
+    public frame_event
+{
+    bool            show;
+
+public:
+    virtual uint get_id() const override { return feid_show; }
+    virtual uint get_event_size() const override { return sizeof(*this); }
+};
+
+struct frame_resize_event:
+    public frame_event
+{
+    rect            boundary;
+
+public:
+    virtual uint get_id() const override { return feid_resize; }
+    virtual uint get_event_size() const override { return sizeof(*this); }
+};
+
+struct frame_mouse_down_event:
+    public frame_event
 {
     uint            modifier;
     unikey          key;
     point           position;
+
+public:
+    virtual uint get_id() const override { return feid_mouse_down; }
+    virtual uint get_event_size() const override { return sizeof(*this); }
 };
-struct frame_pack_mouse_up
+
+struct frame_mouse_up_event:
+    public frame_event
 {
     uint            modifier;
     unikey          key;
     point           position;
+
+public:
+    virtual uint get_id() const override { return feid_mouse_up; }
+    virtual uint get_event_size() const override { return sizeof(*this); }
 };
-struct frame_pack_move
+
+struct frame_mouse_move_event:
+    public frame_event
 {
     uint            modifier;
     point           position;
+
+public:
+    virtual uint get_id() const override { return feid_mouse_move; }
+    virtual uint get_event_size() const override { return sizeof(*this); }
 };
-struct frame_pack_key_down
+
+struct frame_key_down_event:
+    public frame_event
 {
     uint            modifier;
     unikey          key;
+
+public:
+    virtual uint get_id() const override { return feid_key_down; }
+    virtual uint get_event_size() const override { return sizeof(*this); }
 };
-struct frame_pack_key_up
+
+struct frame_key_up_event:
+    public frame_event
 {
     uint            modifier;
     unikey          key;
+
+public:
+    virtual uint get_id() const override { return feid_key_up; }
+    virtual uint get_event_size() const override { return sizeof(*this); }
 };
-struct frame_pack_char
+
+struct frame_char_event:
+    public frame_event
 {
     uint            modifier;
     uint            charactor;
+
+public:
+    virtual uint get_id() const override { return feid_char; }
+    virtual uint get_event_size() const override { return sizeof(*this); }
 };
-struct frame_pack_create
+
+struct frame_create_event:
+    public frame_event
 {
     system_driver*  driver;
     rect            boundary;
+
+public:
+    virtual uint get_id() const override { return feid_create; }
+    virtual uint get_event_size() const override { return sizeof(*this); }
 };
 
 template<frame_event_id _feid>
-struct frame_pack_table;
+struct frame_event_table;
 
-#define register_frame_pack(feid, fepk) \
+#define register_frame_event(feid, fevt) \
     template<> \
-    struct frame_pack_table<feid> { \
-        typedef frame_pack<feid, fepk> type; \
+    struct frame_event_table<feid> { \
+        typedef fevt type; \
     };
-register_frame_pack(feid_draw, frame_pack_void);
-register_frame_pack(feid_timer, frame_pack_timer);
-register_frame_pack(feid_paint, frame_pack_paint);
-register_frame_pack(feid_mouse_down, frame_pack_mouse_down);
-register_frame_pack(feid_mouse_up, frame_pack_mouse_up);
-register_frame_pack(feid_move, frame_pack_move);
-register_frame_pack(feid_key_down, frame_pack_key_down);
-register_frame_pack(feid_key_up, frame_pack_key_up);
-register_frame_pack(feid_char, frame_pack_char);
-register_frame_pack(feid_show, frame_pack_show);
-register_frame_pack(feid_create, frame_pack_create);
-register_frame_pack(feid_close, frame_pack_void);
-register_frame_pack(feid_size, frame_pack_size);
-register_frame_pack(feid_halt, frame_pack_void);
-register_frame_pack(feid_resume, frame_pack_void);
-#undef register_frame_pack
+register_frame_event(feid_draw, frame_draw_event);
+register_frame_event(feid_timer, frame_timer_event);
+register_frame_event(feid_paint, frame_paint_event);
+register_frame_event(feid_mouse_down, frame_mouse_down_event);
+register_frame_event(feid_mouse_up, frame_mouse_up_event);
+register_frame_event(feid_mouse_move, frame_mouse_move_event);
+register_frame_event(feid_key_down, frame_key_down_event);
+register_frame_event(feid_key_up, frame_key_up_event);
+register_frame_event(feid_char, frame_char_event);
+register_frame_event(feid_show, frame_show_event);
+register_frame_event(feid_create, frame_create_event);
+register_frame_event(feid_close, frame_close_event);
+register_frame_event(feid_resize, frame_resize_event);
+register_frame_event(feid_halt, frame_halt_event);
+register_frame_event(feid_resume, frame_resume_event);
+#undef register_frame_event
 
 class __gs_novtable frame_listener abstract
 {
@@ -188,13 +267,13 @@ public:
     virtual void on_show(bool b) override;
     virtual void on_create(system_driver* ptr, const rect& rc) override;
     virtual void on_close() override;
-    virtual void on_size(const rect& rc) override;
+    virtual void on_resize(const rect& rc) override;
     virtual void on_paint(const rect& rc) override;
     virtual void on_halt() override;
     virtual void on_resume() override;
     virtual bool on_mouse_down(uint um, unikey uk, const point& pt) override;
     virtual bool on_mouse_up(uint um, unikey uk, const point& pt) override;
-    virtual bool on_move(uint um, const point& pt) override;
+    virtual bool on_mouse_move(uint um, const point& pt) override;
     virtual bool on_key_down(uint um, unikey uk) override;
     virtual bool on_key_up(uint um, unikey uk) override;
     virtual bool on_char(uint um, uint ch) override;

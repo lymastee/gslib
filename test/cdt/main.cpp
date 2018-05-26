@@ -1,6 +1,6 @@
 #include <ariel/delaunay.h>
-#include <gslib/mtrand.h>
 #include <gslib/error.h>
+#include <gslib/mtrand.h>
 
 #pragma warning(disable: 4996)
 
@@ -18,7 +18,6 @@ typedef std::vector<vec2> dt_test_seq;
 
 void main()
 {
-    mtgoodseed();
     delaunay_triangulation dt;
     dt_input_joints inputs;
     const int c = 50;
@@ -84,7 +83,5 @@ void main()
         trace(_t("#trim result.\n"));
         dt.tracing();
     }
-
-    __asm nop;
 }
 

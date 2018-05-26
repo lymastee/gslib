@@ -1,8 +1,8 @@
 #include <gslib/avl.h>
 #include <gslib/rbtree.h>
 #include <gslib/bintree.h>
-#include <gslib/mtrand.h>
 #include <gslib/error.h>
+#include <gslib/mtrand.h>
 #include <map>
 #include <windows.h>
 
@@ -48,7 +48,7 @@ static void init_test(test_tree& tr)
 
 static void run_test_append(test_tree& tr)
 {
-    uint n = mtrand() % 31001;
+    int n = mtrand() % 31001;
     int i = (int)n - 15500;
     flush_tree(tr, i);
     _print_bintree<test_tree> pt(tr);
@@ -117,7 +117,6 @@ void main()
 void main()
 {
     test_tree tr;
-    mtsrand(mtgoodseed());
     printf("random test for AVL tree.\n"
         "  c: create new test.\n"
         "  a: random insert.\n"

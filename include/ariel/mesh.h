@@ -27,7 +27,7 @@
 #define mesh_7c5c4ae5_0f3e_4a2d_936e_0447239ac3a7_h
 
 #include <ariel/config.h>
-#include <gslib/math.h>
+#include <gslib/type.h>
 #include <gslib/std.h>
 
 __ariel_begin__

@@ -29,12 +29,9 @@
 #include <gslib/error.h>
 #include <gslib/tree.h>
 #include <gslib/std.h>
-#include <ariel/type.h>
+#include <gslib/type.h>
 
 __gslib_begin__
-
-using ariel::pointf;
-using ariel::rectf;
 
 template<class _bind, int _bsize = sizeof(_bind)>
 class rtree_entity

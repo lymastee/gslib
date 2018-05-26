@@ -25,6 +25,7 @@
 
 #include <assert.h>
 #include <gslib/entrywin32.h>
+#include <gslib/string.h>
 
 using namespace gs;
 

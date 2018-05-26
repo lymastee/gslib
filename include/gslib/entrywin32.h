@@ -27,7 +27,7 @@
 #define entrywin32_c99dd31d_a655_463f_95d6_082845c49699_h
 
 #include <windows.h>
-#include <ariel/type.h>
+#include <gslib/type.h>
 
 typedef LRESULT (__stdcall *fnwndproc)(HWND, UINT, WPARAM, LPARAM);
 extern LRESULT __stdcall wndproc(HWND, UINT, WPARAM, LPARAM);
@@ -36,7 +36,7 @@ struct gs_app_config
 {
     gs::gchar       class_name[128];
     gs::gchar       window_name[128];
-    gs::ariel::rect position;
+    gs::rect        position;
     fnwndproc       window_proc;
     /* more .. */
 };

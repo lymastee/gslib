@@ -12,27 +12,26 @@ solution "gslib"
 	rtti "Off"
 	
 	-- debug configs
-	configuration "Debug"
+	filter "configurations:Debug"
 		defines { "DEBUG" }
 		symbols "On"
 
 	-- release configs
-	configuration "Release"
+	filter "configurations:Release"
 		defines { "NDEBUG" }
 		flags { "Optimize" }
 		
 	-- windows specific
-	configuration "windows"
+	filter "system:Windows"
 		defines { "WIN32", "_WINDOWS", "_UNICODE" }
 		
-	if _ACTION == "vs2017" then
+	filter "action:vs2017"
 		sysincludedirs {
 			"C:/Program Files (x86)/Windows Kits/10/Include/10.0.15063.0/ucrt"
 		}
 		syslibdirs {
 			"C:/Program Files (x86)/Windows Kits/10/Lib/10.0.15063.0/ucrt/x86"
 		}
-	end
 
 project "zlib"
 	language "C"
@@ -64,7 +63,60 @@ project "zlib"
 		"ext/zlib/uncompr.c",
 		"ext/zlib/zutil.c"
 	}
-		
+	
+project "freetype"
+	language "C"
+	kind "StaticLib"
+	entrypoint ""
+	defines { "_LIB", "_CRT_SECURE_NO_WARNINGS", "FT2_BUILD_LIBRARY" }
+	filter "configurations:Debug"
+		defines { "FT_DEBUG_LEVEL_ERROR", "FT_DEBUG_LEVEL_TRACE" }
+	includedirs {
+		"ext/freetype/include"
+	}
+	files {
+		"ext/freetype/src/autofit/autofit.c",
+		"ext/freetype/src/base/ftbase.c",
+		"ext/freetype/src/base/ftbbox.c",
+		"ext/freetype/src/base/ftbdf.c",
+		"ext/freetype/src/base/ftbitmap.c",
+		"ext/freetype/src/base/ftcid.c",
+		"ext/freetype/src/base/ftfstype.c",
+		"ext/freetype/src/base/ftgasp.c",
+		"ext/freetype/src/base/ftglyph.c",
+		"ext/freetype/src/base/ftgxval.c",
+		"ext/freetype/src/base/ftinit.c",
+		"ext/freetype/src/base/ftmm.c",
+		"ext/freetype/src/base/ftotval.c",
+		"ext/freetype/src/base/ftpatent.c",
+		"ext/freetype/src/base/ftpfr.c",
+		"ext/freetype/src/base/ftstroke.c",
+		"ext/freetype/src/base/ftsynth.c",
+		"ext/freetype/src/base/ftsystem.c",
+		"ext/freetype/src/base/fttype1.c",
+		"ext/freetype/src/base/ftwinfnt.c",
+		"ext/freetype/src/bdf/bdf.c",
+		"ext/freetype/src/cache/ftcache.c",
+		"ext/freetype/src/cff/cff.c",
+		"ext/freetype/src/cid/type1cid.c",
+		"ext/freetype/src/gzip/ftgzip.c",
+		"ext/freetype/src/lzw/ftlzw.c",
+		"ext/freetype/src/pcf/pcf.c",
+		"ext/freetype/src/pfr/pfr.c",
+		"ext/freetype/src/psaux/psaux.c",
+		"ext/freetype/src/pshinter/pshinter.c",
+		"ext/freetype/src/psnames/psmodule.c",
+		"ext/freetype/src/raster/raster.c",
+		"ext/freetype/src/sfnt/sfnt.c",
+		"ext/freetype/src/smooth/smooth.c",
+		"ext/freetype/src/truetype/truetype.c",
+		"ext/freetype/src/type1/type1.c",
+		"ext/freetype/src/type42/type42.c",
+		"ext/freetype/src/winfonts/winfnt.c",
+		"ext/freetype/src/ftdebug.c",
+		"ext/freetype/src/base/ftver.rc"
+	}
+	
 project "libpng"
 	language "C"
 	kind "StaticLib"
@@ -209,6 +261,7 @@ project "gslib"
 		"src/gslib/res.cpp",
 		"src/gslib/sha1.cpp",
 		"src/gslib/string.cpp",
+		"src/gslib/type.cpp",
 		"src/gslib/uuid.cpp",
 		"src/gslib/vdir.cpp",
 		"src/gslib/xml.cpp",
@@ -325,7 +378,7 @@ project "ariel"
 		"src/ariel/texbatch.cpp",
 		"src/ariel/scene.cpp",
 		"src/gslib/string.cpp",
-		"src/ariel/type.cpp",
+		"src/gslib/type.cpp",
 		"src/ariel/utility.cpp",
 		"src/ariel/widget.cpp",
 		"src/ariel/temporal.cpp"
@@ -438,7 +491,7 @@ project "cdt"
 		"src/ariel/raster.cpp",
 		"src/gslib/res.cpp",
 		"src/gslib/string.cpp",
-		"src/ariel/type.cpp",
+		"src/gslib/type.cpp",
 		"src/ariel/utility.cpp",
 		"src/gslib/mtrand.cpp",
 		"test/cdt/main.cpp"
@@ -467,8 +520,8 @@ project "rtree"
 		"include/gslib/string.h",
 		"include/gslib/tree.h",
 		"include/gslib/treeop.h",
-		"src/ariel/type.cpp",
-		"include/ariel/type.h",
+		"src/gslib/type.cpp",
+		"include/gslib/type.h",
 		"test/rtree/main.cpp"
 	}
 	
@@ -491,7 +544,7 @@ project "rectpack"
 		"include/gslib/string.h",
 		"include/gslib/tree.h",
 		"include/gslib/type.h",
-		"src/ariel/type.cpp",
+		"src/gslib/type.cpp",
 		"include/ariel/config.h",
 		"include/ariel/type.h",
 		"src/ariel/rectpack.cpp",

@@ -27,7 +27,7 @@
 #include <windows.h>
 #include <windowsx.h>
 #include <imm.h>
-#include <gslib/entrywin32.h>
+#include <entrywin32.h>
 #include <gslib/string.h>
 #include <ariel/framesys.h>
 #include <ariel/scene.h>

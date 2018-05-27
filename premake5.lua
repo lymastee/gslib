@@ -268,31 +268,20 @@ project "gslib"
 		"src/gslib/zip.cpp",
 		"src/gslib/zipimp.c"
 	}
-	
+
 project "ariel"
 	language "C++"
-	kind "WindowedApp"
+	kind "StaticLib"
 	entrypoint ""
-	dependson {
-		"zlib",
-		"libpng",
-		"libjpeg"
-	}
 	includedirs {
 		todir,
 		"include",
 		"src",
-		"ext"
+		"ext",
+		"framework"
 	}
 	libdirs {
 		"$(OutDir)"
-	}
-	links {
-		"dxgi.lib",
-		"d3d11.lib",
-		"zlib.lib",
-		"libjpeg.lib",
-		"libpng.lib"
 	}
 	prebuildcommands {
 		'fxc /T vs_4_0 /E "rose_vsf_cr" /Fd /Zi /Fh "rose_vsf_cr.h" "../../src/ariel/rose.hlsl"',
@@ -316,72 +305,91 @@ project "ariel"
 	files {
 		"include/ariel/batch.h",
 		"include/ariel/clip.h",
-		"include/gslib/config.h",
 		"include/ariel/config.h",
 		"include/ariel/delaunay.h",
 		"include/ariel/dirty.h",
-		"include/gslib/entrywin32.h",
-		"include/gslib/error.h",
 		"include/ariel/framesys.h",
-		"include/ariel/mesh.h",
 		"include/ariel/image.h",
-		"include/ariel/mesh.hpp",
 		"include/ariel/imageio.h",
 		"include/ariel/loopblinn.h",
-		"include/gslib/math.h",
-		"include/gslib/math.inl",
-		"include/gslib/mcls.h",
+		"include/ariel/mesh.h",
+		"include/ariel/mesh.hpp",
 		"include/ariel/painter.h",
-		"include/gslib/pool.h",
 		"include/ariel/raster.h",
-		"include/ariel/rendersysd3d11.h",
 		"include/ariel/rectpack.h",
+		"include/ariel/render.h",
 		"include/ariel/rendersys.h",
+		"include/ariel/rendersysd3d11.h",
 		"include/ariel/rose.h",
-		"include/ariel/smaa.h",
-		"include/gslib/rtree.h",
-		"include/ariel/texbatch.h",
 		"include/ariel/scene.h",
-		"include/gslib/std.h",
-		"include/gslib/string.h",
+		"include/ariel/smaa.h",
 		"include/ariel/sysop.h",
-		"include/gslib/tree.h",
-		"include/gslib/type.h",
+		"include/ariel/temporal.h",
+		"include/ariel/texbatch.h",
 		"include/ariel/type.h",
 		"include/ariel/utility.h",
 		"include/ariel/widget.h",
-		"include/ariel/temporal.h",
 		"src/ariel/batch.cpp",
 		"src/ariel/clip.cpp",
 		"src/ariel/delaunay.cpp",
 		"src/ariel/dirty.cpp",
-		"src/gslib/entrywin32.cpp",
-		"src/gslib/error.cpp",
 		"src/ariel/framesys.cpp",
 		"src/ariel/framesyswin32.cpp",
-		"src/ariel/mesh.cpp",
 		"src/ariel/image.cpp",
 		"src/ariel/imageio.cpp",
 		"src/ariel/loopblinn.cpp",
-		"proj/ariel/main.cpp",
-		"src/gslib/math.cpp",
+		"src/ariel/mesh.cpp",
 		"src/ariel/painter.cpp",
-		"src/gslib/pool.cpp",
-		"src/ariel/rectpack.cpp",
 		"src/ariel/raster.cpp",
+		"src/ariel/rectpack.cpp",
+		"src/ariel/render.cpp",
 		"src/ariel/rendersys.cpp",
 		"src/ariel/rendersysd3d11.cpp",
 		"src/ariel/rose.cpp",
-		"src/ariel/rose.hlsl",
-		"src/ariel/smaa.cpp",
-		"src/ariel/smaa.hlsl",
-		"src/ariel/texbatch.cpp",
 		"src/ariel/scene.cpp",
-		"src/gslib/string.cpp",
-		"src/gslib/type.cpp",
+		"src/ariel/smaa.cpp",
+		"src/ariel/temporal.cpp",
+		"src/ariel/texbatch.cpp",
 		"src/ariel/utility.cpp",
 		"src/ariel/widget.cpp",
-		"src/ariel/temporal.cpp"
+		"src/ariel/rose.hlsl",
+		"src/ariel/smaa.hlsl"
+	}
+	
+project "test111"
+	language "C++"
+	kind "WindowedApp"
+	entrypoint ""
+	dependson {
+		"zlib",
+		"libpng",
+		"libjpeg",
+		"gslib",
+		"ariel"
+	}
+	includedirs {
+		todir,
+		"include",
+		"src",
+		"ext",
+		"framework"
+	}
+	libdirs {
+		"$(OutDir)"
+	}
+	links {
+		"dxgi.lib",
+		"d3d11.lib",
+		"zlib.lib",
+		"libjpeg.lib",
+		"libpng.lib",
+		"gslib.lib",
+		"ariel.lib"
+	}
+	files {
+		"framework/entrywin32.h",
+		"framework/entrywin32.cpp",
+		"proj/ariel/main.cpp"
 	}
 	
 project "rathen"
@@ -552,6 +560,27 @@ project "rectpack"
 		"test/rectpack/main.cpp"
 	}
 
+project "testfreetype"
+	language "C++"
+	kind "ConsoleApp"
+	entrypoint ""
+	dependson {
+		"freetype"
+	}
+	includedirs {
+		"include",
+		"ext/freetype/include"
+	}
+	libdirs {
+		"$(OutDir)"
+	}
+	links {
+		"freetype.lib"
+	}
+	files {
+		"test/testfreetype/main.cpp"
+	}
+	
 -- following are tools
 project "mres"
 	language "C++"

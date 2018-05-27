@@ -1,6 +1,6 @@
 #include <gslib/type.h>
 #include <gslib/error.h>
-#include <gslib/entrywin32.h>
+//#include <gslib/entrywin32.h>
 #include <ariel/framesys.h>
 #include <ariel/config.h>
 #include <ariel/rose.h>

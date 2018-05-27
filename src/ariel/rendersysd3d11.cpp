@@ -27,7 +27,6 @@
 #include <ariel/config.h>
 #include <ariel/type.h>
 #include <ariel/rendersysd3d11.h>
-#include <gslib/entrywin32.h>
 
 class FakeD3DBlob:
     public ID3DBlob

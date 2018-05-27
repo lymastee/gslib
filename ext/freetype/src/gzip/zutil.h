@@ -184,8 +184,19 @@ typedef unsigned long  ulg;
 /* Diagnostic functions */
 #ifdef DEBUG
 #  include <stdio.h>
+   /*
    extern int z_verbose;
    extern void z_error    OF((char *m));
+   */
+#  ifndef z_verbose
+#  define z_verbose 0
+#  endif
+#  ifndef z_error
+#  define z_error(m) { \
+            fprintf(stderr, "%s\n", (m)); \
+            exit(1); \
+       }
+#  endif
 #  define Assert(cond,msg) {if(!(cond)) z_error(msg);}
 #  define Trace(x) {if (z_verbose>=0) fprintf x ;}
 #  define Tracev(x) {if (z_verbose>0) fprintf x ;}

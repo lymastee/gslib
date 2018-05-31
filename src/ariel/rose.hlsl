@@ -97,7 +97,7 @@ float4 rose_psf_klm_cr_aa(float4 pos : SV_POSITION, float3 klm : TEXCOORD, float
     float cy = k23 * py.x - klm.z * py.y - klm.y * py.z;
     float sd = c / sqrt(cx * cx + cy * cy);
     float alpha = saturate(sd - 0.5f);
-    return float4(cr.x, cr.y, cr.z, cr.w * alpha);
+    return float4(cr.xyz, cr.w * alpha);
 }
 
 void rose_vss_coef_cr(rose_vsf_coef_cr_input input, out float4 pos : SV_POSITION, out float4 coef : TEXCOORD, out float4 cr : COLOR)
@@ -126,7 +126,7 @@ float4 rose_psf_klm_tex(float4 pos : SV_POSITION, float3 klm : TEXCOORD0, float2
     if(c < 0.f)
         discard;
     float4 cr = g_texture.Sample(g_sstate, tex);
-    return cr.yzwx;
+    return cr;
 }
 
 void rose_vss_coef_tex(rose_vsf_coef_tex_input input, out float4 pos : SV_POSITION, out float4 coef : TEXCOORD0, out float2 tex : TEXCOORD1)
@@ -140,5 +140,5 @@ float4 rose_pss_coef_tex(float4 pos : SV_POSITION, float4 coef : TEXCOORD0, floa
 {
     float alpha = rose_get_alpha(pos, coef);
     float4 cr = g_texture.Sample(g_sstate, tex);
-    return float4(cr.yzw, cr.x * alpha);
+    return float4(cr.xyz, cr.w * alpha);
 }

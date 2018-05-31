@@ -272,7 +272,7 @@ class __gs_novtable raster abstract:
 {
 public:
     typedef painter_context context;
-    typedef stack<context> context_stack;
+    typedef list<context> context_stack;
 
 public:
     virtual ~raster() {}
@@ -281,6 +281,16 @@ public:
         painter_path path;
         path.move_to(p1);
         path.line_to(p2);
+        draw_path(path);
+    }
+    virtual void draw_rect(const rectf& rc) override
+    {
+        painter_path path;
+        path.move_to(rc.left, rc.top);
+        path.line_to(rc.left, rc.bottom);
+        path.line_to(rc.right, rc.bottom);
+        path.line_to(rc.right, rc.top);
+        path.close_path();
         draw_path(path);
     }
     virtual void draw_quad(const vec2& p1, const vec2& p2, const vec2& p3) override
@@ -325,25 +335,22 @@ protected:
     uint                _hints;
 
 public:
-    virtual void save() override;
-    virtual void restore() override;
-    virtual void set_brush(const painter_brush& b) override { _context.set_brush(b); }
-    virtual void set_pen(const painter_pen& p) override { _context.set_pen(p); }
-    virtual void set_hints(uint hints, bool enable) override;
-    virtual void set_clip(const rectf& rc) override { _context.set_clip(rc); }
-    virtual void set_no_clip() override { _context._clip = 0; }
-    virtual bool query_hints(uint hints) const override { return (_hints & hints) == hints; }
-    virtual context& get_context() override { return _context; }
-
-public:
-    // todo
     virtual int get_width() const override { return _width; }
     virtual int get_height() const override { return _height; }
     virtual void set_dirty(dirty_list* dirty) override {}
     virtual dirty_list* get_dirty() const override { return 0; }
+    virtual void set_hints(uint hints, bool enable) override;
+    virtual void set_brush(const painter_brush& b) override { _context.set_brush(b); }
+    virtual void set_pen(const painter_pen& p) override { _context.set_pen(p); }
+    virtual void set_tranform(const mat3& m) override { _context.set_transform(m); }
+    virtual void save() override;
+    virtual void restore() override;
+    virtual bool query_hints(uint hints) const override { return (_hints & hints) == hints; }
+    virtual context& get_context() override { return _context; }
 
 public:
     bool query_antialias() const { return query_hints(hint_anti_alias); }
+    void get_transform_recursively(mat3& m) const;
 };
 
 __ariel_end__

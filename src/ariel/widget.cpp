@@ -25,11 +25,15 @@
 
 #include <windows.h>
 #include <ariel/widget.h>
+#include <ariel/scene.h>
 
 __ariel_begin__
 
 #define tid_refresh 0
 #define tid_caret   1
+
+/* in GPU draw, no immediate refresh */
+#define refresh_immediately false
 
 vtable_ops<widget>& widget_vtable_ops()
 {
@@ -116,7 +120,7 @@ void widget::move(const rect& rc)
         return;
     refresh(false);
     _pos = rc;
-    refresh(true);
+    refresh(refresh_immediately);
 }
 
 void widget::refresh(const rect& rc, bool imm)
@@ -147,81 +151,10 @@ void widget::refresh(const rect& rc, bool imm)
     _manager->refresh(rc1, imm);
 }
 
-void widget::make_individual_vtable()
+void widget::create_individual_vtable()
 {
     assert(!_backvt);
     _backvt = widget_vtable_ops().create_per_instance_vtable(this);
-}
-
-int widget::run_proc(int msgid, ...)
-{
-    va_list ptr;
-    va_start(ptr, msgid);
-    return proceed(msgid, ptr);
-}
-
-int widget::proceed(int msgid, va_list vlst)
-{
-//     /* deal with the reflection */
-//     for(reflect_list::iterator i = _reflect_list.begin(); i != _reflect_list.end(); ++ i) {
-//         if(i->reflect_id == msgid) {
-//             i->reflect_to->on_reflect(this, msgid, vlst);
-//             break;
-//         }
-//     }
-//     /* default handles */
-//     if(msgid == hid_press) {
-//         uint um = va_arg(vlst, uint);
-//         unikey uk = va_arg(vlst, unikey);
-//         point* pt = va_arg(vlst, point*);
-//         on_press(um, uk, *pt);
-//         return rid_ok;
-//     }
-//     else if(msgid == hid_click) {
-//         uint um = va_arg(vlst, uint);
-//         unikey uk = va_arg(vlst, unikey);
-//         point* pt = va_arg(vlst, point*);
-//         on_click(um, uk, *pt);
-//         return rid_ok;
-//     }
-//     else if(msgid == hid_hover) {
-//         uint um = va_arg(vlst, uint);
-//         point* pt = va_arg(vlst, point*);
-//         on_hover(um, *pt);
-//         return rid_ok;
-//     }
-//     else if(msgid == hid_leave) {
-//         uint um = va_arg(vlst, uint);
-//         point* pt = va_arg(vlst, point*);
-//         on_leave(um, *pt);
-//         return rid_ok;
-//     }
-//     else if(msgid == hid_keydown) {
-//         uint um = va_arg(vlst, uint);
-//         unikey uk = va_arg(vlst, unikey);
-//         on_keydown(um, uk);
-//         return rid_ok;
-//     }
-//     else if(msgid == hid_keyup) {
-//         uint um = va_arg(vlst, uint);
-//         unikey uk = va_arg(vlst, unikey);
-//         on_keyup(um, uk);
-//         return rid_ok;
-//     }
-//     else if(msgid == hid_char) {
-//         uint um = va_arg(vlst, uint);
-//         uint ch = va_arg(vlst, uint);
-//         on_char(um, ch);
-//         return rid_ok;
-//     }
-//     else if(msgid == hid_scroll) {
-//         point* pt = va_arg(vlst, point*);
-//         real scr = va_arg(vlst, real);
-//         bool vert = va_arg(vlst, bool);
-//         on_scroll(*pt, scr, vert);
-//         return rid_ok;
-//     }
-    return rid_undone;
 }
 
 widget* widget::capture(bool b)
@@ -235,13 +168,6 @@ widget* widget::focus()
     assert(_manager);
     return _manager->set_focus(this);
 }
-
-// void widget::reflect(widget* w, int msgid)
-// {
-//     assert(w);
-//     reflect_node n = { this, msgid };
-//     w->_reflect_list.push_back(n);
-// }
 
 void widget::lay(widget* ptr, laytag t)
 {
@@ -306,20 +232,20 @@ void widget::move(const point& pt)
 
 void widget::refresh(bool imm)
 {
-    refresh(rect(0,0,get_width(),get_height()), imm);
+    refresh(rect(0, 0, get_width(), get_height()), imm);
 }
 
 button::button(wsys_manager* m): widget(m)
 {
-    _source = 0;
-    _allstate = false;
+    _source = nullptr;
+    _4states = false;
     _btnstate = bs_zr;
 }
 
 void button::draw(painter* paint)
 {
-    //if(_bkground.is_valid())
-    //    paint->draw(&_bkground, 0, 0);
+    if(_bkground.is_valid())
+        paint->draw_image(&_bkground, 0, 0);
 }
 
 void button::enable(bool b)
@@ -369,68 +295,69 @@ void button::on_leave(uint um, const point& pt)
 void button::set_image(const image* img, bool as)
 {
     assert(!_source);
-    if(_source != 0)
+    if(_source != nullptr)
         return;
     _source = img;
-    _allstate = as;
+    _4states = as;
     refresh(false);
     int w = img->get_width(), h = img->get_height();
     if(as) w >>= 2;
     _pos.right = _pos.left + w;
     _pos.bottom = _pos.top + h;
-    //_bkground.create(w, h, img->get_alpha(0) != 0);
+    _bkground.create(image::fmt_rgba, w, h);
+    _bkground.enable_alpha_channel(img->has_alpha());
     _enable ? set_normal() : set_gray();
 }
 
 void button::set_press()
 {
-    if(_source == 0)
+    if(!_source)
         return;
-//     _allstate ?
-//         _bkground.copy(_source, 0, 0, get_width(), get_height(), get_width()<<1, 0) :
-//         _bkground.set_brigntness(_source, 0.7f);
-    refresh(true);
+    _4states ?
+        _bkground.copy(*_source, 0, 0, get_width(), get_height(), get_width() << 1, 0) :
+        _bkground.set_brightness(*_source, 0.7f);
+    refresh(refresh_immediately);
 }
 
 void button::set_normal()
 {
-    if(_source == 0)
+    if(!_source)
         return;
-    //_allstate ?
-    //    _bkground.copy(_source, 0, 0, get_width(), get_height(), 0, 0) :
-    //    _bkground.copy(_source, true, true);
-    refresh(true);
+    _4states ?
+        _bkground.copy(*_source, 0, 0, get_width(), get_height(), 0, 0) :
+        _bkground.copy(*_source);
+    refresh(refresh_immediately);
 }
 
 void button::set_hover()
 {
-    if(_source == 0)
+    if(!_source)
         return;
-//     _allstate ? 
-//         _bkground.copy(_source, 0, 0, get_width(), get_height(), get_width(), 0) :
-//         _bkground.set_brigntness(_source, 1.3f);
-    refresh(true);
+    _4states ?
+        _bkground.copy(*_source, 0, 0, get_width(), get_height(), get_width(), 0) :
+        _bkground.set_brightness(*_source, 1.3f);
+    refresh(refresh_immediately);
 }
 
 void button::set_gray()
 {
-    if(_source == 0)
+    if(!_source)
         return;
-//     _allstate ? 
-//         _bkground.copy(_source, 0, 0, get_width(), get_height(), get_width()*3, 0) :
-//         _bkground.set_gray(_source);
-    refresh(true);
+    _4states ?
+        _bkground.copy(*_source, 0, 0, get_width(), get_height(), get_width() * 3, 0) :
+        _bkground.set_gray(*_source);
+    refresh(refresh_immediately);
 }
 
 edit::edit(wsys_manager* m): widget(m)
 {
     _caret_on = false;
     _caretpos = 0;
-    _bkground = 0;
+    _bkground = nullptr;
     _sel_start = -1;
-    _txtcolor = pixel(0,0,0);
-    _selcolor = pixel(0,125,255);
-    _crtcolor = pixel(0,0,0);
+    _txtcolor = color(0, 0, 0);
+    _selcolor = color(0, 125, 255);
+    _crtcolor = color(0, 0, 0);
     _font = font(_t("ËÎÌו"), 14);
     _font_idx = -1;
 }
@@ -444,13 +371,13 @@ bool edit::create(widget* ptr, const gchar* name, const rect& rc, uint style)
 
 void edit::draw(painter* paint)
 {
-    //if(_bkground)
-    //    paint->draw(_bkground, 0, 0);
-    fontsys* pfs = _manager->get_fontsys();
+    if(_bkground)
+        paint->draw_image(_bkground, 0, 0);
+    fontsys* pfs = scene::get_singleton_ptr()->get_fontsys();
     assert(pfs);
     _font_idx = pfs->set_font(_font, _font_idx);
-    if(_sel_start < 0);
-    //    paint->draw_text(_textbuf.c_str(), 0, 0, _txtcolor);
+    if(_sel_start < 0)
+        paint->draw_text(_textbuf.c_str(), 0, 0, _txtcolor, _textbuf.length());
     else {
         /* 0-start, start-end, end-last */
         int start, end;
@@ -469,18 +396,18 @@ void edit::draw(painter* paint)
         if(start) {
             s.assign(_textbuf.c_str(), start);
             pfs->get_size(s.c_str(), w, h);
-            //paint->draw_text(s.c_str(), bias, 0, _txtcolor);
+            paint->draw_text(s.c_str(), bias, 0, _txtcolor, s.length());
             bias = w;
         }
         if(start != end) {
             s.assign(_textbuf.c_str()+start, end-start);
             pfs->get_size(s.c_str(), w, h);
-            //paint->draw_rect(rect(bias,0,w,h), _selcolor);
-            //paint->draw_text(s.c_str(), bias, 0, pixel(255,255,255));
+            paint->draw_rect(rectf((float)bias, 0.f, (float)w, (float)h), _selcolor);
+            paint->draw_text(s.c_str(), bias, 0, color(255, 255, 255), s.length());
             bias += w;
         }
-        //if(end < _textbuf.length())
-        //    paint->draw_text(_textbuf.c_str()+end, bias, 0, _txtcolor);
+        if(end < _textbuf.length())
+            paint->draw_text(_textbuf.c_str() + end, bias, 0, _txtcolor);
     }
     /* draw caret */
     if(_caret_on) {
@@ -488,7 +415,7 @@ void edit::draw(painter* paint)
         s.assign(_textbuf.c_str(), _caretpos);
         int w, h;
         pfs->get_size(s.c_str(), w, h);
-        //paint->draw_line(point(w,0), point(w,_font.height), _crtcolor);
+        paint->draw_line(pointf((float)w, 0.f), pointf((float)w, (float)_font.height), _crtcolor);
     }
 }
 
@@ -497,7 +424,7 @@ void edit::on_press(uint um, unikey uk, const point& pt)
     if(uk == mk_left) {
         int pos = hit_char(pt);
         set_select(pos, pos);
-        refresh(true);
+        refresh(refresh_immediately);
     }
     superref::on_press(um, uk, pt);
 }
@@ -507,7 +434,7 @@ void edit::on_click(uint um, unikey uk, const point& pt)
     if(uk == mk_left) {
         int pos = hit_char(pt);
         set_select(_sel_start, pos);
-        refresh(true);
+        refresh(refresh_immediately);
     }
     superref::on_click(um, uk, pt);
 }
@@ -517,26 +444,26 @@ void edit::on_hover(uint um, const point& pt)
     if(um & um_lmouse) {
         int pos = hit_char(pt);
         set_select(_sel_start, pos);
-        refresh(true);
+        refresh(refresh_immediately);
     }
     superref::on_hover(um, pt);
 }
 
 void edit::on_char(uint um, uint ch)
 {
-    /* ascii codes */
+    /* ASCII codes */
     if((ch >= 0x20 && ch < 0x7f) || ch == 0x09 || ch == 0x0a) {
         del_select();
         _textbuf.insert((size_t)_caretpos, 1, (char)ch);
         set_caret(_caretpos+1);
         return;
     }
-    /* mbcs codes */
+    /* MBCS codes */
     if(ch & 0x8080) {
         del_select();
-        _textbuf.insert((size_t)_caretpos, 1, (char)((ch&0xff00)>>8));
-        _textbuf.insert((size_t)_caretpos+1, 1, (char)(ch&0xff));
-        set_caret(_caretpos+2);
+        _textbuf.insert((size_t)_caretpos, 1, (char)((ch & 0xff00) >> 8));
+        _textbuf.insert((size_t)_caretpos+1, 1, (char)(ch & 0xff));
+        set_caret(_caretpos + 2);
         return;
     }
 }
@@ -709,7 +636,7 @@ void edit::set_caret(int n)
         _textbuf.length() : n;
     string s;
     s.assign(_textbuf.c_str(), _caretpos);
-    fontsys* pfs = _manager->get_fontsys();
+    fontsys* pfs = scene::get_singleton_ptr()->get_fontsys();
     assert(pfs);
     int w, h;
     _font_idx = pfs->set_font(_font, _font_idx);
@@ -766,7 +693,7 @@ int edit::hit_char(point pt)
     if(pt.x <= 0 || !_textbuf.length())
         return 0;
     /* treat as mono font and predict the width */
-    fontsys* pfs = _manager->get_fontsys();
+    fontsys* pfs = scene::get_singleton_ptr()->get_fontsys();
     assert(pfs);
     int w, h, fixc;
     _font_idx = pfs->set_font(_font, _font_idx);
@@ -776,7 +703,7 @@ int edit::hit_char(point pt)
         fixc = _textbuf.length();
 #ifndef _UNICODE
     if(is_mbcs_half(_textbuf.c_str() + fixc)) {
-        assert(fixc);  /* broken mbcs? */
+        assert(fixc);  /* broken MBCS? */
         fixc --;
     }
 #endif
@@ -794,7 +721,7 @@ int edit::hit_char(point pt)
         }
         if(fixc > _textbuf.length())
             return _textbuf.length();
-        fixc -= (s.back()&0x80) ? 2 : 1;
+        fixc -= (s.back() & 0x80) ? 2 : 1;
     }
     else if (pt.x < w) {
         if(fixc == 0)
@@ -817,7 +744,7 @@ int edit::prev_char(int pos)
     if(pos < 0 || pos > _textbuf.length())
         pos = _textbuf.length();
     if(pos > 0)
-        pos -= (_textbuf.at(pos-1)&0x80) ? 2 : 1;
+        pos -= (_textbuf.at(pos-1) & 0x80) ? 2 : 1;
     if(pos < 0)
         pos = 0;
     return pos;
@@ -828,7 +755,7 @@ int edit::next_char(int pos)
     if(pos < 0 || pos > _textbuf.length())
         pos = _textbuf.length();
     if(pos < _textbuf.length())
-        pos += (_textbuf.at(pos)&0x80) ? 2 : 1;
+        pos += (_textbuf.at(pos) & 0x80) ? 2 : 1;
     if(pos > _textbuf.length())
         pos = _textbuf.length();
     return pos;
@@ -962,7 +889,6 @@ void scroller::on_hover(uint um, const point& pt)
 wsys_manager::wsys_manager()
 {
     _driver = nullptr;
-    _fontsys = nullptr;
     _capture = _focus = _hover = _root = nullptr;
     _width = 0;
     _height = 0;
@@ -980,13 +906,6 @@ void wsys_manager::set_wsysdrv(wsys_driver* drv)
     _driver = drv;
 }
 
-void wsys_manager::set_fontsys(fontsys* fsys)
-{
-    assert(!_fontsys);
-    _fontsys = fsys;
-    fsys->initialize();
-}
-
 void wsys_manager::set_painter(painter* paint)
 {
     _painter = paint;
@@ -994,7 +913,7 @@ void wsys_manager::set_painter(painter* paint)
 
 void wsys_manager::initialize(const rect& rc)
 {
-    assert(_driver && _fontsys);
+    assert(_driver);
     system_context ctx;
     ctx.mask = system_context::sct_notify |
         system_context::sct_painter |
@@ -1009,7 +928,7 @@ void wsys_manager::initialize(const rect& rc)
     set_timer(get_timer_id(0), 15);
     assert(_next_tid == tid_caret);
     set_timer(get_timer_id(0), 600);
-    /* ime support */
+    /* IME support */
     set_ime(0, point(0,0), font(_t("ËÎÌו"), 14));
 }
 
@@ -1019,11 +938,6 @@ void wsys_manager::set_dimension(int w, int h)
         _width = w;
         _height = h;
         _dirty.set_dimension(w, h);
-        /* deal with the canvas */
-        image* img = gs_new(image);
-        //img->create(w, h);
-        //if(image* oldimg = _painter->select(img))
-        //    gs_del(image, oldimg);
     }
 }
 
@@ -1050,13 +964,17 @@ void wsys_manager::update(widget* w)
 {
     assert(w);
     rect rc = w->get_rect();
+    float x = (float)rc.left, y = (float)rc.top;
     rc.move_to(0, 0);
     w->top_level(rc);
     if(!w->is_visible() || !_dirty.is_dirty(rc))
         return;
-    //_painter->lock(rc);
+    mat3 m;
+    m.translation(x, y);
+    _painter->save();
+    _painter->set_tranform(m);
     w->draw(_painter);
-    //_painter->unlock();
+    _painter->restore();
     if(widget* c = w->_child) {
         while(c->_next)
             c = c->_next;
@@ -1125,11 +1043,10 @@ void wsys_manager::on_create(wsys_driver* ptr, const rect& rc)
 
 void wsys_manager::on_close()
 {
-    _focus = 0;
-    _capture = 0;
-    if(_root) remove_widget(_root);
-    //if(image* oldimg = _painter->select(0))
-    //    gs_del(image, oldimg);
+    _focus = nullptr;
+    _capture = nullptr;
+    if(_root)
+        remove_widget(_root);
 }
 
 void wsys_manager::on_resize(const rect& rc)
@@ -1222,7 +1139,7 @@ void wsys_manager::on_timer(uint tid)
     }
     else {
         assert(tid < (uint)_timer_map.size());
-        if(widget* ptr = _timer_map[tid-tid_refresh])
+        if(widget* ptr = _timer_map[tid - tid_refresh])
             ptr->on_timer(tid);
     }
 }

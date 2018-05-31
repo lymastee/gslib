@@ -116,6 +116,7 @@ public:
     ~scene();
     stage* get_stage(const gchar* name);
     wsys_manager* get_ui_system() const { return _uisys; }
+    fontsys* get_fontsys() const { return _fontsys; }
     void set_rendersys(rendersys* rsys) { _rendersys = rsys; }
     void set_rose(rose* ptr) { _rose = ptr; }
     void setup();
@@ -132,6 +133,7 @@ protected:
     rose*               _rose;
     stages              _stages;
     wsys_manager*       _uisys;
+    fontsys*            _fontsys;
     stage*              _notify;
     stage*              _present;
 

@@ -25,8 +25,10 @@
 
 #include <assert.h>
 #include <gslib/error.h>
+#include <gslib/pool.h>
 #include <ariel/painter.h>
 #include <ariel/utility.h>
+#include <ariel/scene.h>
 
 __ariel_begin__
 
@@ -120,6 +122,83 @@ void painter_linestrip::tracing() const
     trace(_t("@lineTo %f, %f;\n"), i->x, i->y);
     trace(_t("@@\n"));
 #endif
+}
+
+painter::~painter()
+{
+    destroy_text_image_cache();
+}
+
+void painter::on_draw_begin()
+{
+    destroy_text_image_cache();
+}
+
+void painter::on_draw_end()
+{
+}
+
+void painter::draw_image(const image* img, float x, float y)
+{
+    assert(img);
+    save();
+    painter_brush brush;
+    painter_extra_data ext;
+    ext.reset(gs_new(painter_picture_data, img), [](painter_picture_data* p) { gs_del(painter_picture_data, p); });
+    brush.set_tag(painter_brush::picture);
+    brush.set_extra(ext);
+    set_brush(brush);
+    draw_rect(rectf(x, y, (float)img->get_width(), (float)img->get_height()));
+    restore();
+}
+
+void painter::draw_line(const vec2& p1, const vec2& p2, const color& cr)
+{
+    //save();
+    //painter_brush brush;
+    //brush.set_tag(painter_brush::solid);
+    //brush.set_color(cr);
+    //set_brush(brush);
+    //draw_line(p1, p2);
+    //restore();
+}
+
+void painter::draw_rect(const rectf& rc, const color& cr)
+{
+    save();
+    painter_brush brush;
+    brush.set_tag(painter_brush::solid);
+    brush.set_color(cr);
+    set_brush(brush);
+    draw_rect(rc);
+    restore();
+}
+
+void painter::draw_text(const gchar* str, int x, int y, const color& cr, int length)
+{
+    assert(str);
+    scene* scn = scene::get_singleton_ptr();
+    assert(scn);
+    fontsys* fsys = scn->get_fontsys();
+    assert(fsys);
+    int w, h;
+    fsys->get_size(str, w, h);
+    image* img = gs_new(image);
+    assert(img);
+    img->create(image::fmt_rgba, w, h);
+    img->enable_alpha_channel(true);
+    _text_image_cache.push_back(img);
+    fsys->create_text_image(*img, str, x, y, cr, length);
+    draw_image(img, 0.f, 0.f);
+}
+
+void painter::destroy_text_image_cache()
+{
+    for(auto* img : _text_image_cache) {
+        assert(img);
+        gs_del(image, img);
+    }
+    _text_image_cache.clear();
 }
 
 painter_obj::painter_obj(const painter_context& ctx)

@@ -1165,15 +1165,16 @@ void painter_helper::close_sub_paths(painter_path& output, const painter_path& p
 
 void raster::save()
 {
-    _ctxst.push(_context);
+    _ctxst.push_back(_context);
+    _context.set_transform(mat3().identity());
 }
 
 void raster::restore()
 {
     if(_ctxst.empty())
         return;
-    _context = _ctxst.top();
-    _ctxst.pop();
+    _context = _ctxst.back();
+    _ctxst.pop_back();
 }
 
 void raster::set_hints(uint hints, bool enable)
@@ -1182,6 +1183,18 @@ void raster::set_hints(uint hints, bool enable)
         _hints |= hints;
     else
         _hints &= ~hints;
+}
+
+void raster::get_transform_recursively(mat3& m) const
+{
+    m = _context.get_trasnform();
+    if(_ctxst.empty())
+        return;
+    for(auto i = std::prev(_ctxst.end());; -- i) {
+        m *= i->get_trasnform();
+        if(i == _ctxst.begin())
+            break;
+    }
 }
 
 __ariel_end__

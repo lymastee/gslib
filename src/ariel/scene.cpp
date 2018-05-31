@@ -25,6 +25,7 @@
 
 #include <ariel/scene.h>
 #include <ariel/rose.h>
+#include <ariel/fsyswin32.h>
 
 __ariel_begin__
 
@@ -248,11 +249,12 @@ bool ui_stage::on_frame_event(const frame_event& event)
 
 scene::scene()
 {
-    _rendersys = 0;
-    _rose = 0;
-    _notify = 0;
-    _present = 0;
-    _uisys = 0;
+    _rendersys = nullptr;
+    _rose = nullptr;
+    _notify = nullptr;
+    _present = nullptr;
+    _uisys = nullptr;
+    _fontsys = nullptr;
 }
 
 scene::~scene()
@@ -268,14 +270,20 @@ void scene::setup()
     ui->setup();
     _notify = _present = ui;
     _uisys = ui->get_wsys_manager();
+    _fontsys = gs_new(fsys_win32);      /* using win32 fontsys */
+    _fontsys->initialize();
 }
 
 void scene::destroy()
 {
     destroy_all_stages();
-    _rendersys = 0;
-    _rose = 0;
-    _uisys = 0;
+    _rendersys = nullptr;
+    _rose = nullptr;
+    _uisys = nullptr;
+    if(_fontsys) {
+        gs_del(fontsys, _fontsys);
+        _fontsys = nullptr;
+    }
 }
 
 void scene::destroy_all_stages()

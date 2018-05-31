@@ -82,7 +82,7 @@ tex_batcher::tex_batcher()
     _gap = 1.f;
 }
 
-void tex_batcher::add_image(image* p)
+void tex_batcher::add_image(const image* p)
 {
     assert(p);
     _location_map.try_emplace(p, rectf());
@@ -115,7 +115,7 @@ render_texture2d* tex_batcher::create_texture(rendersys* rsys) const
     /* prepare image */
     image img;
     img.create(image::fmt_rgba, (int)ceil(w), (int)ceil(h));
-    img.init(color(255, 255, 255, 0));
+    img.init(color(0, 0, 0, 0));
     for(const auto& value : _location_map)
         write_image_source(img, *value.first, value.second);
 #if use_rendersys_d3d_11
@@ -133,7 +133,7 @@ void tex_batcher::prepare_input_list(rp_input_list& inputs)
         rp_input input;
         input.width = img->get_width() + _gap;
         input.height = img->get_height() + _gap;
-        input.binding = img;
+        input.binding = (void*)img;
         inputs.push_back(input);
     }
 }

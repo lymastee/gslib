@@ -185,7 +185,7 @@ static bool is_image_transposed(const image& img, const rectf& rc)
     return !(img.get_width() == rc.width() && img.get_height() == rc.height());
 }
 
-static vec2 rose_calc_tex_coords(image* img, const vec2& p, const tex_batcher& batch)
+static vec2 rose_calc_tex_coords(const image* img, const vec2& p, const tex_batcher& batch)
 {
     assert(img);
     const auto& lm = batch.get_location_map();
@@ -863,12 +863,17 @@ void rose::draw_path(const painter_path& path)
     context& ctx = get_context();
     auto& brush = ctx.get_brush();
     auto& pen = ctx.get_pen();
-    prepare_fill(path, brush);
-    prepare_stroke(path, pen);
+    mat3 m;
+    get_transform_recursively(m);
+    painter_path p = path;
+    p.transform(m);
+    prepare_fill(p, brush);
+    prepare_stroke(p, pen);
 }
 
 void rose::on_draw_begin()
 {
+    __super::on_draw_begin();
     _nextz = 0.f;
     _bp.clear_batches();
     _bp.set_antialias(query_antialias());
@@ -877,6 +882,7 @@ void rose::on_draw_begin()
 
 void rose::on_draw_end()
 {
+    __super::on_draw_end();
     _bp.finish_batching();
     clear_batches();
     prepare_batches();
@@ -1199,7 +1205,7 @@ void rose_paint_solid_brush(graphics_obj& gfx, rose_bind_list_cr& bind_cache, co
     }
 }
 
-static void rose_paint_picture_joint(lb_joint* joint, rose_bind_list_tex& bind_cache, image* img, const mat3& m)
+static void rose_paint_picture_joint(lb_joint* joint, rose_bind_list_tex& bind_cache, const image* img, const mat3& m)
 {
     assert(joint && img);
     vec3 tex;
@@ -1220,7 +1226,7 @@ void rose_paint_picture_brush(graphics_obj& gfx, const rectf& bound, rose_bind_l
     assert(img);
     /* map the bound to image size */
     mat3 mt, ms, m;
-    mt.translation(bound.left, bound.top);
+    mt.translation(-bound.left, -bound.top);
     ms.scaling(img->get_width() / bound.width(), img->get_height() / bound.height());
     m.multiply(mt, ms);
     auto& joints = gfx->get_joints();

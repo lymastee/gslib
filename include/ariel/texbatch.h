@@ -37,14 +37,14 @@ __ariel_begin__
 class tex_batcher
 {
 public:
-    typedef unordered_map<image*, rectf> location_map;
+    typedef unordered_map<const image*, rectf> location_map;
 
 public:
     tex_batcher();
     bool is_empty() const { return _rect_packer.is_empty(); }
     float get_width() const { return _rect_packer.get_width() + _gap; }
     float get_height() const { return _rect_packer.get_height() + _gap; }
-    void add_image(image* p);
+    void add_image(const image* p);
     void arrange();
     const location_map& get_location_map() const { return _location_map; }
     render_texture2d* create_texture(rendersys* rsys) const;

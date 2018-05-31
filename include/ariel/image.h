@@ -66,6 +66,12 @@ public:
     bool load(const string& filepath);
     bool load(const gchar* filepath, int len) { return load(string(filepath, len)); }
     bool save(const string& filepath) const;
+    void clear(byte b, const rect* rc = nullptr);
+    void clear(const color& cr, const rect* rc = nullptr);
+    void copy(const image& img);
+    void copy(const image& img, int x, int y, int cx, int cy, int sx, int sy);
+    void set_brightness(const image& img, float s);
+    void set_gray(const image& img);
 
 protected:
     image_format        _format;

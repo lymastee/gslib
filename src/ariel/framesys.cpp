@@ -174,7 +174,7 @@ framesys::framesys()
     _rose = new rose;
     _empty_frame_proc = 0;
     memset(&_configs, 0, sizeof(_configs));
-    set_frame_strategy(fs_lazy_passive);
+    set_frame_strategy(fs_busy_loop);
     set_frame_listener(scene::get_singleton_ptr());
 }
 

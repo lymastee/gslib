@@ -139,8 +139,6 @@ typedef bool(__stdcall * FnSnmpExtensionInitEx)(
     AsnObjectIdentifier* supportedView
     );
 
-#pragma comment(lib, "Snmpapi.lib")
-
 static bool get_valid_mac_address(byte node[6])
 {
     static BYTE mac_addr[6];

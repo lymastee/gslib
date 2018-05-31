@@ -23,12 +23,13 @@
  * SOFTWARE.
  */
 
-#include <pink/fsyswin32.h>
+#include <ariel/fsyswin32.h>
+#include <ariel/image.h>
 
-__pink_begin__
+__ariel_begin__
 
 static const int fplist_cap = 20;
-static MAT2 _stand_mat = { {0,1}, {0,0}, {0,0}, {0,1} };
+static MAT2 _stand_mat = { {0, 1}, {0, 0}, {0, 0}, {0, 1} };
 
 /* used for glyph buffers */
 #define byte gs::byte
@@ -159,7 +160,7 @@ bool fsys_win32::get_size(const gchar* str, int& w, int& h, int len)
     return true;
 }
 
-bool fsys_win32::convert(image& img, const gchar* str, int x, int y, const pixel& p, int len)
+bool fsys_win32::create_text_image(image& img, const gchar* str, int x, int y, const color& cr, int len)
 {
     if(!str || !img.is_valid() || _current == -1 || x < 0 || y < 0)
         return false;
@@ -175,7 +176,7 @@ bool fsys_win32::convert(image& img, const gchar* str, int x, int y, const pixel
     /* ensure there is enough memory buffer */
     int r = (int)GetGlyphOutline(_container_dc, 0xBCCD, GGO_GRAY8_BITMAP, &gm, 0, 0, &_stand_mat);
     if(r > _gbsize) {
-        alloc_glyph_buf(r+1024);
+        alloc_glyph_buf(r + 1024);
         assert(_glyph_buf && _gbsize);
         if(!_glyph_buf || !_gbsize)
             return false;
@@ -186,8 +187,8 @@ bool fsys_win32::convert(image& img, const gchar* str, int x, int y, const pixel
     SIZE sz;
     GetTextExtentPoint32(_container_dc, str, len, &sz);
     rect rcclr(x, y, sz.cx, sz.cy);
-    img.set_alpha(0, &rcclr);
-    img.clear(p, &rcclr);
+    img.clear(color(cr.red, cr.green, cr.blue, 0), &rcclr);
+    int alpha = cr.alpha;
     GetTextExtentPoint32(_container_dc, _t(" "), 1, &sz);
     /* end condition */
     const gchar* end = str + len;
@@ -215,18 +216,19 @@ bool fsys_win32::convert(image& img, const gchar* str, int x, int y, const pixel
         const byte* ptr = _glyph_buf;
         int vmax = gs_min(v, h-ybias) + y;
         for(int j = y, k = 0; j < vmax; j ++) {
-            byte* des = img.get_alpha(j+ybias);
-            assert(des);
             int grow = x + xbias;
             if(grow >= w)
                 break;
-            des += grow;
+            byte* des = img.get_data(grow, j + ybias);
+            assert(des);
             int umax = gs_min(u, w-grow);
             for(int i = 0; i < umax; i ++) {
                 int cb = (int)ptr[i];
                 cb = (cb << 8) - cb;
                 cb >>= 6;
-                des[i] = cb;
+                byte* des = img.get_data(grow + i, ybias + j);
+                assert(des);
+                des[3] = cb * alpha / 255;
             }
             ptr += u;
         }
@@ -236,7 +238,7 @@ bool fsys_win32::convert(image& img, const gchar* str, int x, int y, const pixel
     return true;
 }
 
-void fsys_win32::draw(image& img, const gchar* str, int x, int y, const pixel& p, int len)
+void fsys_win32::draw(image& img, const gchar* str, int x, int y, const color& cr, int len)
 {
     if(!str || !img.is_valid() || _current == -1 || x < 0 || y < 0)
         return;
@@ -252,7 +254,7 @@ void fsys_win32::draw(image& img, const gchar* str, int x, int y, const pixel& p
     /* ensure there is enough memory buffer */
     int r = (int)GetGlyphOutline(_container_dc, 0xBCCD, GGO_GRAY8_BITMAP, &gm, 0, 0, &_stand_mat);
     if(r > _gbsize) {
-        alloc_glyph_buf(r+1024);
+        alloc_glyph_buf(r + 1024);
         assert(_glyph_buf && _gbsize);
         if(!_glyph_buf || !_gbsize)
             return;
@@ -291,18 +293,18 @@ void fsys_win32::draw(image& img, const gchar* str, int x, int y, const pixel& p
             if(grow >= w)
                 break;
             int umax = gs_min(u, w-grow);
-            pixel* d = img.get_color(j+ybias) + grow;
+            color* d = reinterpret_cast<color*>(img.get_data(grow, j + ybias));
             assert(d);
             for(int i = 0; i < umax; i ++, d ++) {
                 if(!ptr[i]);
                 else if(ptr[i] == 64)
-                    *d = p;
+                    *d = cr;
                 else {
                     byte a1 = (ptr[i] - 1) << 2;
                     byte a2 = ~a1;
-                    d->red = (byte)(((int)d->red * a2 + (int)p.red * a1) >> 8);
-                    d->green = (byte)(((int)d->green * a2 + (int)p.green * a1) >> 8);
-                    d->blue = (byte)(((int)d->blue * a2 + (int)p.blue * a1) >> 8);
+                    d->red = (byte)(((int)d->red * a2 + (int)cr.red * a1) >> 8);
+                    d->green = (byte)(((int)d->green * a2 + (int)cr.green * a1) >> 8);
+                    d->blue = (byte)(((int)d->blue * a2 + (int)cr.blue * a1) >> 8);
                 }
             }
             ptr += u;
@@ -312,4 +314,4 @@ void fsys_win32::draw(image& img, const gchar* str, int x, int y, const pixel& p
     }
 }
 
-__pink_end__
+__ariel_end__

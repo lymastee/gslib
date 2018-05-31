@@ -33,38 +33,6 @@
 
 __ariel_begin__
 
-struct color;
-struct pixel;
-void convert_color_to_pixel(pixel& p, const color& cr);
-
-struct pixel
-{
-    byte    blue, green, red;
-
-public:
-    pixel() { red = 0; green = 0; blue = 0; }
-    pixel(int cr) { from_xrgb(cr); }
-    pixel(int r, int g, int b) { red = r; green = g; blue = b; }
-    dword to_rgb() const { return (dword)(red << 24) | (green << 16) | (blue << 8); }
-    dword to_bgr() const { return (dword) red | (green << 8) | (blue << 16); }
-    void from_color(const color& cr) { convert_color_to_pixel(*this, cr); }
-    void from_rgbx(int cr) { from_xrgb(cr >>= 8); }
-    void from_xrgb(int cr) { blue = cr; green = (cr >>= 8); red = (cr >>= 8); }
-    const pixel& blend(const pixel& c1, const pixel& c2, float f) { return blend_color(*this, c1, c2, f); }
-    const pixel& blend(const pixel& c1, const pixel& c2, float f1, float f2) { return blend_color(*this, c1, c2, f1, f2); }
-    bool operator !=(const pixel& that) const { return blue != that.blue || green != that.green || red != that.red; }
-    bool operator ==(const pixel& that) const { return blue == that.blue && green == that.green && red == that.red; }
-
-    static inline const pixel& blend_color(pixel& c, const pixel& c1, const pixel& c2, float f1, float f2)
-    {
-        c.red = round(f1 * c1.red + f2 * c2.red);
-        c.green = round(f1 * c1.green + f2 * c2.green);
-        c.blue = round(f1 * c1.blue + f2 * c2.blue);
-        return c;
-    }
-    static inline const pixel& blend_color(pixel& c, const pixel& c1, const pixel& c2, float f) { return blend_color(c, c1, c2, f, 1.f-f); }
-};
-
 struct color
 {
     union
@@ -81,17 +49,9 @@ public:
     uint data() const { return _data; }
     void set_color(int r, int g, int b) { red = r, green = g, blue = b, alpha = 255; }
     void set_color(int r, int g, int b, int a) { red = r, green = g, blue = b, alpha = a; }
-    void from_pixel(const pixel& p) { set_color(p.red, p.green, p.blue); }
     bool operator !=(const color& cr) const { return blue != cr.blue || green != cr.green || red != cr.red || alpha != cr.alpha; }
     bool operator ==(const color& cr) const { return blue == cr.blue && green == cr.green && red == cr.red && alpha == cr.alpha; }
 };
-
-inline void convert_color_to_pixel(pixel& p, const color& cr)
-{
-    p.red = cr.red;
-    p.green = cr.green;
-    p.blue = cr.blue;
-}
 
 struct font
 {

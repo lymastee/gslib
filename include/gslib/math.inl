@@ -1316,6 +1316,51 @@ inline float mat3determinant(const matrix3* m)
         m->_13 * (m->_21 * m->_32 - m->_22 * m->_31);
 }
 
+inline matrix3* mat3inverse(matrix3* out, float* det, const matrix3* m)
+{
+    assert(out && m);
+    float d = mat3determinant(m);
+    if(abs(d) < 1e-6f) {
+        assert(!"can't inverse.");
+        return nullptr;
+    }
+    if(det) *det = d;
+    d = 1.f / d;
+    if(out == m) {
+        float t11 = m->_22 * m->_33 - m->_23 * m->_32,
+            t12 = m->_13 * m->_32 - m->_12 * m->_33,
+            t13 = m->_12 * m->_23 - m->_13 * m->_22,
+            t21 = m->_23 * m->_31 - m->_21 * m->_33,
+            t22 = m->_11 * m->_33 - m->_13 * m->_31,
+            t23 = m->_13 * m->_21 - m->_11 * m->_23,
+            t31 = m->_21 * m->_32 - m->_22 * m->_31,
+            t32 = m->_12 * m->_31 - m->_11 * m->_32,
+            t33 = m->_11 * m->_22 - m->_12 * m->_21;
+        out->_11 = t11 * d,
+        out->_12 = t12 * d,
+        out->_13 = t13 * d,
+        out->_21 = t21 * d,
+        out->_22 = t22 * d,
+        out->_23 = t23 * d,
+        out->_31 = t31 * d,
+        out->_32 = t32 * d,
+        out->_33 = t33 * d;
+    }
+    else {
+        out->_11 = m->_22 * m->_33 - m->_23 * m->_32;
+        out->_12 = m->_13 * m->_32 - m->_12 * m->_33;
+        out->_13 = m->_12 * m->_23 - m->_13 * m->_22;
+        out->_21 = m->_23 * m->_31 - m->_21 * m->_33;
+        out->_22 = m->_11 * m->_33 - m->_13 * m->_31;
+        out->_23 = m->_13 * m->_21 - m->_11 * m->_23;
+        out->_31 = m->_21 * m->_32 - m->_22 * m->_31;
+        out->_32 = m->_12 * m->_31 - m->_11 * m->_32;
+        out->_33 = m->_11 * m->_22 - m->_12 * m->_21;
+        *out *= d;
+    }
+    return out;
+}
+
 inline matrix3* mat3multiply(matrix3* out, const matrix3* m1, const matrix3* m2)
 {
     assert(out && m1 && m2);

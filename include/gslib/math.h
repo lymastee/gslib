@@ -155,6 +155,7 @@ vec4* vec4multiply(vec4* out, const vec4* v, const matrix* m);
 matrix3* mat3identity(matrix3* out);
 bool mat3isidentity(const matrix3* m);
 float mat3determinant(const matrix3* m);
+matrix3* mat3inverse(matrix3* out, float* det, const matrix3* m);
 matrix3* mat3multiply(matrix3* out, const matrix3* m1, const matrix3* m2);
 matrix3* mat3transpose(matrix3* out, const matrix3* m);
 matrix3* mat3scaling(matrix3* out, float sx, float sy);
@@ -519,6 +520,7 @@ public:
     mat3& multiply(const mat3& m) { return *mat3multiply(this, this, &m); }
     mat3& multiply(const mat3& m1, const mat3& m2) { return *mat3multiply(this, &m1, &m2); }
     float determinant() const { return mat3determinant(this); }
+    mat3& inverse(float* det, const mat3& m) { return *mat3inverse(this, det, &m); }
 };
 
 class mat4:

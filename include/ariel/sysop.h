@@ -187,6 +187,19 @@ public:
     //virtual int get_clipboard(clipboard_list& cl, int c) = 0;
 };
 
+class image;
+
+class __gs_novtable fontsys abstract
+{
+public:
+    virtual ~fontsys() {}
+    virtual void initialize() = 0;
+    virtual int set_font(const font& f, int idx = -1) = 0;
+    virtual bool get_size(const gchar* str, int& w, int& h, int len = -1) = 0;
+    virtual bool create_text_image(image& img, const gchar* str, int x, int y, const color& cr, int len = -1) = 0;
+    virtual void draw(image& img, const gchar* str, int x, int y, const color& cr, int len = -1) = 0;
+};
+
 __ariel_end__
 
 #endif

@@ -32,34 +32,6 @@
 
 __ariel_begin__
 
-// enum painter_version
-// {
-//     painter_ver1,       /* software painter */
-//     painter_ver2,       /* rose painter */
-//     painter_ver3,       /* not used. */
-// };
-// 
-// class __gs_novtable painter abstract
-// {
-// public:
-//     virtual painter_version get_version() const = 0;
-//     virtual int get_width() const = 0;
-//     virtual int get_height() const = 0;
-//     virtual void set_dirty(dirty_list* dirty) = 0;
-//     virtual dirty_list* get_dirty() const = 0;
-//     virtual image* select(image* img) = 0;
-//     virtual image* get_image() const = 0;
-//     virtual bool lock(const rect& rc) = 0;
-//     virtual const rect& unlock() = 0;
-//     virtual void on_draw_begin() = 0;
-//     virtual void on_draw_end() = 0;
-//     virtual void draw(const image* img, int x, int y) = 0;
-//     virtual void draw(const image* img, int x, int y, int cx, int cy, int sx, int sy) = 0;
-//     virtual void draw_text(const gchar* str, int x, int y, const pixel& p) = 0;
-//     virtual void draw_line(const point& start, const point& end, const pixel& p) = 0;
-//     virtual void draw_rect(const rect& rc, const pixel& p) = 0;
-// };
-
 class painter_linestrip
 {
 public:
@@ -68,8 +40,8 @@ public:
     typedef points::const_iterator ptciter;
 
 protected:
-    bool            _closed;
-    points          _pts;
+    bool                _closed;
+    points              _pts;
 
 public:
     painter_linestrip();
@@ -117,13 +89,13 @@ struct painter_picture_data:
     public painter_data
 {
 protected:
-    image*          _image;
+    const image*        _image;
 
 public:
     painter_picture_data() { _image = 0; }
-    painter_picture_data(image* p) { _image = p; }
-    void set_image(image* p) { _image = p; }
-    image* get_image() const { return _image; }
+    painter_picture_data(const image* p) { _image = p; }
+    void set_image(const image* p) { _image = p; }
+    const image* get_image() const { return _image; }
 };
 
 typedef list<painter_linestrip> linestrips;
@@ -144,12 +116,12 @@ public:
     typedef painter_extra_data extra_data;
 
 protected:
-    uint            _tag;
-    color           _color;
-    extra_data      _extra;
+    uint                _tag;
+    color               _color;
+    extra_data          _extra;
 
 public:
-    painter_brush() { _tag = solid; }
+    painter_brush() { _tag = none; }
     void set_tag(uint tag) { _tag = tag; }
     uint get_tag() const { return _tag; }
     void set_color(const color& cr) { _color = cr; }
@@ -170,12 +142,12 @@ public:
     typedef painter_extra_data extra_data;
 
 protected:
-    uint            _tag;
-    color           _color;
-    extra_data      _extra;
+    uint                _tag;
+    color               _color;
+    extra_data          _extra;
 
 public:
-    painter_pen() { _tag = solid; }
+    painter_pen() { _tag = none; }
     painter_pen(uint tag) { _tag = tag; }
     painter_pen(uint tag, const color& cr) { _tag = tag; _color = cr; }
     void set_tag(uint tag) { _tag = tag; }
@@ -190,19 +162,15 @@ struct painter_context
 {
     painter_brush       _brush;
     painter_pen         _pen;
-    rectf*              _clip;
-    rectf               _clipdata;
+    mat3                _transform;
 
-    painter_context() { _clip = 0; }
+    painter_context() { _transform.identity(); }
     void set_brush(const painter_brush& brush) { _brush = brush; }
     void set_pen(const painter_pen& pen) { _pen = pen; }
-    void set_clip(const rectf& rc)
-    {
-        _clipdata = rc;
-        _clip = &_clipdata;
-    }
+    void set_transform(const mat3& m) { _transform = m; }
     const painter_brush& get_brush() const { return _brush; }
     const painter_pen& get_pen() const { return _pen; }
+    const mat3& get_trasnform() const { return _transform; }
 };
 
 class painter_path;
@@ -214,22 +182,22 @@ public:
     {
         hint_anti_alias     = 0x1,
     };
+    typedef vector<image*> text_image_cache;
 
 public:
+    virtual ~painter();
     virtual int get_width() const = 0;
     virtual int get_height() const = 0;
     virtual void set_dirty(dirty_list* dirty) = 0;
     virtual dirty_list* get_dirty() const = 0;
-    virtual void on_draw_begin() = 0;
-    virtual void on_draw_end() = 0;
     virtual void resize(int w, int h) = 0;
     virtual void set_hints(uint hints, bool enable) = 0;
-    virtual void set_clip(const rectf& rc) = 0;
-    virtual void set_no_clip() = 0;
     virtual void set_brush(const painter_brush& b) = 0;
     virtual void set_pen(const painter_pen& p) = 0;
+    virtual void set_tranform(const mat3& m) = 0;
     virtual void draw_path(const painter_path& path) = 0;
     virtual void draw_line(const vec2& p1, const vec2& p2) = 0;
+    virtual void draw_rect(const rectf& rc) = 0;
     virtual void draw_quad(const vec2& p1, const vec2& p2, const vec2& p3) = 0;
     virtual void draw_cubic(const vec2& p1, const vec2& p2, const vec2& p3, const vec2& p4) = 0;
     virtual void draw_arc(const vec2& p1, const vec2& p2, float r, bool inv = false) = 0;
@@ -237,6 +205,20 @@ public:
     virtual void restore() = 0;
     virtual bool query_hints(uint hints) const = 0;
     virtual painter_context& get_context() = 0;
+
+public:
+    virtual void on_draw_begin();
+    virtual void on_draw_end();
+    virtual void draw_image(const image* img, float x, float y);
+    virtual void draw_line(const vec2& p1, const vec2& p2, const color& cr);
+    virtual void draw_rect(const rectf& rc, const color& cr);
+    virtual void draw_text(const gchar* str, int x, int y, const color& cr, int length = -1);
+
+protected:
+    text_image_cache    _text_image_cache;
+
+protected:
+    void destroy_text_image_cache();
 };
 
 class painter_obj;
@@ -269,9 +251,9 @@ public:
     void destroy_children();
 
 protected:
-    painter_obj*    _parent;
-    obj_list        _children;
-    painter_context _context;
+    painter_obj*        _parent;
+    obj_list            _children;
+    painter_context     _context;
 
 public:
     virtual ~painter_obj();

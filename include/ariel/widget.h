@@ -89,27 +89,6 @@ struct clipboard_bitmap:
     virtual int get_size() const { return -1; }
 };
 
-// enum hid
-// {
-//     hid_zr  =   0,
-//     hid_press,
-//     hid_click,
-//     hid_hover,
-//     hid_leave,
-//     hid_keydown,
-//     hid_keyup,
-//     hid_char,
-//     hid_timer,
-//     hid_scroll,
-// };
-// 
-// class __gs_novtable handle abstract
-// {
-// public:
-//     /* if hid = 0, then it's a widget */
-//     virtual int get_id() const = 0;
-// };
-
 class widget;
 extern vtable_ops<widget>& widget_vtable_ops();
 
@@ -213,7 +192,6 @@ public:
     virtual void move(const rect& rc);
     virtual void refresh(const rect& rc, bool imm = false);
     virtual void draw(painter* paint) {}
-    virtual int proceed(int msgid, va_list vlst);
     virtual widget* capture(bool b);
     virtual widget* focus();
     virtual bool hit_test(const point& pt) { return (_style & sm_hitable) != 0; }
@@ -263,8 +241,7 @@ public:
     void refresh(bool imm);
     int get_width() const { return _pos.width(); }
     int get_height() const { return _pos.height(); }
-    void make_individual_vtable();
-    int run_proc(int msgid, ...);
+    void create_individual_vtable();
 
 protected:
     widget*         _last;
@@ -305,8 +282,8 @@ public:
 protected:
     const image*    _source;
     image           _bkground;
-    bool            _allstate;
-    
+    bool            _4states;
+
 public:
     enum btnstate
     {
@@ -357,9 +334,9 @@ public:
 public:
     void set_font(const font& ft) { _font = ft; }
     void set_bkground(image* ptr) { _bkground = ptr; }
-    void set_text_color(pixel pix) { _txtcolor = pix; }
-    void set_select_color(pixel pix) { _selcolor = pix; }
-    void set_caret_color(pixel pix) { _crtcolor = pix; }
+    void set_text_color(color cr) { _txtcolor = cr; }
+    void set_select_color(color cr) { _selcolor = cr; }
+    void set_caret_color(color cr) { _crtcolor = cr; }
     const gchar* get_text() const { return _textbuf.c_str(); }
     void del_select();
     int hit_char(point pt);
@@ -371,9 +348,9 @@ public:
 
 protected:
     image*          _bkground;
-    pixel           _txtcolor;
-    pixel           _selcolor;
-    pixel           _crtcolor;
+    color           _txtcolor;
+    color           _selcolor;
+    color           _crtcolor;
     font            _font;
     int             _font_idx;
 };
@@ -402,32 +379,18 @@ protected:
 typedef system_driver wsys_driver;
 typedef system_notify wsys_notify;
 
-class __gs_novtable fontsys abstract
-{
-public:
-    virtual ~fontsys() {}
-    virtual void initialize() = 0;
-    virtual int set_font(const font& f, int idx = -1) = 0;
-    virtual bool get_size(const gchar* str, int& w, int& h, int len = -1) = 0;
-    virtual bool convert(image& img, const gchar* str, int x, int y, const pixel& p, int len = -1) = 0;
-    virtual void draw(image& img, const gchar* str, int x, int y, const pixel& p, int len = -1) = 0;
-};
-
 class wsys_manager:
     public wsys_notify
 {
 public:
     wsys_manager();
     void set_wsysdrv(wsys_driver* drv);
-    void set_fontsys(fontsys* fsys);
-    fontsys* get_fontsys() const { return _fontsys; }
     void set_painter(painter* paint);
     painter* get_painter() const { return _painter; }
     void initialize(const rect& rc);
 
 protected:
     wsys_driver*    _driver;
-    fontsys*        _fontsys;
     painter*        _painter;
     dirty_list      _dirty;
     int             _width;

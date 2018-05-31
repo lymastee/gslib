@@ -1,0 +1,1 @@
+Copy the picture resources into the same directory of the application.

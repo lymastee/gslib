@@ -309,6 +309,7 @@ project "ariel"
 		"include/ariel/delaunay.h",
 		"include/ariel/dirty.h",
 		"include/ariel/framesys.h",
+		"include/ariel/fsyswin32.h",
 		"include/ariel/image.h",
 		"include/ariel/imageio.h",
 		"include/ariel/loopblinn.h",
@@ -335,6 +336,7 @@ project "ariel"
 		"src/ariel/dirty.cpp",
 		"src/ariel/framesys.cpp",
 		"src/ariel/framesyswin32.cpp",
+		"src/ariel/fsyswin32.cpp",
 		"src/ariel/image.cpp",
 		"src/ariel/imageio.cpp",
 		"src/ariel/loopblinn.cpp",
@@ -384,12 +386,50 @@ project "test111"
 		"libjpeg.lib",
 		"libpng.lib",
 		"gslib.lib",
-		"ariel.lib"
+		"ariel.lib",
+		"imm32.lib"
 	}
 	files {
 		"framework/entrywin32.h",
 		"framework/entrywin32.cpp",
 		"proj/ariel/main.cpp"
+	}
+	
+project "widget"
+	language "C++"
+	kind "WindowedApp"
+	entrypoint ""
+	dependson {
+		"zlib",
+		"libpng",
+		"libjpeg",
+		"gslib",
+		"ariel"
+	}
+	includedirs {
+		todir,
+		"include",
+		"src",
+		"ext",
+		"framework"
+	}
+	libdirs {
+		"$(OutDir)"
+	}
+	links {
+		"dxgi.lib",
+		"d3d11.lib",
+		"zlib.lib",
+		"libjpeg.lib",
+		"libpng.lib",
+		"gslib.lib",
+		"ariel.lib",
+		"imm32.lib"
+	}
+	files {
+		"framework/entrywin32.h",
+		"framework/entrywin32.cpp",
+		"test/widget/main.cpp"
 	}
 	
 project "rathen"

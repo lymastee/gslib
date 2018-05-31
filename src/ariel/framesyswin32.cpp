@@ -33,8 +33,6 @@
 #include <ariel/scene.h>
 #include <ariel/rendersysd3d11.h>
 
-#pragma comment(lib, "imm32.lib")
-
 __ariel_begin__
 
 static HWND                 __frame_hwnd = 0;

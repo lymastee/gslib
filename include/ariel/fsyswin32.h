@@ -27,9 +27,10 @@
 #define fsyswin32_02c06bb0_546a_4008_a296_7cd2c199bade_h
 
 #include <windows.h>
-#include <pink/widget.h>
+#include <gslib/std.h>
+#include <ariel/sysop.h>
 
-__pink_begin__
+__ariel_begin__
 
 struct font_pair
 {
@@ -48,8 +49,8 @@ public:
     virtual void initialize();
     virtual int set_font(const font& f, int idx = -1);
     virtual bool get_size(const gchar* str, int& w, int& h, int len = -1);
-    virtual bool convert(image& img, const gchar* str, int x, int y, const pixel& p, int len = -1);
-    virtual void draw(image& img, const gchar* str, int x, int y, const pixel& p, int len = -1);
+    virtual bool create_text_image(image& img, const gchar* str, int x, int y, const color& cr, int len = -1);
+    virtual void draw(image& img, const gchar* str, int x, int y, const color& cr, int len = -1);
 
 protected:
     HDC         _container_dc;
@@ -58,6 +59,6 @@ protected:
     int         _current;
 };
 
-__pink_end__
+__ariel_end__
 
 #endif

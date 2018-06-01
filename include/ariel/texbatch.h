@@ -48,6 +48,8 @@ public:
     void arrange();
     const location_map& get_location_map() const { return _location_map; }
     render_texture2d* create_texture(rendersys* rsys) const;
+    void create_packed_image(image& img) const;
+    void tracing() const;
 
 protected:
     rect_packer         _rect_packer;

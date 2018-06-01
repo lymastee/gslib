@@ -63,13 +63,13 @@ struct font
     };
 
 public:
-    string  name;
-    int     height;
-    int     width;
-    int     escape;
-    int     orient;
-    int     weight; /* 0-9 */
-    uint    mask;
+    string      name;
+    int         height;
+    int         width;
+    int         escape;
+    int         orient;
+    int         weight; /* 0-9 */
+    uint        mask;
 
 public:
     font()

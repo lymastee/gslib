@@ -75,7 +75,7 @@ bool widget::create(widget* ptr, const gchar* name, const rect& rc, uint style)
     _name.assign(name);
     _pos = rc;
     _style = style;
-    _htpos.set_point(-1,-1);
+    _htpos.set_point(-1, -1);
     if(style & sm_visible)
         _show = true;
     refresh(false);
@@ -186,7 +186,7 @@ void widget::on_press(uint um, unikey uk, const point& pt)
 void widget::on_click(uint um, unikey uk, const point& pt)
 {
     if(uk == mk_left && _htpos.x >= 0 && _htpos.y >= 0) {
-        _htpos.set_point(-1,-1);
+        _htpos.set_point(-1, -1);
         capture(false);
         /* focus! */
         focus();
@@ -376,7 +376,7 @@ void edit::draw(painter* paint)
     fontsys* pfs = scene::get_singleton_ptr()->get_fontsys();
     assert(pfs);
     _font_idx = pfs->set_font(_font, _font_idx);
-    if(_sel_start < 0)
+    if(_sel_start < 0 || _sel_start == _sel_end)
         paint->draw_text(_textbuf.c_str(), 0, 0, _txtcolor, _textbuf.length());
     else {
         /* 0-start, start-end, end-last */
@@ -395,13 +395,13 @@ void edit::draw(painter* paint)
         string s;
         if(start) {
             s.assign(_textbuf.c_str(), start);
-            pfs->get_size(s.c_str(), w, h);
+            pfs->get_size(s.c_str(), w, h, s.length());
             paint->draw_text(s.c_str(), bias, 0, _txtcolor, s.length());
             bias = w;
         }
         if(start != end) {
-            s.assign(_textbuf.c_str()+start, end-start);
-            pfs->get_size(s.c_str(), w, h);
+            s.assign(_textbuf.c_str() + start, end - start);
+            pfs->get_size(s.c_str(), w, h, s.length());
             paint->draw_rect(rectf((float)bias, 0.f, (float)w, (float)h), _selcolor);
             paint->draw_text(s.c_str(), bias, 0, color(255, 255, 255), s.length());
             bias += w;
@@ -414,7 +414,7 @@ void edit::draw(painter* paint)
         string s;
         s.assign(_textbuf.c_str(), _caretpos);
         int w, h;
-        pfs->get_size(s.c_str(), w, h);
+        pfs->get_size(s.c_str(), w, h, s.length());
         paint->draw_line(pointf((float)w, 0.f), pointf((float)w, (float)_font.height), _crtcolor);
     }
 }
@@ -455,17 +455,26 @@ void edit::on_char(uint um, uint ch)
     if((ch >= 0x20 && ch < 0x7f) || ch == 0x09 || ch == 0x0a) {
         del_select();
         _textbuf.insert((size_t)_caretpos, 1, (char)ch);
-        set_caret(_caretpos+1);
+        set_caret(_caretpos + 1);
         return;
     }
+#ifndef _UNICODE
     /* MBCS codes */
     if(ch & 0x8080) {
         del_select();
         _textbuf.insert((size_t)_caretpos, 1, (char)((ch & 0xff00) >> 8));
-        _textbuf.insert((size_t)_caretpos+1, 1, (char)(ch & 0xff));
+        _textbuf.insert((size_t)_caretpos + 1, 1, (char)(ch & 0xff));
         set_caret(_caretpos + 2);
         return;
     }
+#else
+    if(ch > 0x80) {
+        del_select();
+        _textbuf.insert((size_t)_caretpos, 1, (wchar_t)ch);
+        set_caret(_caretpos + 1);
+        return;
+    }
+#endif
 }
 
 void edit::on_keydown(uint um, unikey uk)
@@ -581,10 +590,10 @@ void edit::on_keydown(uint um, unikey uk)
         int start = gs_min(_sel_start, _sel_end),
             end = gs_max(_sel_start, _sel_end);
         if(start >= 0 && start != end) {
-            int size = end - start + 1;            
+            int size = end - start + 1;
             size *= sizeof(gchar);
             assert(_manager);
-            _manager->set_clipboard(clipfmt_text, _textbuf.c_str()+start, size);
+            _manager->set_clipboard(clipfmt_text, _textbuf.c_str() + start, size);
             if(uk == _t('X'))
                 del_select();
         }
@@ -640,8 +649,8 @@ void edit::set_caret(int n)
     assert(pfs);
     int w, h;
     _font_idx = pfs->set_font(_font, _font_idx);
-    pfs->get_size(s.c_str(), w, h);
-    _manager->set_ime(this, point(w,0), _font);
+    pfs->get_size(s.c_str(), w, h, s.length());
+    _manager->set_ime(this, point(w, 0), _font);
     refresh(false);
 }
 
@@ -663,7 +672,7 @@ void edit::replace_select(const gchar* str)
     del_select();
     if(str) {
         _textbuf.insert(_caretpos, str);
-        set_caret(_caretpos+strtool::length(str));
+        set_caret(_caretpos + strtool::length(str));
     }
 }
 
@@ -709,29 +718,39 @@ int edit::hit_char(point pt)
 #endif
     string s;
     s.assign(_textbuf.c_str(), fixc);
-    pfs->get_size(s.c_str(), w, h);
+    pfs->get_size(s.c_str(), w, h, s.length());
     if(pt.x > w) {
         for(fixc ++; fixc <= _textbuf.length(); fixc ++) {
-            s.push_back(_textbuf.at(fixc-1));
-            if(_textbuf.at(fixc-1) & 0x80)
-                s.push_back(_textbuf.at(fixc++));
-            pfs->get_size(s.c_str(), w, h);
+            s.push_back(_textbuf.at(fixc - 1));
+#ifndef _UNICODE
+            if(_textbuf.at(fixc - 1) & 0x80)
+                s.push_back(_textbuf.at(fixc ++));
+#endif
+            pfs->get_size(s.c_str(), w, h, s.length());
             if(pt.x < w)
                 break;
         }
         if(fixc > _textbuf.length())
             return _textbuf.length();
+#ifndef _UNICODE
         fixc -= (s.back() & 0x80) ? 2 : 1;
+#else
+        fixc --;
+#endif
     }
     else if (pt.x < w) {
         if(fixc == 0)
             return 0;
         for(fixc --; fixc > 0; fixc --) {
+#ifndef _UNICODE
             if(s.pop_back() & 0x80) {
                 fixc --;
                 s.pop_back();
             }
-            pfs->get_size(s.c_str(), w, h);
+#else
+            s.pop_back();
+#endif
+            pfs->get_size(s.c_str(), w, h, s.length());
             if(pt.x >= w)
                 break;
         }
@@ -744,7 +763,11 @@ int edit::prev_char(int pos)
     if(pos < 0 || pos > _textbuf.length())
         pos = _textbuf.length();
     if(pos > 0)
-        pos -= (_textbuf.at(pos-1) & 0x80) ? 2 : 1;
+#ifndef _UNICODE
+        pos -= (_textbuf.at(pos - 1) & 0x80) ? 2 : 1;
+#else
+        pos --;
+#endif
     if(pos < 0)
         pos = 0;
     return pos;
@@ -755,7 +778,11 @@ int edit::next_char(int pos)
     if(pos < 0 || pos > _textbuf.length())
         pos = _textbuf.length();
     if(pos < _textbuf.length())
+#ifndef _UNICODE
         pos += (_textbuf.at(pos) & 0x80) ? 2 : 1;
+#else
+        pos ++;
+#endif
     if(pos > _textbuf.length())
         pos = _textbuf.length();
     return pos;
@@ -764,7 +791,11 @@ int edit::next_char(int pos)
 static int get_logic_field(uint c)
 {
     static const string sfield1 = _t(" \t\v\a\b\f");
+#ifndef _UNICODE
     if(!(c & 0x8080)) {
+#else
+    if(c < 0x80) {
+#endif
         assert(c < 0x80);
         if(sfield1.find((char)c) != string::npos)
             return 0;
@@ -781,7 +812,11 @@ static int get_logic_field(uint c)
         if(c >= _t('A') && c <= _t('z'))
             return 4;
     }
+#ifndef _UNICODE
     else if((c & 0x8080) == 0x8080)
+#else
+    else
+#endif
         return 5;
     return -1;
 }
@@ -791,12 +826,12 @@ int edit::prev_logic_char(int pos)
     if(!pos || !(pos = prev_char(pos)))
         return 0;
     uint c;
-    get_next_char(_textbuf.c_str()+pos, c);
+    get_next_char(_textbuf.c_str() + pos, c);
     int f = get_logic_field(c);
     for(;;) {
         int np = prev_char(pos);
         if(np == 0) { pos = 0; break; }
-        get_next_char(_textbuf.c_str()+np, c);
+        get_next_char(_textbuf.c_str() + np, c);
         if(get_logic_field(c) != f)
             break;
         pos = np;
@@ -809,10 +844,10 @@ int edit::next_logic_char(int pos)
     if(pos < 0 || pos >= _textbuf.length())
         return _textbuf.length();
     uint c;
-    get_next_char(_textbuf.c_str()+pos, c);
+    get_next_char(_textbuf.c_str() + pos, c);
     int f = get_logic_field(c);
     for(pos = next_char(pos); pos <= _textbuf.length(); pos = next_char(pos)) {
-        get_next_char(_textbuf.c_str()+pos, c);
+        get_next_char(_textbuf.c_str() + pos, c);
         if(get_logic_field(c) != f)
             break;
     }
@@ -929,7 +964,7 @@ void wsys_manager::initialize(const rect& rc)
     assert(_next_tid == tid_caret);
     set_timer(get_timer_id(0), 600);
     /* IME support */
-    set_ime(0, point(0,0), font(_t("ËÎÌו"), 14));
+    set_ime(0, point(0, 0), font(_t("ËÎÌו"), 14));
 }
 
 void wsys_manager::set_dimension(int w, int h)

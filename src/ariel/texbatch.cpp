@@ -101,9 +101,9 @@ void tex_batcher::arrange()
         assert(f != _location_map.end());
         float w = rc.width - _gap;
         float h = rc.height - _gap;
-        if(transposed)
-            gs_swap(w, h);
-        assert(w == img->get_width() && h == img->get_height());
+        assert((!transposed && w == img->get_width() && h == img->get_height()) ||
+            (transposed && h == img->get_width() && w == img->get_height())
+            );
         f->second.set_rect(rc.left() + _gap, rc.top() + _gap, w, h);
     });
 }
@@ -111,18 +111,28 @@ void tex_batcher::arrange()
 render_texture2d* tex_batcher::create_texture(rendersys* rsys) const
 {
     assert(rsys);
-    float w = get_width(), h = get_height();
-    /* prepare image */
     image img;
-    img.create(image::fmt_rgba, (int)ceil(w), (int)ceil(h));
-    img.init(color(0, 0, 0, 0));
-    for(const auto& value : _location_map)
-        write_image_source(img, *value.first, value.second);
+    create_packed_image(img);
 #if use_rendersys_d3d_11
     render_texture2d* p = rsys->create_texture2d(img, 1, D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0);
 #endif
     assert(p);
     return p;
+}
+
+void tex_batcher::create_packed_image(image& img) const
+{
+    float w = get_width(), h = get_height();
+    img.create(image::fmt_rgba, (int)ceil(w), (int)ceil(h));
+    img.enable_alpha_channel(true);
+    img.init(color(0, 0, 0, 0));
+    for(const auto& value : _location_map)
+        write_image_source(img, *value.first, value.second);
+}
+
+void tex_batcher::tracing() const
+{
+    _rect_packer.tracing();
 }
 
 void tex_batcher::prepare_input_list(rp_input_list& inputs)

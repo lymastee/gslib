@@ -1,4 +1,6 @@
 #pragma once
+
+#include <windows.h>
 #include <ariel/widget.h>
 #include <ariel/scene.h>
 
@@ -134,7 +136,8 @@ public:
         _btn->set_image(&_btn_image);
 
         /* reflection */
-        //reflect(_btn, hid_click);
+        //create_individual_vtable();
+        //reflect_widget_notify(_btn, button::on_click, this, wbkground::on_reflect);
 
         return true;
     }
@@ -142,14 +145,14 @@ public:
     {
         cvs->draw_image(&_bkgnd, 0, 0);
     }
-    virtual void on_reflect(widget* ptr, int msgid, va_list vlst)
+    virtual void on_reflect(uint um, unikey uk, const point& pt)
     {
         /* must be button clicked */
         int w = get_width(), h = get_height();
-        point pt;
-        pt.x = rand() % w;
-        pt.y = rand() % h;
-        wflttext::create_inst(this, pt, _editptr->get_text());
+        point pt1;
+        pt1.x = rand() % w;
+        pt1.y = rand() % h;
+        wflttext::create_inst(this, pt1, _editptr->get_text());
     }
 
 protected:
@@ -159,23 +162,6 @@ protected:
     image       _btn_image;
 };
 
-// int __stdcall WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLine, int nCmdShow)
-// {
-//     wsysdrv_win32 wsd(hInstance, lpCmdLine);
-//     fsys_win32 fs;
-//     wsys_manager* mgr = wsys_manager::get_singleton_ptr();
-//     mgr->set_wsysdrv(&wsd);
-//     mgr->set_fontsys(&fs);
-//     mgr->initialize(rect(100,100,800,500));
-// 
-//     widget* root = mgr->add_widget<wbkground>(
-//         0, _t("wbkground"), rect(0,0,mgr->get_width(),mgr->get_height()),
-//         sm_hitable|sm_visible
-//         );
-// 
-//     return wsd.run();
-// }
-
 int gs_main()
 {
     wsys_manager* wsys = scene::get_singleton_ptr()->get_ui_system();
@@ -183,7 +169,7 @@ int gs_main()
     assert(ptex);
     ptex->set_hints(painter::hint_anti_alias, true);
     widget* root = wsys->add_widget<wbkground>(
-        0, _t("wbkground"), rect(0,0, wsys->get_width(), wsys->get_height()),
+        0, _t("wbkground"), rect(0, 0, wsys->get_width(), wsys->get_height()),
         sm_hitable|sm_visible
         );
     framesys::get_framesys()->refresh();

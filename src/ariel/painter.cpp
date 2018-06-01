@@ -182,14 +182,14 @@ void painter::draw_text(const gchar* str, int x, int y, const color& cr, int len
     fontsys* fsys = scn->get_fontsys();
     assert(fsys);
     int w, h;
-    fsys->get_size(str, w, h);
+    fsys->get_size(str, w, h, length);
     image* img = gs_new(image);
     assert(img);
     img->create(image::fmt_rgba, w, h);
     img->enable_alpha_channel(true);
     _text_image_cache.push_back(img);
-    fsys->create_text_image(*img, str, x, y, cr, length);
-    draw_image(img, 0.f, 0.f);
+    fsys->create_text_image(*img, str, 0, 0, cr, length);
+    draw_image(img, (float)x, (float)y);
 }
 
 void painter::destroy_text_image_cache()

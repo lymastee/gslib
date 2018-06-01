@@ -170,6 +170,7 @@ class batch_processor
 public:
     typedef bat_batches::iterator bat_iter;
     typedef bat_batches::const_iterator bat_const_iter;
+    typedef bat_batches::reverse_iterator bat_reversed_iter;
     friend class rose;
 
 public:

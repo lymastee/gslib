@@ -621,6 +621,38 @@ project "testfreetype"
 		"test/testfreetype/main.cpp"
 	}
 	
+project "texpack"
+	language "C++"
+	kind "ConsoleApp"
+	entrypoint ""
+	dependson {
+		"libpng",
+		"libjpeg",
+		"zlib",
+		"gslib",
+		"ariel"
+	}
+	includedirs {
+		"include"
+	}
+	libdirs {
+		"$(OutDir)"
+	}
+	links {
+		"libpng.lib",
+		"libjpeg.lib",
+		"zlib.lib",
+		"gslib.lib",
+		"ariel.lib",
+		"dxgi.lib",
+		"imm32.lib",
+		"d3d11.lib",
+		"snmpapi.lib"
+	}
+	files {
+		"test/texpack/main.cpp"
+	}
+	
 -- following are tools
 project "mres"
 	language "C++"

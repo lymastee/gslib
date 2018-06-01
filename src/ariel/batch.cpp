@@ -282,7 +282,7 @@ void bat_line::get_bound_rect(rectf& rc) const
 
 static void trace_clip_triangle(const bat_triangle* triangle, bat_line output[2], int c)
 {
-#if defined (DEBUG) || defined (_DEBUG)
+#if (defined (DEBUG) || defined (_DEBUG)) && defined(_GS_DEBUG_VERBOSE)
     assert(triangle && output);
     if(c <= 0)
         return;
@@ -768,23 +768,33 @@ void batch_processor::gather_tex_triangles(bat_triangles& triangles, lb_polygon*
 
 bat_batch* batch_processor::find_containable_tex_batch(const bat_triangles& triangles)
 {
-    auto find_next_batch = [](bat_iter from, bat_iter to)-> bat_iter {
+    auto find_next_batch = [&triangles](bat_reversed_iter from, bat_reversed_iter to)-> bat_reversed_iter {
         for(auto i = from; i != to; ++ i) {
-            if((*i)->get_type() == bf_klm_tex)      /* so there's only bf_klm_tex type */
+            auto t = (*i)->get_type();
+            if(t >= bs_start && t <= bs_end)
+                return to;
+            assert(t >= bf_start && t <= bf_end);
+            if(t == bf_klm_tex)
                 return i;
+            else {
+                if(bat_is_triangles_overlapped(triangles, *i))
+                    return to;
+            }
         }
         return to;
     };
-    auto f = find_next_batch(_batches.begin(), _batches.end());
-    while(f != _batches.end()) {
+    bat_batch* lastfound = nullptr;
+    auto f = find_next_batch(_batches.rbegin(), _batches.rend());
+    while(f != _batches.rend()) {
         auto* bat = *f;
         assert(bat);
         assert(bat->get_type() == bf_klm_tex);
-        if(!bat_is_triangles_overlapped(triangles, bat))
-            return bat;
-        f = find_next_batch(++ f, _batches.end());
+        if(bat_is_triangles_overlapped(triangles, bat))
+            break;
+        lastfound = bat;
+        f = find_next_batch(++ f, _batches.rend());
     }
-    return nullptr;
+    return lastfound;
 }
 
 bat_stroke_batch* batch_processor::find_associated_tex_stroke_batch(const bat_batch* bat)

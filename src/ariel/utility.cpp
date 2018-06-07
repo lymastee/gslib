@@ -381,24 +381,19 @@ static void csqrt(fcomplex out[2], const fcomplex& c)
 {
     float m = sqrtf(cmodule(c));
     float t = ctheta(c) * 0.5f;
-    out[0]._Val[_RE] = m * cosf(t);
-    out[0]._Val[_IM] = m * sinf(t);
-    out[1]._Val[_RE] = m * cosf(t + PI);
-    out[1]._Val[_IM] = m * sinf(t + PI);
+    out[0] = fcomplex(m * cosf(t), m * sinf(t));
+    out[1] = fcomplex(m * cosf(t + PI), m * sinf(t + PI));
 }
 
 static void ccbrt(fcomplex out[3], const fcomplex& c)
 {
     float m = cbrt(cmodule(c));
     float t = ctheta(c) * 0.333333f;
-    out[0]._Val[_RE] = m * cosf(t);
-    out[0]._Val[_IM] = m * sinf(t);
+    out[0] = fcomplex(m * cosf(t), m * sinf(t));
     t += PI * 0.666667f;
-    out[1]._Val[_RE] = m * cosf(t);
-    out[1]._Val[_IM] = m * sinf(t);
+    out[1] = fcomplex(m * cosf(t), m * sinf(t));
     t += PI * 0.666667f;
-    out[2]._Val[_RE] = m * cosf(t);
-    out[2]._Val[_IM] = m * sinf(t);
+    out[2] = fcomplex(m * cosf(t), m * sinf(t));
 }
 
 int solve_univariate_cubic(float t[3], const vec4& coef)

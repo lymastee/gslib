@@ -27,11 +27,30 @@
 #define dvt_31727ef2_2dfa_4e64_b93d_deab9c280036_h
 
 #include <gslib/config.h>
+#include <gslib/type.h>
 
 __gslib_begin__
 
 #define method_address(method) \
     []()->uint { __asm { mov eax, method } } ()
+
+extern uint dsm_get_address(uint addr, uint pthis);
+extern void dvt_recover_vtable(void* pthis, void* ovt, int vtsize);
+
+/* get dest address from a jump table */
+inline uint __gs_naked dsm_final_address(uint addr)
+{
+    __asm {
+        push    ebp;
+        mov     ebp, esp;
+        push    ecx;                /* this */
+        push    dword ptr[addr];
+        call    dsm_get_address;
+        add     esp, 8;
+        pop     ebp;
+        ret;
+    }
+}
 
 template<class _cls>
 class vtable_ops:
@@ -53,21 +72,20 @@ public:
 public:
     int get_virtual_method_index(uint m) const
     {
-        __asm {
-            xor     eax, eax;
-            mov     ecx, dword ptr[ecx];
-            mov     edx, myref::end_of_vtable;
-            mov     ebx, m;
-        l_loop:
-            cmp     dword ptr[ecx + eax], edx;
-            jz      l_exit;
-            cmp     dword ptr[ecx + eax], ebx;
-            jz      l_exit;
-            add     eax, 4;
-            jmp     l_loop;
-        l_exit:
-            shr     eax, 2;
+        uint mv = dsm_final_address(m);
+        uint eov = dsm_final_address(method_address(myref::end_of_vtable));
+        uint* ovt = *(uint**)this;
+        int i = 0;
+        for(;; ++ i) {
+            uint cv = dsm_final_address(ovt[i]);
+            if(cv == mv)
+                return i;
+            if(cv == eov) {
+                assert(!"get index failed.");
+                return i;
+            }
         }
+        return -1;
     }
     int size_of_vtable() const
     {
@@ -89,10 +107,7 @@ public:
     void destroy_per_instance_vtable(_cls* p, void* ovt)
     {
         assert(p && ovt);
-        byte* pvt = *(byte**)p;
-        int size = size_of_vtable() * 4;
-        VirtualFree(pvt, size, MEM_DECOMMIT);
-        memcpy(p, &ovt, 4);
+        dvt_recover_vtable(p, ovt, size_of_vtable());
     }
     template<class _func>
     uint replace_vtable_method(_cls* p, int index, _func func)

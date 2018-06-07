@@ -3,6 +3,7 @@
 #include <windows.h>
 #include <ariel/widget.h>
 #include <ariel/scene.h>
+#include <gslib/error.h>
 
 using namespace gs;
 using namespace gs::ariel;
@@ -135,9 +136,7 @@ public:
         _btn_image.load(_t("button.png"));
         _btn->set_image(&_btn_image);
 
-        /* reflection */
-        //create_individual_vtable();
-        //reflect_widget_notify(_btn, button::on_click, this, wbkground::on_reflect);
+        reflect_widget_notify(_btn, button::on_click, this, wbkground::on_reflect, 3);
 
         return true;
     }
@@ -145,7 +144,7 @@ public:
     {
         cvs->draw_image(&_bkgnd, 0, 0);
     }
-    virtual void on_reflect(uint um, unikey uk, const point& pt)
+    void on_reflect(uint um, unikey uk, const point& pt)
     {
         /* must be button clicked */
         int w = get_width(), h = get_height();
@@ -168,7 +167,7 @@ int gs_main()
     painter* ptex = wsys->get_painter();
     assert(ptex);
     ptex->set_hints(painter::hint_anti_alias, true);
-    widget* root = wsys->add_widget<wbkground>(
+    wbkground* root = wsys->add_widget<wbkground>(
         0, _t("wbkground"), rect(0, 0, wsys->get_width(), wsys->get_height()),
         sm_hitable|sm_visible
         );

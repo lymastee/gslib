@@ -195,15 +195,27 @@ public:
     template<> static int comparefunc<_string_caseless>(const _string* s, const element* str, int len) { return _strtool::compare_cl(s->c_str(), str, len); }
 
 protected:
+#ifdef _MSC_VER
     void _stl_tidy(bool built, int newsize) { _Tidy(built, newsize); }
-#if defined(_MSC_VER) && (_MSC_VER >= 1910)
+#if (_MSC_VER >= 1914)
+    bool _stl_grow(int newsize) { resize(newsize); return true; }
+#elif (_MSC_VER >= 1910)
     bool _stl_grow(int newsize, bool trim = false) { return _Grow(newsize); }
 #else
     bool _stl_grow(int newsize, bool trim = false) { return _Grow(newsize, trim); }
 #endif
+#if (_MSC_VER >= 1914)
+    element* _stl_rawstr() { return _Get_data()._Myptr(); }
+    const element* _stl_rawstr() const { return _Get_data()._Myptr(); }
+#else
     element* _stl_rawstr() { return _Myptr(); }
     const element* _stl_rawstr() const { return _Myptr(); }
-#if defined(_MSC_VER) && (_MSC_VER >= 1900)
+#endif
+#if (_MSC_VER >= 1914)
+    int& _stl_cap() { return (int&)_Get_data()._Myres; }
+    int& _stl_size() { return (int&)_Get_data()._Mysize; }
+    void _stl_fix() { _stl_size() = _strtool::length(c_str()); }
+#elif ((_MSC_VER >= 1900) && (_MSC_VER < 1910))
     int& _stl_cap() { return (int&)_Myres(); }
     int& _stl_size() { return (int&)_Mysize(); }
     void _stl_fix() { _Mysize() = (size_t)_strtool::length(c_str()); }
@@ -213,6 +225,7 @@ protected:
     void _stl_fix() { _Mysize = (size_t)_strtool::length(c_str()); }
 #endif
     void _stl_eos(int pos) { _Eos(pos); }
+#endif      /* endif _MSC_VER */
 
 private:
     template<class _element>
@@ -348,7 +361,7 @@ public:
     }
     void from_real(real d, int precis = 22)
     {
-        _stl_grow(precis+2);
+        _stl_grow(precis + 2);
         _strtool::from_real(_stl_rawstr(), _stl_cap(), d, precis);
         _stl_fix();
     }

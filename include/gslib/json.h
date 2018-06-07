@@ -49,8 +49,10 @@ public:
     virtual json_node* duplicate() const = 0;   /* gs_del */
 };
 
-struct json_node_hash:
-    public std::unary_function<json_node*, size_t>
+struct json_node_hash
+#if defined(_MSC_VER) && (_MSC_VER < 1914)
+    : public std::unary_function<json_node*, size_t>
+#endif
 {
 public:
     size_t operator()(const json_node* p) const
@@ -60,8 +62,10 @@ public:
     }
 };
 
-struct json_node_equalto:
-    public std::binary_function<json_node*, json_node*, bool>
+struct json_node_equalto
+#if defined(_MSC_VER) && (_MSC_VER < 1914)
+    : public std::binary_function<json_node*, json_node*, bool>
+#endif
 {
 public:
     bool operator()(const json_node* p1, const json_node* p2) const

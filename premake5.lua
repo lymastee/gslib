@@ -23,7 +23,7 @@ solution "gslib"
 		
 	-- windows specific
 	filter "system:Windows"
-		defines { "WIN32", "_WINDOWS", "_UNICODE" }
+		defines { "WIN32", "_WINDOWS", "_UNICODE", "_GS_THREADSAFE" }
 		
 	filter "action:vs2017"
 		sysincludedirs {
@@ -252,6 +252,7 @@ project "gslib"
 		"include/gslib/xml.h",
 		"include/gslib/zip.h",
 		"src/gslib/base64.cpp",
+		"src/gslib/dvt.cpp",
 		"src/gslib/error.cpp",
 		"src/gslib/json.cpp",
 		"src/gslib/math.cpp",

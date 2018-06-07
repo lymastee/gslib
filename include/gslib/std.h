@@ -168,8 +168,10 @@ __gslib_end__
 namespace std {
 
 template<>
-class hash<gs::string>:
-    public unary_function<gs::string, size_t>
+class hash<gs::string>
+#if defined(_MSC_VER) && (_MSC_VER < 1914)
+    : public unary_function<gs::string, size_t>
+#endif
 {
 public:
     size_t operator()(const gs::string& kval) const
@@ -213,7 +215,7 @@ template<class _ty, class _pr = std::less<_ty> >
 class multiset: public std::multiset<_ty, _pr, gs::allocator<_ty> > {};
 
 template<class _kty, class _ty,
-    class _hs = std::tr1::hash<_kty>, class _equ = std::equal_to<_kty>
+    class _hs = std::hash<_kty>, class _equ = std::equal_to<_kty>
     >
 class unordered_map:
     public std::unordered_map<_kty, _ty, _hs, _equ,
@@ -221,7 +223,7 @@ class unordered_map:
     >
 {};
 template<class _kty,
-    class _hs = std::tr1::hash<_kty>,
+    class _hs = std::hash<_kty>,
     class _equ = std::equal_to<_kty>
     >
 class unordered_set:
@@ -230,7 +232,7 @@ class unordered_set:
 {};
 
 template<class _kty, class _ty,
-    class _hs = std::tr1::hash<_kty>, class _equ = std::equal_to<_kty>
+    class _hs = std::hash<_kty>, class _equ = std::equal_to<_kty>
     >
 class unordered_multimap:
     public std::unordered_multimap<_kty, _ty, _hs, _equ, 
@@ -271,20 +273,20 @@ class multiset: public std::multiset<_ty, _pr>
 {};
 
 template<class _kty, class _ty,
-    class _hs = std::tr1::hash<_kty>
+    class _hs = std::hash<_kty>
     >
 class unordered_map:
     public std::unordered_map<_kty, _ty, _hs> {};
 
 template<class _kty,
-    class _hs = std::tr1::hash<_kty>,
+    class _hs = std::hash<_kty>,
     class _equ = std::equal_to<_kty>
     >
 class unordered_set:
     public std::unordered_set<_kty, _hs, _equ> {};
 
 template<class _kty, class _ty,
-    class _hs = std::tr1::hash<_kty>
+    class _hs = std::hash<_kty>
     >
 class unordered_multimap:
     public std::unordered_multimap<_kty, _ty, _hs> {};

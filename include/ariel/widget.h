@@ -90,90 +90,28 @@ struct clipboard_bitmap:
 };
 
 class widget;
-extern vtable_ops<widget>& widget_vtable_ops();
 
-#define reflect_widget_notify(target, trigger, host, action) { \
-    static byte replaced_func[] = { \
-        0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:old_func */ \
-        0xff, 0xd0,                             /* call eax */ \
-        0x8d, 0x0d, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea ecx, 0xcccccccc:host */ \
-        0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:action */ \
-        0xff, 0xd0,                             /* call eax */ \
-        0xc3                                    /* ret */ \
-    }; \
-    vtable_ops<widget>& vo = widget_vtable_ops(); \
-    uint old_func = vo.replace_vtable_method(target, vo.get_virtual_method_index(method_address(trigger)), replaced_func); \
-    *(uint*)(&replaced_func[2]) = old_func; \
-    *(uint*)(&replaced_func[10]) = (uint)host; \
-    *(uint*)(&replaced_func[16]) = method_address(action); \
-    DWORD oldpro; \
-    VirtualProtect(replaced_func, sizeof(replaced_func), PAGE_EXECUTE_READ, &oldpro); \
-}
+class widget_notify_code
+{
+public:
+    widget_notify_code(int n);
+    ~widget_notify_code();
+    void finalize(uint old_func, uint host, uint action);
+    uint get_code_address() const { return (uint)_ptr; }
 
-#define reflect_widget_notify1(target, trigger, host, action) { \
-    static byte replaced_func[] = { \
-        0xff, 0x74, 0x24, 0x04,                 /* push dword ptr[esp+4] */ \
-        0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:old_func */ \
-        0xff, 0xd0,                             /* call eax */ \
-        0xff, 0x74, 0x24, 0x04,                 /* push dword ptr[esp+4] */ \
-        0x8d, 0x0d, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea ecx, 0xcccccccc:host */ \
-        0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:action */ \
-        0xff, 0xd0,                             /* call eax */ \
-        0xc2, 0x04, 0x00                        /* ret 4 */ \
-    }; \
-    vtable_ops<widget>& vo = widget_vtable_ops(); \
-    uint old_func = vo.replace_vtable_method(target, vo.get_virtual_method_index(method_address(trigger)), replaced_func); \
-    *(uint*)(&replaced_func[6]) = old_func; \
-    *(uint*)(&replaced_func[18]) = (uint)host; \
-    *(uint*)(&replaced_func[24]) = method_address(action); \
-    DWORD oldpro; \
-    VirtualProtect(replaced_func, sizeof(replaced_func), PAGE_EXECUTE_READ, &oldpro); \
-}
+private:
+    int             _type;
+    byte*           _ptr;
+    int             _len;
+    DWORD           _oldpro;
+};
 
-#define reflect_widget_notify2(target, trigger, host, action) { \
-    static byte replaced_func[] = { \
-        0xff, 0x74, 0x24, 0x08,                 /* push dword ptr[esp+8] */ \
-        0xff, 0x74, 0x24, 0x08,                 /* push dword ptr[esp+8] */ \
-        0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:old_func */ \
-        0xff, 0xd0,                             /* call eax */ \
-        0xff, 0x74, 0x24, 0x08,                 /* push dword ptr[esp+8] */ \
-        0xff, 0x74, 0x24, 0x08,                 /* push dword ptr[esp+8] */ \
-        0x8d, 0x0d, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea ecx, 0xcccccccc:host */ \
-        0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:action */ \
-        0xff, 0xd0,                             /* call eax */ \
-        0xc2, 0x08, 0x00                        /* ret 8 */ \
-    }; \
-    vtable_ops<widget>& vo = widget_vtable_ops(); \
-    uint old_func = vo.replace_vtable_method(target, vo.get_virtual_method_index(method_address(trigger)), replaced_func); \
-    *(uint*)(&replaced_func[10]) = old_func; \
-    *(uint*)(&replaced_func[26]) = (uint)host; \
-    *(uint*)(&replaced_func[32]) = method_address(action); \
-    DWORD oldpro; \
-    VirtualProtect(replaced_func, sizeof(replaced_func), PAGE_EXECUTE_READ, &oldpro); \
-}
-
-#define reflect_widget_notify3(target, trigger, host, action) { \
-    static byte replaced_func[] = { \
-        0xff, 0x74, 0x24, 0x0c,                 /* push dword ptr[esp+12] */ \
-        0xff, 0x74, 0x24, 0x0c,                 /* push dword ptr[esp+12] */ \
-        0xff, 0x74, 0x24, 0x0c,                 /* push dword ptr[esp+12] */ \
-        0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:old_func */ \
-        0xff, 0xd0,                             /* call eax */ \
-        0xff, 0x74, 0x24, 0x0c,                 /* push dword ptr[esp+12] */ \
-        0xff, 0x74, 0x24, 0x0c,                 /* push dword ptr[esp+12] */ \
-        0xff, 0x74, 0x24, 0x0c,                 /* push dword ptr[esp+12] */ \
-        0x8d, 0x0d, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea ecx, 0xcccccccc:host */ \
-        0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:action */ \
-        0xff, 0xd0,                             /* call eax */ \
-        0xc2, 0x0c, 0x00                        /* ret 12 */ \
-    }; \
-    vtable_ops<widget>& vo = widget_vtable_ops(); \
-    uint old_func = vo.replace_vtable_method(target, vo.get_virtual_method_index(method_address(trigger)), replaced_func); \
-    *(uint*)(&replaced_func[14]) = old_func; \
-    *(uint*)(&replaced_func[34]) = (uint)host; \
-    *(uint*)(&replaced_func[40]) = method_address(action); \
-    DWORD oldpro; \
-    VirtualProtect(replaced_func, sizeof(replaced_func), PAGE_EXECUTE_READ, &oldpro); \
+#define reflect_widget_notify(target, trigger, host, action, ntftype) { \
+    auto& vo = vtable_ops<std::remove_reference_t<decltype(*target)>>(nullptr); \
+    auto* notify = target->add_notifier(ntftype); \
+    assert(notify); \
+    uint old_func = vo.replace_vtable_method(target, vo.get_virtual_method_index(method_address(trigger)), notify->get_code_address()); \
+    notify->finalize(old_func, (uint)host, method_address(action)); \
 }
 
 class wsys_manager;
@@ -181,6 +119,7 @@ class wsys_manager;
 class widget
 {
     friend class wsys_manager;
+    typedef vector<widget_notify_code*> notify_list;
 
 public:
     widget(wsys_manager* m);
@@ -207,7 +146,6 @@ public:
     virtual void lay(widget* ptr, laytag t);
 
 public:
-    virtual void on_reflect(widget* ptr, int msgid, va_list vlst) {}
     virtual void on_press(uint um, unikey uk, const point& pt);
     virtual void on_click(uint um, unikey uk, const point& pt);
     virtual void on_hover(uint um, const point& pt);
@@ -228,7 +166,23 @@ protected:
     bool            _show;
     bool            _enable;
     point           _htpos;
+
+public:
+    template<class _cls>
+    void ensure_dvt_available()
+    {
+        if(_backvt)
+            return;
+        auto& vo = vtable_ops<_cls>(nullptr);
+        _backvtsize = vo.size_of_vtable();
+        _backvt = vo.create_per_instance_vtable(static_cast<_cls*>(this));
+    }
+    widget_notify_code* add_notifier(int n);
+
+private:
     void*           _backvt;
+    int             _backvtsize;
+    notify_list     _notifiers;
 
 public:
     const string& get_name() const { return _name; }
@@ -241,7 +195,6 @@ public:
     void refresh(bool imm);
     int get_width() const { return _pos.width(); }
     int get_height() const { return _pos.height(); }
-    void create_individual_vtable();
 
 protected:
     widget*         _last;
@@ -447,7 +400,7 @@ public:
             ptr = _root;
         _ctor* p = gs_new(_ctor, this);
         assert(p);
-        if(!p->create(ptr, name, rc, style)) {
+        if(!p->create(ptr, name ? name : _t(""), rc, style)) {
             gs_del(_ctor, p);
             return 0;
         }

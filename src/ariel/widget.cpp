@@ -35,10 +35,134 @@ __ariel_begin__
 /* in GPU draw, no immediate refresh */
 #define refresh_immediately false
 
-vtable_ops<widget>& widget_vtable_ops()
+static const byte __notify_code_0[] =
 {
-    static vtable_ops<widget> inst(nullptr);
-    return inst;
+    0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:old_func */
+    0xff, 0xd0,                             /* call eax */
+    0x8d, 0x0d, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea ecx, 0xcccccccc:host */
+    0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:action */
+    0xff, 0xd0,                             /* call eax */
+    0xc3                                    /* ret */
+};
+
+static const byte __notify_code_1[] =
+{
+    0xff, 0x74, 0x24, 0x04,                 /* push dword ptr[esp+4] */
+    0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:old_func */
+    0xff, 0xd0,                             /* call eax */
+    0xff, 0x74, 0x24, 0x04,                 /* push dword ptr[esp+4] */
+    0x8d, 0x0d, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea ecx, 0xcccccccc:host */
+    0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:action */
+    0xff, 0xd0,                             /* call eax */
+    0xc2, 0x04, 0x00                        /* ret 4 */
+};
+
+static const byte __notify_code_2[] =
+{
+    0xff, 0x74, 0x24, 0x08,                 /* push dword ptr[esp+8] */
+    0xff, 0x74, 0x24, 0x08,                 /* push dword ptr[esp+8] */
+    0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:old_func */
+    0xff, 0xd0,                             /* call eax */
+    0xff, 0x74, 0x24, 0x08,                 /* push dword ptr[esp+8] */
+    0xff, 0x74, 0x24, 0x08,                 /* push dword ptr[esp+8] */
+    0x8d, 0x0d, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea ecx, 0xcccccccc:host */
+    0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:action */
+    0xff, 0xd0,                             /* call eax */
+    0xc2, 0x08, 0x00                        /* ret 8 */
+};
+
+static const byte __notify_code_3[] =
+{
+    0xff, 0x74, 0x24, 0x0c,                 /* push dword ptr[esp+12] */
+    0xff, 0x74, 0x24, 0x0c,                 /* push dword ptr[esp+12] */
+    0xff, 0x74, 0x24, 0x0c,                 /* push dword ptr[esp+12] */
+    0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:old_func */
+    0xff, 0xd0,                             /* call eax */
+    0xff, 0x74, 0x24, 0x0c,                 /* push dword ptr[esp+12] */
+    0xff, 0x74, 0x24, 0x0c,                 /* push dword ptr[esp+12] */
+    0xff, 0x74, 0x24, 0x0c,                 /* push dword ptr[esp+12] */
+    0x8d, 0x0d, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea ecx, 0xcccccccc:host */
+    0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:action */
+    0xff, 0xd0,                             /* call eax */
+    0xc2, 0x0c, 0x00                        /* ret 12 */
+};
+
+widget_notify_code::widget_notify_code(int n)
+{
+    _type = n;
+    switch(n)
+    {
+    case 0:
+        _len = sizeof(__notify_code_0);
+        _ptr = (byte*)VirtualAlloc(nullptr, _len, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+        assert(_ptr);
+        memcpy(_ptr, __notify_code_0, _len);
+        break;
+    case 1:
+        _len = sizeof(__notify_code_1);
+        _ptr = (byte*)VirtualAlloc(nullptr, _len, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+        assert(_ptr);
+        memcpy(_ptr, __notify_code_1, _len);
+        break;
+    case 2:
+        _len = sizeof(__notify_code_2);
+        _ptr = (byte*)VirtualAlloc(nullptr, _len, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+        assert(_ptr);
+        memcpy(_ptr, __notify_code_2, _len);
+        break;
+    case 3:
+        _len = sizeof(__notify_code_3);
+        _ptr = (byte*)VirtualAlloc(nullptr, _len, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+        assert(_ptr);
+        memcpy(_ptr, __notify_code_3, _len);
+        break;
+    default:
+        assert(!"unexpected notify code type.");
+        _ptr = nullptr;
+        _len = 0;
+        break;
+    }
+}
+
+widget_notify_code::~widget_notify_code()
+{
+    if(_ptr) {
+        VirtualProtect(_ptr, _len, _oldpro, &_oldpro);
+        VirtualFree(_ptr, _len, MEM_DECOMMIT);
+        _ptr = nullptr;
+        _len = 0;
+    }
+}
+
+void widget_notify_code::finalize(uint old_func, uint host, uint action)
+{
+    switch(_type)
+    {
+    case 0:
+        *(uint*)(_ptr + 2) = old_func;
+        *(uint*)(_ptr + 10) = host;
+        *(uint*)(_ptr + 16) = action;
+        break;
+    case 1:
+        *(uint*)(_ptr + 6) = old_func;
+        *(uint*)(_ptr + 18) = host;
+        *(uint*)(_ptr + 24) = action;
+        break;
+    case 2:
+        *(uint*)(_ptr + 10) = old_func;
+        *(uint*)(_ptr + 26) = host;
+        *(uint*)(_ptr + 32) = action;
+        break;
+    case 3:
+        *(uint*)(_ptr + 14) = old_func;
+        *(uint*)(_ptr + 34) = host;
+        *(uint*)(_ptr + 40) = action;
+        break;
+    default:
+        assert(!"widget notify code finalize failed.");
+        return;
+    }
+    VirtualProtect(_ptr, _len, PAGE_EXECUTE_READ, &_oldpro);
 }
 
 widget::widget(wsys_manager* m)
@@ -49,14 +173,21 @@ widget::widget(wsys_manager* m)
     _show = false;
     _enable = true;
     _backvt = nullptr;
+    _backvtsize = 0;
 }
 
 widget::~widget()
 {
     if(_backvt) {
-        widget_vtable_ops().destroy_per_instance_vtable(this, _backvt);
+        dvt_recover_vtable(this, _backvt, _backvtsize);
         _backvt = nullptr;
+        _backvtsize = 0;
     }
+    for(auto* notify : _notifiers) {
+        assert(notify);
+        gs_del(widget_notify_code, notify);
+    }
+    _notifiers.clear();
 }
 
 bool widget::create(widget* ptr, const gchar* name, const rect& rc, uint style)
@@ -72,6 +203,7 @@ bool widget::create(widget* ptr, const gchar* name, const rect& rc, uint style)
             _last = c;
         }
     }
+    assert(name);
     _name.assign(name);
     _pos = rc;
     _style = style;
@@ -151,12 +283,6 @@ void widget::refresh(const rect& rc, bool imm)
     _manager->refresh(rc1, imm);
 }
 
-void widget::create_individual_vtable()
-{
-    assert(!_backvt);
-    _backvt = widget_vtable_ops().create_per_instance_vtable(this);
-}
-
 widget* widget::capture(bool b)
 {
     assert(_manager);
@@ -205,6 +331,14 @@ void widget::on_hover(uint um, const point& pt)
 
 void widget::on_leave(uint um, const point& pt)
 {
+}
+
+widget_notify_code* widget::add_notifier(int n)
+{
+    auto* notify = gs_new(widget_notify_code, n);
+    assert(notify);
+    _notifiers.push_back(notify);
+    return notify;
 }
 
 point& widget::top_level(point& pt) const

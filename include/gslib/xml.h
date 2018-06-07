@@ -41,15 +41,19 @@ struct xml_key:
     xml_key(const gchar* c) { key.assign(c); }
 };
 
-struct xml_kvp_hash:
-    public std::unary_function<xml_kvpair, size_t>
+struct xml_kvp_hash
+#if defined(_MSC_VER) && (_MSC_VER < 1914)
+    : public std::unary_function<xml_kvpair, size_t>
+#endif
 {
     size_t operator()(const xml_kvpair& kvp) const
     { return string_hash(kvp.key); }
 };
 
-struct xml_kvp_equalto:
-    public std::binary_function<xml_kvpair, xml_kvpair, bool>
+struct xml_kvp_equalto
+#if defined(_MSC_VER) && (_MSC_VER < 1914)
+    : public std::binary_function<xml_kvpair, xml_kvpair, bool>
+#endif
 {
     bool operator()(const xml_kvpair& p1, const xml_kvpair& p2) const
     { return p1.key == p2.key; }

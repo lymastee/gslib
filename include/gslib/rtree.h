@@ -905,8 +905,8 @@ public:
     typedef _alg alg;
     typedef rtree<_ty, _alg, _wrapper, _alloc> myref;
     typedef tree<_ty, _wrapper, _alloc> superref;
-    typedef superref::iterator iterator;
-    typedef superref::const_iterator const_iterator;
+    typedef typename superref::iterator iterator;
+    typedef typename superref::const_iterator const_iterator;
     typedef typename value::bind_arg bind_arg;
     typedef unordered_set<bind_arg> lookup_table;
 

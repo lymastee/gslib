@@ -289,8 +289,13 @@ public:
     clip_joint* get_joint() const { return _joint; }
 };
 
+#if defined(_MSC_VER) && (_MSC_VER < 1914)
 template<class _arg1, class _ret>
 using clip_binary_func = std::binary_function<_arg1, _arg1, _ret>;
+#else
+template<class _arg1, class _ret>
+class clip_binary_func {};
+#endif
 
 template<class _joint>
 struct clip_order_x_ascend:

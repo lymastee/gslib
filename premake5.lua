@@ -513,7 +513,9 @@ project "cdt"
 	dependson {
 		"zlib",
 		"libpng",
-		"libjpeg"
+		"libjpeg",
+		"gslib",
+		"ariel"
 	}
 	includedirs {
 		"include",
@@ -525,24 +527,11 @@ project "cdt"
 	links {
 		"zlib.lib",
 		"libjpeg.lib",
-		"libpng.lib"
+		"libpng.lib",
+		"gslib.lib",
+		"ariel.lib"
 	}
 	files {
-		"src/ariel/clip.cpp",
-		"src/ariel/delaunay.cpp",
-		"src/ariel/dirty.cpp",
-		"src/gslib/error.cpp",
-		"src/ariel/image.cpp",
-		"src/ariel/imageio.cpp",
-		"src/gslib/math.cpp",
-		"src/ariel/painter.cpp",
-		"src/gslib/pool.cpp",
-		"src/ariel/raster.cpp",
-		"src/gslib/res.cpp",
-		"src/gslib/string.cpp",
-		"src/gslib/type.cpp",
-		"src/ariel/utility.cpp",
-		"src/gslib/mtrand.cpp",
 		"test/cdt/main.cpp"
 	}
 	

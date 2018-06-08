@@ -1082,21 +1082,13 @@ void wsys_manager::set_painter(painter* paint)
 
 void wsys_manager::initialize(const rect& rc)
 {
-    assert(_driver);
-    system_context ctx;
-    ctx.mask = system_context::sct_notify |
-        system_context::sct_painter |
-        system_context::sct_rectangle;
-    ctx.painter = _painter;
-    ctx.notify = static_cast<wsys_notify*>(this);
-    ctx.rectangle = rc;
-    _driver->initialize(ctx);
-    _driver->setup();
+    /* dimensions */
+    set_dimension(rc.width(), rc.height());
     /* timer to refresh */
     assert(_next_tid == tid_refresh);
-    set_timer(get_timer_id(0), 15);
+    set_timer(get_timer_id(nullptr), 15);
     assert(_next_tid == tid_caret);
-    set_timer(get_timer_id(0), 600);
+    set_timer(get_timer_id(nullptr), 600);
     /* IME support */
     set_ime(0, point(0, 0), font(_t("ËÎÌו"), 14));
 }

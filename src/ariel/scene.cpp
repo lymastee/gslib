@@ -152,7 +152,7 @@ bool ui_stage::setup()
     const frame_configs& cfgs = sys->get_configs();
     _wsys_manager.set_painter(_rose);
     _wsys_manager.set_wsysdrv(sys);
-    _wsys_manager.set_dimension(cfgs.width, cfgs.height);
+    _wsys_manager.initialize(rect(0, 0, cfgs.width, cfgs.height));
     return true;
 }
 

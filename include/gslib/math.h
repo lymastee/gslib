@@ -191,7 +191,7 @@ matrix* matviewportunproject(matrix* out, const viewport* vp);
 matrix* mattransform(matrix* out, const vec3* scalecenter, const quat* scalerot, const vec3* scale, const vec3* rotcenter, const quat* rot, const vec3* trans);
 matrix* mattransform2d(matrix* out, const vec2* scalecenter, float scalerot, const vec2* scale, const vec2* rotcenter, float rot, const vec2* trans);
 matrix* mataffinetransform(matrix* out, float scale, const vec3* rotcenter, const quat* rot, const vec3* trans);
-matrix* mataffinetransform2d(matrix* out, float scale, const vec3* rotcenter, const quat* rot, const vec3* trans);
+matrix* mataffinetransform2d(matrix* out, float scale, const vec2* rotcenter, float rot, const vec2* trans);
 float quatlength(const quat* q);
 float quatlengthsq(const quat* q);
 float quatdot(const quat* q1, const quat* q2);

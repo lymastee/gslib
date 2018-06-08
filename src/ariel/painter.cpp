@@ -154,13 +154,13 @@ void painter::draw_image(const image* img, float x, float y)
 
 void painter::draw_line(const vec2& p1, const vec2& p2, const color& cr)
 {
-    //save();
-    //painter_brush brush;
-    //brush.set_tag(painter_brush::solid);
-    //brush.set_color(cr);
-    //set_brush(brush);
-    //draw_line(p1, p2);
-    //restore();
+    save();
+    painter_pen pen;
+    pen.set_tag(painter_pen::solid);
+    pen.set_color(cr);
+    set_pen(pen);
+    draw_line(p1, p2);
+    restore();
 }
 
 void painter::draw_rect(const rectf& rc, const color& cr)

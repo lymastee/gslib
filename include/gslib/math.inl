@@ -1909,12 +1909,86 @@ inline matrix* matviewportunproject(matrix* out, const viewport* vp)
 inline matrix* mattransform(matrix* out, const vec3* scalecenter, const quat* scalerot, const vec3* scale, const vec3* rotcenter, const quat* rot, const vec3* trans)
 {
     assert(out);
+    matrix imsc, imsr, ms, msr, msc, imrc, mr, mrc, mt;
+    scalecenter ? msc.translation(scalecenter->x, scalecenter->y, scalecenter->z) : msc.identity();
+    float det;
+    imsc.inverse(&det, msc);
+    scalerot ? msr.rotation(*scalerot) : msr.identity();
+    imsr.inverse(&det, msr);
+    scale ? ms.scaling(scale->x, scale->y, 1.f) : ms.identity();
+    rotcenter ? mrc.translation(rotcenter->x, rotcenter->y, 0.f) : mrc.identity();
+    imrc.inverse(&det, mrc);
+    rot ? mr.rotation(*rot) : mr.identity();
+    trans ? mt.translation(trans->x, trans->y, 0.f) : mt.identity();
+    out->multiply(imsc, imsr);
+    out->multiply(ms);
+    out->multiply(msr);
+    out->multiply(msc);
+    out->multiply(imrc);
+    out->multiply(mr);
+    out->multiply(mrc);
+    out->multiply(mt);
     return out;
 }
 
-inline matrix* mattransform2d(matrix* out, const vec2* scalecenter, float scalerot, const vec2* scale, const vec2* rotcenter, float rot, const vec2* trans);
-inline matrix* mataffinetransform(matrix* out, float scale, const vec3* rotcenter, const quat* rot, const vec3* trans);
-inline matrix* mataffinetransform2d(matrix* out, float scale, const vec3* rotcenter, const quat* rot, const vec3* trans);
+inline matrix* mattransform2d(matrix* out, const vec2* scalecenter, float scalerot, const vec2* scale, const vec2* rotcenter, float rot, const vec2* trans)
+{
+    assert(out);
+    matrix imsc, imsr, ms, msr, msc, imrc, mr, mrc, mt;
+    scalecenter ? msc.translation(scalecenter->x, scalecenter->y, 0.f) : msc.identity();
+    float det;
+    imsc.inverse(&det, msc);
+    msr.rotation_z(scalerot);
+    imsr.inverse(&det, msr);
+    scale ? ms.scaling(scale->x, scale->y, 1.f) : ms.identity();
+    rotcenter ? mrc.translation(rotcenter->x, rotcenter->y, 0.f) : mrc.identity();
+    imrc.inverse(&det, mrc);
+    mr.rotation_z(rot);
+    trans ? mt.translation(trans->x, trans->y, 0.f) : mt.identity();
+    out->multiply(imsc, imsr);
+    out->multiply(ms);
+    out->multiply(msr);
+    out->multiply(msc);
+    out->multiply(imrc);
+    out->multiply(mr);
+    out->multiply(mrc);
+    out->multiply(mt);
+    return out;
+}
+
+inline matrix* mataffinetransform(matrix* out, float scale, const vec3* rotcenter, const quat* rot, const vec3* trans)
+{
+    assert(out);
+    matrix ms, mrc, imrc, mr, mt;
+    ms.scaling(scale, scale, scale);
+    rotcenter ? mrc.translation(rotcenter->x, rotcenter->y, rotcenter->z) : mrc.identity();
+    float det;
+    imrc.inverse(&det, mrc);
+    rot ? mr.rotation(*rot) : mr.identity();
+    trans ? mt.translation(trans->x, trans->y, trans->z) : mt.identity();
+    out->multiply(ms, imrc);
+    out->multiply(mr);
+    out->multiply(mrc);
+    out->multiply(mt);
+    return out;
+}
+
+inline matrix* mataffinetransform2d(matrix* out, float scale, const vec2* rotcenter, float rot, const vec2* trans)
+{
+    assert(out);
+    matrix ms, mrc, imrc, mr, mt;
+    ms.scaling(scale, scale, 1.f);
+    rotcenter ? mrc.translation(rotcenter->x, rotcenter->y, 0.f) : mrc.identity();
+    float det;
+    imrc.inverse(&det, mrc);
+    mr.rotation_z(rot);
+    trans ? mt.translation(trans->x, trans->y, 0.f) : mt.identity();
+    out->multiply(ms, imrc);
+    out->multiply(mr);
+    out->multiply(mrc);
+    out->multiply(mt);
+    return out;
+}
 
 inline float quatlength(const quat* q)
 {
@@ -2113,6 +2187,28 @@ inline quat* quatbarycentric(quat* out, const quat* q1, const quat* q2, const qu
 
 inline void quatsquadsetup(quat* a, quat* b, quat* c, const quat* q1, const quat* q2, const quat* q3, const quat* q4)
 {
+    assert(a && b && c && q1 && q2 && q3 && q4);
+    quat expq1, expq2;
+    quatexp(&expq1, q2);
+    quatexp(&expq2, q3);
+    quat qm1, qm2, qm3, qm4;
+    quatmultiply(&qm1, &expq1, q3);
+    quatmultiply(&qm2, &expq1, q1);
+    quatmultiply(&qm3, &expq2, q4);
+    quatmultiply(&qm4, &expq2, q2);
+    quatln(&qm1, &qm1);
+    quatln(&qm2, &qm2);
+    quatln(&qm3, &qm3);
+    quatln(&qm4, &qm4);
+    qm1 += qm2;
+    qm3 += qm4;
+    qm1 *= -0.25f;
+    qm3 *= -0.25f;
+    quatexp(&qm2, &qm1);
+    quatexp(&qm4, &qm3);
+    quatmultiply(a, q2, &qm2);
+    quatmultiply(b, q3, &qm4);
+    *c = *q3;
 }
 
 inline float planedot(const plane* p, const vec4* v)

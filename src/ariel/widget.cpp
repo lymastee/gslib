@@ -87,6 +87,13 @@ static const byte __notify_code_3[] =
     0xc2, 0x0c, 0x00                        /* ret 12 */
 };
 
+#if defined(WIN32) || defined(_WINDOWS)
+#define alloc_writable_exec_codebytes(len)          VirtualAlloc(nullptr, len, MEM_COMMIT, PAGE_EXECUTE_READWRITE)
+#define lock_exec_codebytes(ptr, len, oldprotag)    VirtualProtect(ptr, len, PAGE_EXECUTE_READ, &oldprotag)
+#define unlock_exec_codebytes(ptr, len, oldprotag)  VirtualProtect(ptr, len, oldprotag, &oldprotag)
+#define dealloc_exec_codebytes(ptr, len)            VirtualFree(ptr, len, MEM_DECOMMIT)
+#endif
+
 widget_notify_code::widget_notify_code(int n)
 {
     _type = n;
@@ -94,25 +101,25 @@ widget_notify_code::widget_notify_code(int n)
     {
     case 0:
         _len = sizeof(__notify_code_0);
-        _ptr = (byte*)VirtualAlloc(nullptr, _len, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+        _ptr = (byte*)alloc_writable_exec_codebytes(_len);
         assert(_ptr);
         memcpy(_ptr, __notify_code_0, _len);
         break;
     case 1:
         _len = sizeof(__notify_code_1);
-        _ptr = (byte*)VirtualAlloc(nullptr, _len, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+        _ptr = (byte*)alloc_writable_exec_codebytes(_len);
         assert(_ptr);
         memcpy(_ptr, __notify_code_1, _len);
         break;
     case 2:
         _len = sizeof(__notify_code_2);
-        _ptr = (byte*)VirtualAlloc(nullptr, _len, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+        _ptr = (byte*)alloc_writable_exec_codebytes(_len);
         assert(_ptr);
         memcpy(_ptr, __notify_code_2, _len);
         break;
     case 3:
         _len = sizeof(__notify_code_3);
-        _ptr = (byte*)VirtualAlloc(nullptr, _len, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+        _ptr = (byte*)alloc_writable_exec_codebytes(_len);
         assert(_ptr);
         memcpy(_ptr, __notify_code_3, _len);
         break;
@@ -127,8 +134,8 @@ widget_notify_code::widget_notify_code(int n)
 widget_notify_code::~widget_notify_code()
 {
     if(_ptr) {
-        VirtualProtect(_ptr, _len, _oldpro, &_oldpro);
-        VirtualFree(_ptr, _len, MEM_DECOMMIT);
+        unlock_exec_codebytes(_ptr, _len, _oldpro);
+        dealloc_exec_codebytes(_ptr, _len);
         _ptr = nullptr;
         _len = 0;
     }
@@ -162,7 +169,7 @@ void widget_notify_code::finalize(uint old_func, uint host, uint action)
         assert(!"widget notify code finalize failed.");
         return;
     }
-    VirtualProtect(_ptr, _len, PAGE_EXECUTE_READ, &_oldpro);
+    lock_exec_codebytes(_ptr, _len, _oldpro);
 }
 
 widget::widget(wsys_manager* m)
@@ -962,9 +969,8 @@ int edit::prev_logic_char(int pos)
     uint c;
     get_next_char(_textbuf.c_str() + pos, c);
     int f = get_logic_field(c);
-    for(;;) {
+    while(pos > 0) {
         int np = prev_char(pos);
-        if(np == 0) { pos = 0; break; }
         get_next_char(_textbuf.c_str() + np, c);
         if(get_logic_field(c) != f)
             break;

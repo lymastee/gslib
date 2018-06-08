@@ -33,14 +33,6 @@
 
 __ariel_begin__
 
-enum retid
-{
-    rid_error   = -1,
-    rid_ok      = 0,
-    rid_undone,         /* keep pocessing this message */
-    rid_block,          /* donot pass the message to its children */
-};
-
 /* clipboard formats */
 #define clipfmt_text    _t("gscf_text")
 /* more to come... */
@@ -93,6 +85,8 @@ class widget;
 
 class widget_notify_code
 {
+    typedef unsigned long ulong;
+
 public:
     widget_notify_code(int n);
     ~widget_notify_code();
@@ -103,7 +97,7 @@ private:
     int             _type;
     byte*           _ptr;
     int             _len;
-    DWORD           _oldpro;
+    ulong           _oldpro;
 };
 
 #define reflect_widget_notify(target, trigger, host, action, ntftype) { \
@@ -124,6 +118,7 @@ class widget
 public:
     widget(wsys_manager* m);
     virtual ~widget();
+    virtual const gchar* get_type() const { return _t("widget"); }
     virtual bool create(widget* ptr, const gchar* name, const rect& rc, uint style);
     virtual void close();
     virtual void show(bool b);
@@ -140,8 +135,8 @@ public:
     {
         lay_before,
         lay_after,
-        lay_child,
-        lay_top,
+        lay_first,
+        lay_last,
     };
     virtual void lay(widget* ptr, laytag t);
 
@@ -218,6 +213,7 @@ public:
 
 public:
     button(wsys_manager* m);
+    virtual const gchar* get_type() const override { return _t("button"); }
     virtual void draw(painter* paint) override;
     virtual void enable(bool b) override;
     virtual void on_press(uint um, unikey uk, const point& pt) override;
@@ -261,6 +257,7 @@ public:
 
 public:
     edit(wsys_manager* m);
+    virtual const gchar* get_type() const override { return _t("edit"); }
     virtual bool create(widget* ptr, const gchar* name, const rect& rc, uint style) override;
     virtual void draw(painter* paint) override;
     virtual void on_press(uint um, unikey uk, const point& pt) override;
@@ -320,6 +317,7 @@ public:
     void set_scroller(int r1, int r2, bool vts, const image* img, bool as = false);
     void set_scroll(real32 s);
     real32 get_scroll() const { return _scrpos; }
+    virtual const gchar* get_type() const override { return _t("scroller"); }
     virtual bool create(widget* ptr, const gchar* name, const rect& rc, uint style) override;
     virtual void on_hover(uint um, const point& pt) override;
 

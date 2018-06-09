@@ -82,6 +82,7 @@ public:
     void ensure_make_reduced();
     void set_zorder(float z) { _zorder = z; }
     float get_zorder() const { return _zorder; }
+    void get_center(vec2& c) const;
     void tracing() const;
     void trace_reduced_points() const;
 };

@@ -54,9 +54,9 @@ struct _bintreenode_cpy_wrapper
     const value& const_ref() const { return _value; }
     void born() {}
     void kill() {}
-    template<class _cst>
+    template<class _ctor>
     void born() {}
-    template<class _cst>
+    template<class _ctor>
     void kill() {}
     void copy(const myref* a) { get_ref() = a->const_ref(); }
     void attach(myref* a) { assert(0); }
@@ -85,11 +85,11 @@ struct _bintreenode_wrapper
     const value& const_ref() const { return *_value; }
     void copy(const myref* a) { get_ref() = a->const_ref(); }
     void born() { !! }
-    template<class _cst>
-    void born() { _value = gs_new(_cst); }
+    template<class _ctor>
+    void born() { _value = gs_new(_ctor); }
     void kill() { if(_value) { gs_del(value, _value); _value = 0; } }
-    template<class _cst>
-    void kill() { if(_value) { gs_del(_cst, _value); _value = 0; } }
+    template<class _ctor>
+    void kill() { if(_value) { gs_del(_ctor, _value); _value = 0; } }
     void attach(myref* a)
     {
         assert(a && a->_value);
@@ -354,13 +354,13 @@ public:
         btp_right,
         btp_parent,
     };
-    template<class _cst = value>
+    template<class _ctor = value>
     iterator insert(iterator i, _bintree_pos ipos, _bintree_pos cpos)
     {
         if(!i.is_valid())
-            return !is_valid() ? _init<_cst>() : iterator(0);
+            return !is_valid() ? _init<_ctor>() : iterator(0);
         wrapper* n = alloc::born();
-        n->born<_cst>();
+        n->born<_ctor>();
         n->_parent = i.get_wrapper();
         iterator old = i;   /* find the old one */
         switch(ipos)
@@ -387,14 +387,14 @@ public:
             old.get_wrapper()->_parent = n;
         return iterator(n);
     }
-    template<class _cst = value>
-    iterator insertll(iterator i) { return insert<_cst>(i, btp_left, btp_left); }
-    template<class _cst = value>
-    iterator insertlr(iterator i) { return insert<_cst>(i, btp_left, btp_right); }
-    template<class _cst = value>
-    iterator insertrl(iterator i) { return insert<_cst>(i, btp_right, btp_left); }
-    template<class _cst = value>
-    iterator insertrr(iterator i) { return insert<_cst>(i, btp_right, btp_right); }
+    template<class _ctor = value>
+    iterator insertll(iterator i) { return insert<_ctor>(i, btp_left, btp_left); }
+    template<class _ctor = value>
+    iterator insertlr(iterator i) { return insert<_ctor>(i, btp_left, btp_right); }
+    template<class _ctor = value>
+    iterator insertrl(iterator i) { return insert<_ctor>(i, btp_right, btp_left); }
+    template<class _ctor = value>
+    iterator insertrr(iterator i) { return insert<_ctor>(i, btp_right, btp_right); }
 
     /* The detach and attach methods, provide subtree operations */
     myref& detach(myref& subtree, iterator i)
@@ -490,11 +490,11 @@ protected:
         w->kill();
         alloc::kill(w);
     }
-    template<class _cst>
+    template<class _ctor>
     iterator _init()
     {
         _vptr = alloc::born();
-        _vptr->born<_cst>();
+        _vptr->born<_ctor>();
         return iterator(_vptr);
     }
 

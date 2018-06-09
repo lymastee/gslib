@@ -187,9 +187,13 @@ bool bat_triangle::is_overlapped(const bat_triangle& other) const
     const vec2& q1 = other.get_reduced_point(0);
     const vec2& q2 = other.get_reduced_point(1);
     const vec2& q3 = other.get_reduced_point(2);
+    /* situation like p1 == q1 && p2 == q2 && p3 == q3 was definitely overlapped, but missed, so here we should also judge its center */
+    vec2 c;
+    get_center(c);
     if(point_in_triangle(p1, q1, q2, q3) ||
         point_in_triangle(p2, q1, q2, q3) ||
-        point_in_triangle(p3, q1, q2, q3)
+        point_in_triangle(p3, q1, q2, q3) ||
+        point_in_triangle(c, q1, q2, q3)
         )
         return true;
     return point_in_triangle(q1, p1, p2, p3);
@@ -224,6 +228,13 @@ void bat_triangle::ensure_make_reduced()
     _reduced[0].add(p1, pebi1);
     _reduced[1].add(p2, pebi2);
     _reduced[2].add(p3, pebi3);
+}
+
+void bat_triangle::get_center(vec2& c) const
+{
+    c.add(get_point(0), get_point(1));
+    c += get_point(2);
+    c.scale(1.f / 3.f);
 }
 
 void bat_triangle::tracing() const
@@ -778,8 +789,14 @@ bat_batch* batch_processor::find_containable_tex_batch(const bat_triangles& tria
     auto find_next_batch = [&triangles](bat_reversed_iter from, bat_reversed_iter to)-> bat_reversed_iter {
         for(auto i = from; i != to; ++ i) {
             auto t = (*i)->get_type();
-            if(t >= bs_start && t <= bs_end)
+            if(t >= bs_start && t <= bs_end) {
+                if(t == bs_coef_tex) {
+                    auto n = std::next(i);
+                    if(n != to && ((*n)->get_type() == bf_klm_tex))
+                        continue;
+                }
                 return to;
+            }
             assert(t >= bf_start && t <= bf_end);
             if(t == bf_klm_tex)
                 return i;

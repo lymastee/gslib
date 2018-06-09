@@ -23,7 +23,7 @@ solution "gslib"
 		
 	-- windows specific
 	filter "system:Windows"
-		defines { "WIN32", "_WINDOWS", "_UNICODE", "_GS_THREADSAFE" }
+		defines { "WIN32", "_WINDOWS", "_UNICODE" }
 		
 	filter "action:vs2017"
 		sysincludedirs {
@@ -312,6 +312,7 @@ project "ariel"
 		"include/ariel/framesys.h",
 		"include/ariel/fsyswin32.h",
 		"include/ariel/image.h",
+		"include/ariel/imagefx.h",
 		"include/ariel/imageio.h",
 		"include/ariel/loopblinn.h",
 		"include/ariel/mesh.h",
@@ -339,6 +340,7 @@ project "ariel"
 		"src/ariel/framesyswin32.cpp",
 		"src/ariel/fsyswin32.cpp",
 		"src/ariel/image.cpp",
+		"src/ariel/imagefx.cpp",
 		"src/ariel/imageio.cpp",
 		"src/ariel/loopblinn.cpp",
 		"src/ariel/mesh.cpp",
@@ -670,5 +672,44 @@ project "mres"
 		"src/gslib/xml.cpp",
 		"include/gslib/xml.h",
 		"proj/mres/main.cpp"
+	}
+	
+project "uieditor"
+	language "C++"
+	kind "WindowedApp"
+	entrypoint ""
+	dependson {
+		"gslib",
+		"ariel"
+	}
+	includedirs {
+		todir,
+		"include",
+		"src",
+		"ext",
+		"framework",
+		"proj/uieditor"
+	}
+	libdirs {
+		"$(OutDir)"
+	}
+	links {
+		"dxgi.lib",
+		"d3d11.lib",
+		"zlib.lib",
+		"libjpeg.lib",
+		"libpng.lib",
+		"gslib.lib",
+		"ariel.lib",
+		"imm32.lib"
+	}
+	files {
+		"framework/entrywin32.h",
+		"framework/entrywin32.cpp",
+		"proj/uieditor/main.cpp",
+		"proj/uieditor/uic.cpp",
+		"proj/uieditor/uic.h",
+		"proj/uieditor/uiio.cpp",
+		"proj/uieditor/uiio.h"
 	}
 	

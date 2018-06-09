@@ -27,6 +27,7 @@
 #include <gslib/error.h>
 #include <ariel/widget.h>
 #include <ariel/scene.h>
+#include <ariel/imagefx.h>
 
 __ariel_begin__
 
@@ -457,7 +458,7 @@ void button::set_press()
         return;
     _4states ?
         _bkground.copy(*_source, 0, 0, get_width(), get_height(), get_width() << 1, 0) :
-        _bkground.set_brightness(*_source, 0.7f);
+        imagefx::set_brightness(_bkground, *_source, 0.7f);
     refresh(refresh_immediately);
 }
 
@@ -477,7 +478,7 @@ void button::set_hover()
         return;
     _4states ?
         _bkground.copy(*_source, 0, 0, get_width(), get_height(), get_width(), 0) :
-        _bkground.set_brightness(*_source, 1.3f);
+        imagefx::set_brightness(_bkground, *_source, 1.3f);
     refresh(refresh_immediately);
 }
 
@@ -487,7 +488,7 @@ void button::set_gray()
         return;
     _4states ?
         _bkground.copy(*_source, 0, 0, get_width(), get_height(), get_width() * 3, 0) :
-        _bkground.set_gray(*_source);
+        imagefx::set_gray(_bkground, *_source);
     refresh(refresh_immediately);
 }
 

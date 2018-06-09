@@ -70,8 +70,6 @@ public:
     void clear(const color& cr, const rect* rc = nullptr);
     void copy(const image& img);
     void copy(const image& img, int x, int y, int cx, int cy, int sx, int sy);
-    void set_brightness(const image& img, float s);
-    void set_gray(const image& img);
 
 protected:
     image_format        _format;

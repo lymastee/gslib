@@ -77,7 +77,7 @@ public:
     void* get_lb_binding(int i) const { return _joints[i]->get_binding(); }
     bat_type decide(uint brush_tag) const;
     bool has_klm_coords() const;
-    const vec2& get_reduced_point(int i) const { return _reduced[i]; }
+    const vec2& get_reduced_point(int i) const;
     bool is_overlapped(const bat_triangle& other) const;
     void ensure_make_reduced();
     void set_zorder(float z) { _zorder = z; }

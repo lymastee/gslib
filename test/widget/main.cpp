@@ -95,7 +95,7 @@ public:
         wsys_manager* mgr = scene::get_singleton_ptr()->get_ui_system();
         assert(mgr);
         wflttext* ptr = mgr->add_widget<wflttext>(
-            parent, 0, rect(pt.x,pt.y,0,0), sm_hitable|sm_visible
+            parent, 0, rect(pt.x, pt.y, 0, 0), sm_hitable|sm_visible
             );
         ptr->set_text(str);
         ptr->start();
@@ -136,7 +136,7 @@ public:
         _btn_image.load(_t("button.png"));
         _btn->set_image(&_btn_image);
 
-        reflect_widget_notify(_btn, button::on_click, this, wbkground::on_reflect, 3);
+        reflect_widget_notify(_btn, button::on_click, this, wbkground::on_btn_clicked, 3);
 
         return true;
     }
@@ -144,7 +144,7 @@ public:
     {
         cvs->draw_image(&_bkgnd, 0, 0);
     }
-    void on_reflect(uint um, unikey uk, const point& pt)
+    void on_btn_clicked(uint um, unikey uk, const point& pt)
     {
         /* must be button clicked */
         int w = get_width(), h = get_height();

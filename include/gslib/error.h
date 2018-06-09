@@ -88,6 +88,9 @@ extern void trace_all(const gchar* str);
 #define trace_to_clipboard __noop
 #endif
 
+/* beep an alarm */
+extern void sound_alarm();
+
 __gslib_end__
 
 #endif

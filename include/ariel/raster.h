@@ -278,6 +278,8 @@ public:
     virtual ~raster() {}
     virtual void draw_line(const vec2& p1, const vec2& p2) override
     {
+        if(vec2().sub(p1, p2).length() < 0.001f)
+            return;
         painter_path path;
         path.move_to(p1);
         path.line_to(p2);
@@ -285,6 +287,8 @@ public:
     }
     virtual void draw_rect(const rectf& rc) override
     {
+        if(!rc.width() || !rc.height())
+            return;
         painter_path path;
         path.move_to(rc.left, rc.top);
         path.line_to(rc.left, rc.bottom);

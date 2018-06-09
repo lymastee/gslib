@@ -171,6 +171,12 @@ bool bat_triangle::has_klm_coords() const
     return all_in_span;
 }
 
+const vec2& bat_triangle::get_reduced_point(int i) const
+{
+    assert(_is_reduced);
+    return _reduced[i];
+}
+
 bool bat_triangle::is_overlapped(const bat_triangle& other) const
 {
     const_cast<bat_triangle*>(this)->ensure_make_reduced();
@@ -299,6 +305,7 @@ int bat_line::clip_triangle(bat_line output[2], const bat_triangle* triangle) co
     auto& p1 = triangle->get_point(0);
     auto& p2 = triangle->get_point(1);
     auto& p3 = triangle->get_point(2);
+    const_cast<bat_triangle*>(triangle)->ensure_make_reduced();
     bool inside1 = point_in_triangle(_points[0], triangle->get_reduced_point(0), triangle->get_reduced_point(1), triangle->get_reduced_point(2));
     bool inside2 = point_in_triangle(_points[1], triangle->get_reduced_point(0), triangle->get_reduced_point(1), triangle->get_reduced_point(2));
     auto clone_line_info = [this](bat_line& line) {

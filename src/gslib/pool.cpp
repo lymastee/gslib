@@ -195,11 +195,15 @@ public:
     }
     bool check_free(void* ptr)
     {
+#ifndef _GS_MEMDEBUG
+        return false;
+#else
         for(node* p = _head; p; p = p->_next) {
             if(p == ptr)
                 return true;
         }
         return false;
+#endif
     }
 };
 

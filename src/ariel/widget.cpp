@@ -24,6 +24,7 @@
  */
 
 #include <windows.h>
+#include <gslib/error.h>
 #include <ariel/widget.h>
 #include <ariel/scene.h>
 
@@ -597,6 +598,7 @@ void edit::on_char(uint um, uint ch)
         del_select();
         _textbuf.insert((size_t)_caretpos, 1, (char)ch);
         set_caret(_caretpos + 1);
+        trim_if_overrun(true);
         return;
     }
 #ifndef _UNICODE
@@ -606,6 +608,7 @@ void edit::on_char(uint um, uint ch)
         _textbuf.insert((size_t)_caretpos, 1, (char)((ch & 0xff00) >> 8));
         _textbuf.insert((size_t)_caretpos + 1, 1, (char)(ch & 0xff));
         set_caret(_caretpos + 2);
+        trim_if_overrun(true);
         return;
     }
 #else
@@ -613,6 +616,7 @@ void edit::on_char(uint um, uint ch)
         del_select();
         _textbuf.insert((size_t)_caretpos, 1, (wchar_t)ch);
         set_caret(_caretpos + 1);
+        trim_if_overrun(true);
         return;
     }
 #endif
@@ -776,6 +780,7 @@ void edit::set_text(const gchar* str)
         _textbuf.assign(str);
         if(_caretpos > _textbuf.length())
             set_caret(_textbuf.length());
+        trim_if_overrun(true);
     }
     set_select(-1, 0);
 }
@@ -814,6 +819,7 @@ void edit::replace_select(const gchar* str)
     if(str) {
         _textbuf.insert(_caretpos, str);
         set_caret(_caretpos + strtool::length(str));
+        trim_if_overrun(true);
     }
 }
 
@@ -992,6 +998,39 @@ int edit::next_logic_char(int pos)
             break;
     }
     return pos;
+}
+
+int edit::trim_if_overrun(bool alarm)
+{
+    if(_textbuf.empty())
+        return 0;
+    fontsys* fsys = scene::get_singleton_ptr()->get_fontsys();
+    assert(fsys);
+    int len = _textbuf.length();
+    int c = len;
+    for( ; c > 0; c --) {
+        int w, h;
+        fsys->get_size(_textbuf.c_str(), w, h, c);
+        if(w <= get_width())
+            break;
+    }
+    if(!c) {
+        _textbuf.clear();
+        set_caret(0);
+    }
+    else if(c != len) {
+        _textbuf.resize(c);
+        if(_caretpos > c)
+            set_caret(c);
+    }
+    int alarm_count = len - c;
+    static const int max_alarm_count = 10;
+    if(alarm) {
+        int alarms = gs_min(alarm_count, max_alarm_count);
+        for(int i = 0; i < alarms; i ++)
+            sound_alarm();
+    }
+    return alarm_count;
 }
 
 scroller::scroller(wsys_manager* m): button(m)

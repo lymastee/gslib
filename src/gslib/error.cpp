@@ -225,4 +225,11 @@ void trace_all(const gchar* str)
 
 #endif
 
+#if defined(WIN32) || defined(_WINDOWS)
+void sound_alarm()
+{
+    Beep(442, 80);
+}
+#endif
+
 __gslib_end__

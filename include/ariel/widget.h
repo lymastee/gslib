@@ -303,6 +303,9 @@ protected:
     color           _crtcolor;
     font            _font;
     int             _font_idx;
+
+protected:
+    int trim_if_overrun(bool alarm);
 };
 
 class scroller:

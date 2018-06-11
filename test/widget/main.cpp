@@ -37,21 +37,19 @@ class wflttext:
 {
 public:
     wflttext(wsys_manager* m):
-        widget(m)
+        widget(m), _animtimer(m)
     {
-        _timerid = m->get_timer_id(this);
+        reflect_notify(&_animtimer, timer::on_timer, this, on_animation, 1);
     }
     virtual ~wflttext()
     {
-        _manager->kill_timer(_timerid);
     }
     virtual void draw(painter* cvs)
     {
         cvs->draw_image(&_cpytext, 0, 0);
     }
-    virtual void on_timer(uint tid)
+    void on_animation(uint)
     {
-        assert(tid == _timerid);
         _alpha -= _fadeby;
         if(_alpha <= 0) {
             _manager->remove_widget(this);
@@ -88,7 +86,7 @@ public:
     }
     void start()
     {
-        _manager->set_timer(_timerid, 30);
+        _animtimer.start(30);
     }
     static wflttext* create_inst(widget* parent, point pt, const gchar* str)
     {
@@ -105,9 +103,9 @@ public:
 protected:
     image       _text;
     image       _cpytext;
-    uint        _timerid;
     real32      _alpha;
     real32      _fadeby;
+    timer       _animtimer;
 };
 
 /* background */
@@ -136,7 +134,7 @@ public:
         _btn_image.load(_t("button.png"));
         _btn->set_image(&_btn_image);
 
-        reflect_widget_notify(_btn, button::on_click, this, wbkground::on_btn_clicked, 3);
+        reflect_notify(_btn, button::on_click, this, wbkground::on_btn_clicked, 3);
 
         return true;
     }

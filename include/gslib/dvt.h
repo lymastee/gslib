@@ -28,6 +28,7 @@
 
 #include <gslib/config.h>
 #include <gslib/type.h>
+#include <gslib/std.h>
 
 __gslib_begin__
 
@@ -121,6 +122,79 @@ public:
         VirtualProtect(vt, 4, oldpro, &oldpro);
         return r;
     }
+};
+
+class notify_code
+{
+    typedef unsigned long ulong;
+
+public:
+    notify_code(int n);
+    ~notify_code();
+    void finalize(uint old_func, uint host, uint action);
+    uint get_code_address() const { return (uint)_ptr; }
+
+private:
+    int             _type;
+    byte*           _ptr;
+    int             _len;
+    ulong           _oldpro;
+};
+
+#define reflect_notify(target, trigger, host, action, ntftype) { \
+    auto& vo = vtable_ops<std::remove_reference_t<decltype(*target)>>(nullptr); \
+    (target)->ensure_dvt_available<std::remove_reference_t<decltype(*target)>>(); \
+    auto* notify = (target)->add_notifier(ntftype); \
+    assert(notify); \
+    uint old_func = vo.replace_vtable_method(target, vo.get_virtual_method_index(method_address(trigger)), notify->get_code_address()); \
+    notify->finalize(old_func, (uint)host, method_address(action)); \
+}
+
+class notify_holder
+{
+public:
+    typedef vector<notify_code*> notify_list;
+
+public:
+    notify_holder();
+    virtual ~notify_holder();
+
+private:
+    void*           _backvt;
+    int             _backvtsize;
+    notify_list     _notifiers;
+
+public:
+    template<class _cls>
+    void ensure_dvt_available()
+    {
+        if(_backvt)
+            return;
+        auto& vo = vtable_ops<_cls>(nullptr);
+        _backvtsize = vo.size_of_vtable();
+        _backvt = vo.create_per_instance_vtable(static_cast<_cls*>(this));
+    }
+    notify_code* add_notifier(int n);
+};
+
+class notify_collector
+{
+public:
+    typedef vector<notify_holder*> holder_list;
+
+private:
+    holder_list     _holders;
+    notify_collector() {}
+
+public:
+    static notify_collector* get_singleton_ptr()
+    {
+        static notify_collector inst;
+        return &inst;
+    }
+    ~notify_collector() { cleanup(); }
+    void set_delete_later(notify_holder* holder) { _holders.push_back(holder); }
+    void cleanup();
 };
 
 __gslib_end__

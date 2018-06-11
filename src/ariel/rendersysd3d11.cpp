@@ -461,9 +461,9 @@ shader_resource_view* rendersys_d3d11::create_shader_resource_view(render_resour
 render_sampler_state* rendersys_d3d11::create_sampler_state(sampler_state_filter filter)
 {
     D3D11_SAMPLER_DESC desc;
-    desc.AddressU = D3D11_TEXTURE_ADDRESS_MIRROR;
-    desc.AddressV = D3D11_TEXTURE_ADDRESS_MIRROR;
-    desc.AddressW = D3D11_TEXTURE_ADDRESS_MIRROR;
+    desc.AddressU = D3D11_TEXTURE_ADDRESS_CLAMP;
+    desc.AddressV = D3D11_TEXTURE_ADDRESS_CLAMP;
+    desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP;
     desc.MipLODBias = 0.f;
     desc.MaxAnisotropy = 1;
     desc.ComparisonFunc = D3D11_COMPARISON_NEVER;

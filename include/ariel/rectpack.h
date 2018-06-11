@@ -138,7 +138,7 @@ public:
 
 public:
     template<class _lamb>
-    void for_each_compactly(rp_iterator i, _lamb fn)
+    void for_each(rp_iterator i, _lamb fn)
     {
         assert(i);
         _tree.preorder_traversal([&fn](rp_wrapper* w) {
@@ -152,33 +152,11 @@ public:
         });
     }
     template<class _lamb>
-    void for_each_dynamically(rp_iterator i, _lamb fn)
-    {
-        assert(i);
-        _tree.preorder_traversal([&fn](rp_wrapper* w) {
-            assert(w);
-            rp_iterator i(w);
-            if(i.is_leaf() && !i->is_empty()) {
-                rp_rect rc;
-                rp_global_location(i, rc);
-                fn(i->bind_ptr, rc, rp_is_node_transposed(i));
-            }
-        });
-    }
-    template<class _lamb>
     void for_each(_lamb fn)
     {
         if(!_tree.is_valid())
             return;
-        switch(_strategy)
-        {
-        case ps_compactly:
-            return for_each_compactly(_tree.get_root(), fn);
-        case ps_dynamically:
-            return for_each_dynamically(_tree.get_root(), fn);
-        default:
-            assert(!"unexpected.");
-        }
+        for_each(_tree.get_root(), fn);
     }
 
 protected:

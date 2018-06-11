@@ -340,7 +340,7 @@ protected:
         assert(_empty_frame_proc);
         (this->*_empty_frame_proc)();
     }
-    void empty_frame_lazy() {}
+    void empty_frame_lazy();
     void empty_frame_busy();
 
 protected:

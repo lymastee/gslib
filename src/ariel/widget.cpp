@@ -31,148 +31,8 @@
 
 __ariel_begin__
 
-#define tid_refresh 0
-#define tid_caret   1
-
 /* in GPU draw, no immediate refresh */
 #define refresh_immediately false
-
-static const byte __notify_code_0[] =
-{
-    0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:old_func */
-    0xff, 0xd0,                             /* call eax */
-    0x8d, 0x0d, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea ecx, 0xcccccccc:host */
-    0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:action */
-    0xff, 0xd0,                             /* call eax */
-    0xc3                                    /* ret */
-};
-
-static const byte __notify_code_1[] =
-{
-    0xff, 0x74, 0x24, 0x04,                 /* push dword ptr[esp+4] */
-    0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:old_func */
-    0xff, 0xd0,                             /* call eax */
-    0xff, 0x74, 0x24, 0x04,                 /* push dword ptr[esp+4] */
-    0x8d, 0x0d, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea ecx, 0xcccccccc:host */
-    0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:action */
-    0xff, 0xd0,                             /* call eax */
-    0xc2, 0x04, 0x00                        /* ret 4 */
-};
-
-static const byte __notify_code_2[] =
-{
-    0xff, 0x74, 0x24, 0x08,                 /* push dword ptr[esp+8] */
-    0xff, 0x74, 0x24, 0x08,                 /* push dword ptr[esp+8] */
-    0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:old_func */
-    0xff, 0xd0,                             /* call eax */
-    0xff, 0x74, 0x24, 0x08,                 /* push dword ptr[esp+8] */
-    0xff, 0x74, 0x24, 0x08,                 /* push dword ptr[esp+8] */
-    0x8d, 0x0d, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea ecx, 0xcccccccc:host */
-    0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:action */
-    0xff, 0xd0,                             /* call eax */
-    0xc2, 0x08, 0x00                        /* ret 8 */
-};
-
-static const byte __notify_code_3[] =
-{
-    0xff, 0x74, 0x24, 0x0c,                 /* push dword ptr[esp+12] */
-    0xff, 0x74, 0x24, 0x0c,                 /* push dword ptr[esp+12] */
-    0xff, 0x74, 0x24, 0x0c,                 /* push dword ptr[esp+12] */
-    0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:old_func */
-    0xff, 0xd0,                             /* call eax */
-    0xff, 0x74, 0x24, 0x0c,                 /* push dword ptr[esp+12] */
-    0xff, 0x74, 0x24, 0x0c,                 /* push dword ptr[esp+12] */
-    0xff, 0x74, 0x24, 0x0c,                 /* push dword ptr[esp+12] */
-    0x8d, 0x0d, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea ecx, 0xcccccccc:host */
-    0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:action */
-    0xff, 0xd0,                             /* call eax */
-    0xc2, 0x0c, 0x00                        /* ret 12 */
-};
-
-#if defined(WIN32) || defined(_WINDOWS)
-#define alloc_writable_exec_codebytes(len)          VirtualAlloc(nullptr, len, MEM_COMMIT, PAGE_EXECUTE_READWRITE)
-#define lock_exec_codebytes(ptr, len, oldprotag)    VirtualProtect(ptr, len, PAGE_EXECUTE_READ, &oldprotag)
-#define unlock_exec_codebytes(ptr, len, oldprotag)  VirtualProtect(ptr, len, oldprotag, &oldprotag)
-#define dealloc_exec_codebytes(ptr, len)            VirtualFree(ptr, len, MEM_DECOMMIT)
-#endif
-
-widget_notify_code::widget_notify_code(int n)
-{
-    _type = n;
-    switch(n)
-    {
-    case 0:
-        _len = sizeof(__notify_code_0);
-        _ptr = (byte*)alloc_writable_exec_codebytes(_len);
-        assert(_ptr);
-        memcpy(_ptr, __notify_code_0, _len);
-        break;
-    case 1:
-        _len = sizeof(__notify_code_1);
-        _ptr = (byte*)alloc_writable_exec_codebytes(_len);
-        assert(_ptr);
-        memcpy(_ptr, __notify_code_1, _len);
-        break;
-    case 2:
-        _len = sizeof(__notify_code_2);
-        _ptr = (byte*)alloc_writable_exec_codebytes(_len);
-        assert(_ptr);
-        memcpy(_ptr, __notify_code_2, _len);
-        break;
-    case 3:
-        _len = sizeof(__notify_code_3);
-        _ptr = (byte*)alloc_writable_exec_codebytes(_len);
-        assert(_ptr);
-        memcpy(_ptr, __notify_code_3, _len);
-        break;
-    default:
-        assert(!"unexpected notify code type.");
-        _ptr = nullptr;
-        _len = 0;
-        break;
-    }
-}
-
-widget_notify_code::~widget_notify_code()
-{
-    if(_ptr) {
-        unlock_exec_codebytes(_ptr, _len, _oldpro);
-        dealloc_exec_codebytes(_ptr, _len);
-        _ptr = nullptr;
-        _len = 0;
-    }
-}
-
-void widget_notify_code::finalize(uint old_func, uint host, uint action)
-{
-    switch(_type)
-    {
-    case 0:
-        *(uint*)(_ptr + 2) = old_func;
-        *(uint*)(_ptr + 10) = host;
-        *(uint*)(_ptr + 16) = action;
-        break;
-    case 1:
-        *(uint*)(_ptr + 6) = old_func;
-        *(uint*)(_ptr + 18) = host;
-        *(uint*)(_ptr + 24) = action;
-        break;
-    case 2:
-        *(uint*)(_ptr + 10) = old_func;
-        *(uint*)(_ptr + 26) = host;
-        *(uint*)(_ptr + 32) = action;
-        break;
-    case 3:
-        *(uint*)(_ptr + 14) = old_func;
-        *(uint*)(_ptr + 34) = host;
-        *(uint*)(_ptr + 40) = action;
-        break;
-    default:
-        assert(!"widget notify code finalize failed.");
-        return;
-    }
-    lock_exec_codebytes(_ptr, _len, _oldpro);
-}
 
 widget::widget(wsys_manager* m)
 {
@@ -181,22 +41,10 @@ widget::widget(wsys_manager* m)
     _style = 0;
     _show = false;
     _enable = true;
-    _backvt = nullptr;
-    _backvtsize = 0;
 }
 
 widget::~widget()
 {
-    if(_backvt) {
-        dvt_recover_vtable(this, _backvt, _backvtsize);
-        _backvt = nullptr;
-        _backvtsize = 0;
-    }
-    for(auto* notify : _notifiers) {
-        assert(notify);
-        gs_del(widget_notify_code, notify);
-    }
-    _notifiers.clear();
 }
 
 bool widget::create(widget* ptr, const gchar* name, const rect& rc, uint style)
@@ -340,14 +188,6 @@ void widget::on_hover(uint um, const point& pt)
 
 void widget::on_leave(uint um, const point& pt)
 {
-}
-
-widget_notify_code* widget::add_notifier(int n)
-{
-    auto* notify = gs_new(widget_notify_code, n);
-    assert(notify);
-    _notifiers.push_back(notify);
-    return notify;
 }
 
 point& widget::top_level(point& pt) const
@@ -1101,6 +941,60 @@ void scroller::on_hover(uint um, const point& pt)
     }
 }
 
+timer::timer(wsys_manager* mgr)
+{
+    if(mgr)
+        initialize(mgr->get_driver());
+    else {
+        /* only used by dvt ops */
+        _driver = nullptr;
+        _userdata = 0;
+        _elapse = 0;
+        _single = false;
+    }
+}
+
+timer::~timer()
+{
+    if(_driver && _elapse) {    /* which means the timer was set */
+        _elapse = 0;
+        _driver->kill_timer((uint)this);
+    }
+}
+
+void timer::initialize(wsys_driver* drv)
+{
+    assert(drv);
+    _driver = drv;
+    _userdata = 0;
+    _elapse = 0;
+    _single = false;
+}
+
+void timer::start(int elapse)
+{
+    _single = false;
+    assert(_driver);
+    _elapse = elapse;
+    _driver->set_timer((uint)this, elapse);
+}
+
+void timer::start_single(int elapse)
+{
+    _single = true;
+    assert(_driver);
+    _elapse = elapse;
+    _driver->set_timer((uint)this, elapse);
+}
+
+void timer::on_notified()
+{
+    if(_single) {
+        _single = false;    /* ensure delete once */
+        gs_del(timer, this);
+    }
+}
+
 wsys_manager::wsys_manager()
 {
     _driver = nullptr;
@@ -1108,11 +1002,15 @@ wsys_manager::wsys_manager()
     _width = 0;
     _height = 0;
     _painter = nullptr;
-    _next_tid = tid_refresh;
+    _caret = nullptr;
 }
 
 wsys_manager::~wsys_manager()
 {
+    if(_caret) {
+        gs_del(timer, _caret);
+        _caret = nullptr;
+    }
 }
 
 void wsys_manager::set_wsysdrv(wsys_driver* drv)
@@ -1130,11 +1028,12 @@ void wsys_manager::initialize(const rect& rc)
 {
     /* dimensions */
     set_dimension(rc.width(), rc.height());
-    /* timer to refresh */
-    assert(_next_tid == tid_refresh);
-    set_timer(get_timer_id(nullptr), 15);
-    assert(_next_tid == tid_caret);
-    set_timer(get_timer_id(nullptr), 600);
+    /* timer */
+    assert(!_caret && _driver);
+    _caret = gs_new(timer, this);
+    assert(_caret);
+    reflect_notify(_caret, timer::on_timer, this, on_caret, 1);
+    _caret->start(600);
     /* IME support */
     set_ime(0, point(0, 0), font(_t("ËÎÌו"), 14));
 }
@@ -1237,6 +1136,12 @@ widget* wsys_manager::set_focus(widget* ptr)
     return p;
 }
 
+void wsys_manager::on_caret(uint)
+{
+    if(_focus && _focus->is_enable() && _focus->is_visible())
+        _focus->on_caret();
+}
+
 void wsys_manager::on_show(bool b)
 {
 }
@@ -1337,18 +1242,10 @@ bool wsys_manager::on_char(uint um, uint ch)
 
 void wsys_manager::on_timer(uint tid)
 {
-    assert(tid < _next_tid);
-    if(tid == tid_refresh)
-        update();
-    else if(tid == tid_caret) {
-        if(_focus && _focus->is_enable() && _focus->is_visible())
-            _focus->on_caret();
-    }
-    else {
-        assert(tid < (uint)_timer_map.size());
-        if(widget* ptr = _timer_map[tid - tid_refresh])
-            ptr->on_timer(tid);
-    }
+    auto* t = reinterpret_cast<timer*>(tid);
+    assert(t);
+    t->on_timer(tid);
+    t->on_notified();
 }
 
 widget* wsys_manager::find_widget(const string& name)
@@ -1377,14 +1274,7 @@ bool wsys_manager::remove_widget(widget* ptr)
     }
     /* notification */
     ptr->close();
-    /* clean up */
-    for(uint j = 0; j < (uint)_timer_map.size(); j ++) {
-        if(_timer_map[j] == ptr) {
-            kill_timer(j);
-            _timer_map[j] = 0;
-        }
-    }
-    gs_del(widget, ptr);
+    notify_collector::get_singleton_ptr()->set_delete_later(ptr);
     if(_root == ptr)
         _root = nullptr;
     if(_capture == ptr)
@@ -1407,15 +1297,8 @@ bool wsys_manager::remove_widget(widget_map::iterator i)
     }
     /* notification */
     ptr->close();
-    /* clean up */
-    for(uint j = 0; j < (uint)_timer_map.size(); j ++) {
-        if(_timer_map[j] == ptr) {
-            kill_timer(j);
-            _timer_map[j] = 0;
-        }
-    }
     _widget_map.erase(i);
-    gs_del(widget, ptr);
+    notify_collector::get_singleton_ptr()->set_delete_later(ptr);
     if(_root == ptr)
         _root = nullptr;
     if(_capture == ptr)
@@ -1423,20 +1306,6 @@ bool wsys_manager::remove_widget(widget_map::iterator i)
     if(_focus == ptr)
         _focus = nullptr;
     return true;
-}
-
-uint wsys_manager::get_timer_id(widget* w)
-{
-    _timer_map.push_back(w);
-    return _next_tid ++;
-}
-
-void wsys_manager::clear_timer()
-{
-    if(!_driver)
-        return;
-    for(uint i = tid_refresh + 1; i < _next_tid; i ++)
-        _driver->kill_timer(i);
 }
 
 void wsys_manager::set_ime(widget* ptr, point pt, const font& ft)

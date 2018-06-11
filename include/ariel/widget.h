@@ -83,37 +83,12 @@ struct clipboard_bitmap:
 
 class widget;
 
-class widget_notify_code
-{
-    typedef unsigned long ulong;
-
-public:
-    widget_notify_code(int n);
-    ~widget_notify_code();
-    void finalize(uint old_func, uint host, uint action);
-    uint get_code_address() const { return (uint)_ptr; }
-
-private:
-    int             _type;
-    byte*           _ptr;
-    int             _len;
-    ulong           _oldpro;
-};
-
-#define reflect_widget_notify(target, trigger, host, action, ntftype) { \
-    auto& vo = vtable_ops<std::remove_reference_t<decltype(*target)>>(nullptr); \
-    auto* notify = target->add_notifier(ntftype); \
-    assert(notify); \
-    uint old_func = vo.replace_vtable_method(target, vo.get_virtual_method_index(method_address(trigger)), notify->get_code_address()); \
-    notify->finalize(old_func, (uint)host, method_address(action)); \
-}
-
 class wsys_manager;
 
-class widget
+class widget:
+    public notify_holder
 {
     friend class wsys_manager;
-    typedef vector<widget_notify_code*> notify_list;
 
 public:
     widget(wsys_manager* m);
@@ -148,7 +123,6 @@ public:
     virtual void on_keydown(uint um, unikey uk) {}
     virtual void on_keyup(uint um, unikey uk) {}
     virtual void on_char(uint um, uint ch) {}
-    virtual void on_timer(uint tid) {}
     virtual void on_caret() {}
     virtual void on_focus(bool b) {}
     virtual void on_scroll(const point& pt, real32 scr, bool vert) {}
@@ -161,23 +135,6 @@ protected:
     bool            _show;
     bool            _enable;
     point           _htpos;
-
-public:
-    template<class _cls>
-    void ensure_dvt_available()
-    {
-        if(_backvt)
-            return;
-        auto& vo = vtable_ops<_cls>(nullptr);
-        _backvtsize = vo.size_of_vtable();
-        _backvt = vo.create_per_instance_vtable(static_cast<_cls*>(this));
-    }
-    widget_notify_code* add_notifier(int n);
-
-private:
-    void*           _backvt;
-    int             _backvtsize;
-    notify_list     _notifiers;
 
 public:
     const string& get_name() const { return _name; }
@@ -333,6 +290,31 @@ protected:
 typedef system_driver wsys_driver;
 typedef system_notify wsys_notify;
 
+class timer:
+    public notify_holder
+{
+public:
+    timer(wsys_manager* mgr);
+    void start(int elapse);
+    void start_single(int elapse);
+    void set_user_data(uint usd) { _userdata = usd; }
+    uint get_user_data() const { return _userdata; }
+
+public:
+    virtual ~timer();
+    virtual void on_timer(uint tid) {}
+    virtual void on_notified();             /* CANNOT be used by reflect notify */
+
+protected:
+    wsys_driver*    _driver;
+    uint            _userdata;
+    int             _elapse;
+    bool            _single;
+
+private:
+    void initialize(wsys_driver* drv);
+};
+
 class wsys_manager:
     public wsys_notify
 {
@@ -341,6 +323,7 @@ public:
     void set_wsysdrv(wsys_driver* drv);
     void set_painter(painter* paint);
     painter* get_painter() const { return _painter; }
+    wsys_driver* get_driver() const { return _driver; }
     void initialize(const rect& rc);
 
 protected:
@@ -349,6 +332,7 @@ protected:
     dirty_list      _dirty;
     int             _width;
     int             _height;
+    timer*          _caret;
 
 public:
     void set_dimension(int w, int h);
@@ -363,6 +347,7 @@ public:
     widget* hit_proc(const point& pt, point& pt1);
     widget* set_capture(widget* ptr, bool b);
     widget* set_focus(widget* ptr);
+    void on_caret(uint);
 
 public:
     virtual ~wsys_manager();
@@ -419,19 +404,6 @@ public:
     bool remove_widget(widget* ptr);
     bool remove_widget(const string& name);
     bool remove_widget(widget_map::iterator i);
-
-protected:
-    uint            _next_tid;
-
-private:
-    typedef vector<widget*> timer_map;
-    timer_map       _timer_map;
-
-public:
-    uint get_timer_id(widget* w);
-    void set_timer(uint tid, int t) { if(_driver) _driver->set_timer(tid, t); }
-    void kill_timer(uint tid) { if(_driver) _driver->kill_timer(tid); }
-    void clear_timer();
 
 public:
     void set_ime(widget* ptr, point pt, const font& ft);

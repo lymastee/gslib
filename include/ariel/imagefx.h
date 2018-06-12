@@ -35,6 +35,8 @@ class imagefx
 public:
     static void set_brightness(image& img, const image& src, float s);
     static void set_gray(image& img, const image& src);
+    static void set_fade(image& img, float s);
+    static void set_inverse(image& img, const image& src);
 };
 
 __ariel_end__

@@ -68,7 +68,7 @@ public:
     myref(_arg1 a1, _arg2 a2): _cls(a1, a2) {}
     template<class _arg1, class _arg2, class _arg3>
     myref(_arg1 a1, _arg2 a2, _arg3 a3): _cls(a1, a2, a3) {}
-    virtual void end_of_vtable() {}
+    virtual void end_of_vtable() { __asm { nop } }      /* add some real stuff in this function to prevent optimization in release. */
 
 public:
     int get_virtual_method_index(uint m) const
@@ -141,14 +141,17 @@ private:
     ulong           _oldpro;
 };
 
-#define reflect_notify(target, trigger, host, action, ntftype) { \
-    auto& vo = vtable_ops<std::remove_reference_t<decltype(*target)>>(nullptr); \
-    (target)->ensure_dvt_available<std::remove_reference_t<decltype(*target)>>(); \
+#define connect_typed_notify(targettype, target, trigger, host, action, ntftype) { \
+    auto& vo = vtable_ops<targettype>(nullptr); \
+    (target)->ensure_dvt_available<targettype>(); \
     auto* notify = (target)->add_notifier(ntftype); \
     assert(notify); \
     uint old_func = vo.replace_vtable_method(target, vo.get_virtual_method_index(method_address(trigger)), notify->get_code_address()); \
     notify->finalize(old_func, (uint)host, method_address(action)); \
 }
+
+#define connect_notify(target, trigger, host, action, ntftype) \
+    connect_typed_notify(std::remove_reference_t<decltype(*target)>, target, trigger, host, action, ntftype)
 
 class notify_holder
 {
@@ -163,6 +166,7 @@ private:
     void*           _backvt;
     int             _backvtsize;
     notify_list     _notifiers;
+    bool            _delete_later;
 
 public:
     template<class _cls>
@@ -175,6 +179,12 @@ public:
         _backvt = vo.create_per_instance_vtable(static_cast<_cls*>(this));
     }
     notify_code* add_notifier(int n);
+    /*
+     * In case the holder would be tagged more than once by the garbage collector, the cause might be
+     * a message re-entrant of the msg callback function. So here we tag it.
+     */
+    void set_delete_later() { _delete_later = true; }
+    bool is_delete_later() const { return _delete_later; }
 };
 
 class notify_collector
@@ -193,7 +203,7 @@ public:
         return &inst;
     }
     ~notify_collector() { cleanup(); }
-    void set_delete_later(notify_holder* holder) { _holders.push_back(holder); }
+    bool set_delete_later(notify_holder* holder);
     void cleanup();
 };
 

@@ -91,4 +91,38 @@ void imagefx::set_gray(image& img, const image& isrc)
     }
 }
 
+void imagefx::set_fade(image& img, float s)
+{
+    assert(s >= 0 && s < 1.0);
+    if(img.get_format() != image::fmt_rgba)
+        return;
+    int w = img.get_width(), h = img.get_height();
+    for(int i = 0; i < h; i ++) {
+        color* ptr = reinterpret_cast<color*>(img.get_data(0, i));
+        assert(ptr);
+        for(int j = 0; j < w; j ++)
+            ptr[j].alpha = byte(round(s * ptr[j].alpha));
+    }
+}
+
+void imagefx::set_inverse(image& img, const image& isrc)
+{
+    if(img.get_format() != image::fmt_rgba)
+        return;
+    int w = img.get_width(), h = img.get_height();
+    if(w < isrc.get_width() || h < isrc.get_height())
+        return;
+    for(int j = 0; j < h; j ++) {
+        for(int i = 0; i < w; i ++) {
+            color* dest = reinterpret_cast<color*>(img.get_data(i, j));
+            const color* src = reinterpret_cast<const color*>(isrc.get_data(i, j));
+            assert(dest && src);
+            dest->red = 0xff - src->red;
+            dest->green = 0xff - src->green;
+            dest->blue = 0xff - src->blue;
+            dest->alpha = src->alpha;
+        }
+    }
+}
+
 __ariel_end__

@@ -169,6 +169,7 @@ notify_holder::notify_holder()
 {
     _backvt = nullptr;
     _backvtsize = 0;
+    _delete_later = false;
 }
 
 notify_holder::~notify_holder()
@@ -191,6 +192,17 @@ notify_code* notify_holder::add_notifier(int n)
     assert(notify);
     _notifiers.push_back(notify);
     return notify;
+}
+
+bool notify_collector::set_delete_later(notify_holder* holder)
+{
+    assert(holder);
+    if(!holder->is_delete_later()) {
+        holder->set_delete_later();
+        _holders.push_back(holder);
+        return true;
+    }
+    return false;
 }
 
 void notify_collector::cleanup()

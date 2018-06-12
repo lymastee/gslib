@@ -1032,7 +1032,7 @@ void wsys_manager::initialize(const rect& rc)
     assert(!_caret && _driver);
     _caret = gs_new(timer, this);
     assert(_caret);
-    reflect_notify(_caret, timer::on_timer, this, on_caret, 1);
+    connect_notify(_caret, timer::on_timer, this, on_caret, 1);
     _caret->start(600);
     /* IME support */
     set_ime(0, point(0, 0), font(_t("ËÎÌו"), 14));
@@ -1265,6 +1265,8 @@ bool wsys_manager::remove_widget(const string& name)
 bool wsys_manager::remove_widget(widget* ptr)
 {
     assert(ptr);
+    if(!notify_collector::get_singleton_ptr()->set_delete_later(ptr))
+        return false;
     /* remove all its children */
     for(widget* c = ptr->_child; c;) {
         widget* p = c;
@@ -1274,13 +1276,14 @@ bool wsys_manager::remove_widget(widget* ptr)
     }
     /* notification */
     ptr->close();
-    notify_collector::get_singleton_ptr()->set_delete_later(ptr);
     if(_root == ptr)
         _root = nullptr;
     if(_capture == ptr)
         _capture = nullptr;
     if(_focus == ptr)
         _focus = nullptr;
+    if(_hover == ptr)
+        _hover = nullptr;
     return true;
 }
 
@@ -1288,24 +1291,11 @@ bool wsys_manager::remove_widget(widget_map::iterator i)
 {
     widget* ptr = i->second;
     assert(ptr);
-    /* remove all its children */
-    for(widget* c = ptr->_child; c;) {
-        widget* p = c;
-        c = c->_next;
-        if(!remove_widget(p))
-            return false;
+    if(remove_widget(ptr)) {
+        _widget_map.erase(i);
+        return true;
     }
-    /* notification */
-    ptr->close();
-    _widget_map.erase(i);
-    notify_collector::get_singleton_ptr()->set_delete_later(ptr);
-    if(_root == ptr)
-        _root = nullptr;
-    if(_capture == ptr)
-        _capture = nullptr;
-    if(_focus == ptr)
-        _focus = nullptr;
-    return true;
+    return false;
 }
 
 void wsys_manager::set_ime(widget* ptr, point pt, const font& ft)

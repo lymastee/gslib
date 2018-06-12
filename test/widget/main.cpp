@@ -4,6 +4,7 @@
 #include <ariel/widget.h>
 #include <ariel/scene.h>
 #include <gslib/error.h>
+#include <ariel/imagefx.h>
 
 using namespace gs;
 using namespace gs::ariel;
@@ -39,7 +40,7 @@ public:
     wflttext(wsys_manager* m):
         widget(m), _animtimer(m)
     {
-        reflect_notify(&_animtimer, timer::on_timer, this, on_animation, 1);
+        connect_notify(&_animtimer, timer::on_timer, this, on_animation, 1);
     }
     virtual ~wflttext()
     {
@@ -55,8 +56,8 @@ public:
             _manager->remove_widget(this);
         }
         else {
-            //_cpytext.copy(_text);
-            //_cpytext.fade_to(_alpha);
+            _cpytext.copy(_text);
+            imagefx::set_fade(_cpytext, _alpha);
             point pt(get_rect().left, get_rect().top);
             pt.y -= 2;
             move(pt);
@@ -134,7 +135,7 @@ public:
         _btn_image.load(_t("button.png"));
         _btn->set_image(&_btn_image);
 
-        reflect_notify(_btn, button::on_click, this, wbkground::on_btn_clicked, 3);
+        connect_notify(_btn, button::on_click, this, on_btn_clicked, 3);
 
         return true;
     }

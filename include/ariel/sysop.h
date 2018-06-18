@@ -27,7 +27,9 @@
 #define sysop_eb634adc_cca3_4f8f_853c_7852abe06d2d_h
 
 #include <gslib/type.h>
+#include <gslib/std.h>
 #include <ariel/type.h>
+#include <ariel/image.h>
 
 __ariel_begin__
 
@@ -132,6 +134,7 @@ enum unikey
 };
 
 class system_driver;
+typedef render_texture2d texture2d;
 
 class __gs_novtable system_notify abstract
 {
@@ -150,6 +153,53 @@ public:
     virtual bool on_key_up(uint um, unikey uk) = 0;
     virtual bool on_char(uint um, uint ch) = 0;
     virtual void on_timer(uint tid) = 0;
+};
+
+enum clipfmt
+{
+    cf_text,
+    cf_bitmap,
+};
+
+class __gs_novtable clipboard_data abstract
+{
+public:
+    virtual ~clipboard_data() {}
+    virtual clipfmt get_format() const = 0;
+    virtual void* get_ptr() = 0;
+    virtual int get_size() const = 0;
+    template<class _tdata>
+    _tdata* get_data() { return (_tdata*)get_ptr(); }
+};
+
+class clipboard_list:
+    public list<clipboard_data*>
+{
+public:
+    ~clipboard_list()
+    {
+        for(auto* p : *this) {
+            assert(p);
+            gs_del(clipboard_data, p);
+        }
+        clear();
+    }
+};
+
+struct clipboard_text:
+    public clipboard_data, public string
+{
+    virtual clipfmt get_format() const { return cf_text; }
+    virtual void* get_ptr() { return (void*)static_cast<string*>(this); }
+    virtual int get_size() const { return string::length(); }
+};
+
+struct clipboard_bitmap:
+    public clipboard_data, public image
+{
+    virtual clipfmt get_format() const { return cf_bitmap; }
+    virtual void* get_ptr() { return (void*)static_cast<image*>(this); }
+    virtual int get_size() const { return -1; }
 };
 
 struct system_context
@@ -187,8 +237,6 @@ public:
     //virtual int get_clipboard(clipboard_list& cl, int c) = 0;
 };
 
-class image;
-
 class __gs_novtable fontsys abstract
 {
 public:
@@ -197,6 +245,7 @@ public:
     virtual int set_font(const font& f, int idx = -1) = 0;
     virtual bool get_size(const gchar* str, int& w, int& h, int len = -1) = 0;
     virtual bool create_text_image(image& img, const gchar* str, int x, int y, const color& cr, int len = -1) = 0;
+    virtual bool create_text_texture(texture2d** tex, const gchar* str, int x, int y, const color& cr, int len = -1) = 0;
     virtual void draw(image& img, const gchar* str, int x, int y, const color& cr, int len = -1) = 0;
 };
 

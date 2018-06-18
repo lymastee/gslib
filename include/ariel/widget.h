@@ -33,54 +33,6 @@
 
 __ariel_begin__
 
-/* clipboard formats */
-#define clipfmt_text    _t("gscf_text")
-/* more to come... */
-
-enum clipfmt
-{
-    cf_text,
-    cf_bitmap,
-};
-
-struct __gs_novtable clipboard_data abstract
-{
-    virtual ~clipboard_data() {}
-    virtual clipfmt get_format() const = 0;
-    virtual void* get_ptr() = 0;
-    virtual int get_size() const = 0;
-    template<class _tdata>
-    _tdata* get_data() { return (_tdata*)get_ptr(); }
-};
-
-class clipboard_list:
-    public list<clipboard_data*>
-{
-public:
-    ~clipboard_list()
-    {
-        iterator imax = end();
-        for(iterator i = begin(); i != imax; ++ i)
-            gs_del(clipboard_data, *i);
-    }
-};
-
-struct clipboard_text:
-    public clipboard_data, public string
-{
-    virtual clipfmt get_format() const { return cf_text; }
-    virtual void* get_ptr() { return (void*)static_cast<string*>(this); }
-    virtual int get_size() const { return string::length(); }
-};
-
-struct clipboard_bitmap:
-    public clipboard_data, public image
-{
-    virtual clipfmt get_format() const { return cf_bitmap; }
-    virtual void* get_ptr() { return (void*)static_cast<image*>(this); }
-    virtual int get_size() const { return -1; }
-};
-
 class widget;
 
 class wsys_manager;
@@ -170,6 +122,7 @@ public:
 
 public:
     button(wsys_manager* m);
+    virtual ~button();
     virtual const gchar* get_type() const override { return _t("button"); }
     virtual void draw(painter* paint) override;
     virtual void enable(bool b) override;
@@ -179,21 +132,21 @@ public:
     virtual void on_leave(uint um, const point& pt) override;
 
 public:
-    void set_image(const image* img, bool as = false);
+    void set_image(texture2d* img, bool fs = false);
     void set_press();
     void set_normal();
     void set_hover();
     void set_gray();
 
 protected:
-    const image*    _source;
-    image           _bkground;
+    texture2d*      _source;
+    texture2d*      _bkground;
     bool            _4states;
 
 public:
     enum btnstate
     {
-        bs_zr   = 0,
+        bs_none     = 0,
         bs_press,
         bs_hover,
         bs_normal,
@@ -240,7 +193,7 @@ public:
 
 public:
     void set_font(const font& ft) { _font = ft; }
-    void set_bkground(image* ptr) { _bkground = ptr; }
+    void set_bkground(texture2d* ptr) { _bkground = ptr; }
     void set_text_color(color cr) { _txtcolor = cr; }
     void set_select_color(color cr) { _selcolor = cr; }
     void set_caret_color(color cr) { _crtcolor = cr; }
@@ -254,7 +207,7 @@ public:
     bool no_select() const { return _sel_start == -1 || _sel_start == _sel_end; }
 
 protected:
-    image*          _bkground;
+    texture2d*      _bkground;
     color           _txtcolor;
     color           _selcolor;
     color           _crtcolor;
@@ -274,7 +227,7 @@ public:
 
 public:
     scroller(wsys_manager* m);
-    void set_scroller(int r1, int r2, bool vts, const image* img, bool as = false);
+    void set_scroller(int r1, int r2, bool vts, texture2d* img, bool as = false);
     void set_scroll(real32 s);
     real32 get_scroll() const { return _scrpos; }
     virtual const gchar* get_type() const override { return _t("scroller"); }
@@ -303,7 +256,7 @@ public:
 public:
     virtual ~timer();
     virtual void on_timer(uint tid) {}
-    virtual void on_notified();             /* CANNOT be used by reflect notify */
+    virtual void on_notified();             /* CANNOT be used by connect notify */
 
 protected:
     wsys_driver*    _driver;
@@ -407,8 +360,8 @@ public:
 
 public:
     void set_ime(widget* ptr, point pt, const font& ft);
-    void set_clipboard(const gchar* fmt, const void* ptr, int size);
-    int get_clipboard(const gchar* fmt, const void*& ptr);
+    void set_clipboard(clipfmt fmt, const void* ptr, int size);
+    int get_clipboard(clipfmt fmt, const void*& ptr);
     int get_clipboard(clipboard_list& cl, int c);
 };
 

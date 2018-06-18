@@ -68,9 +68,9 @@ protected:
         st_clockwise_mask       = 1,
         st_convex_mask          = 2,
     };
-    mutable uint    _tst_table;
-    mutable bool    _is_clock_wise;
-    mutable bool    _is_convex;
+    mutable uint        _tst_table;
+    mutable bool        _is_clock_wise;
+    mutable bool        _is_convex;
 
 protected:
     bool is_clockwise_init() const { return (_tst_table & st_clockwise_mask) != 0; }
@@ -89,13 +89,13 @@ struct painter_picture_data:
     public painter_data
 {
 protected:
-    const image*        _image;
+    texture2d*          _image;
 
 public:
-    painter_picture_data() { _image = 0; }
-    painter_picture_data(const image* p) { _image = p; }
-    void set_image(const image* p) { _image = p; }
-    const image* get_image() const { return _image; }
+    painter_picture_data() { _image = nullptr; }
+    painter_picture_data(texture2d* p) { _image = p; }
+    void set_image(texture2d* p) { _image = p; }
+    texture2d* get_image() const { return _image; }
 };
 
 typedef list<painter_linestrip> linestrips;
@@ -182,7 +182,7 @@ public:
     {
         hint_anti_alias     = 0x1,
     };
-    typedef vector<image*> text_image_cache;
+    typedef vector<texture2d*> text_image_cache;
 
 public:
     virtual ~painter();
@@ -209,7 +209,7 @@ public:
 public:
     virtual void on_draw_begin();
     virtual void on_draw_end();
-    virtual void draw_image(const image* img, float x, float y);
+    virtual void draw_image(texture2d* img, float x, float y);
     virtual void draw_line(const vec2& p1, const vec2& p2, const color& cr);
     virtual void draw_rect(const rectf& rc, const color& cr);
     virtual void draw_text(const gchar* str, int x, int y, const color& cr, int length = -1);

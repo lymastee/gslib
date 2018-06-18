@@ -3,17 +3,17 @@
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
- *
+ * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- *
+ * 
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- *
+ * 
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -23,52 +23,33 @@
  * SOFTWARE.
  */
 
-#ifndef texbatch_dfe6f3b4_430b_4424_98b6_d6b23235dc22_h
-#define texbatch_dfe6f3b4_430b_4424_98b6_d6b23235dc22_h
+#ifndef textureop_1ee1bc81_29bb_4578_9534_56f175127289_h
+#define textureop_1ee1bc81_29bb_4578_9534_56f175127289_h
 
-#include <gslib/std.h>
-#include <ariel/type.h>
-#include <ariel/image.h>
-#include <ariel/rectpack.h>
 #include <ariel/rendersys.h>
 
 __ariel_begin__
 
-typedef render_texture2d texture2d;
-
-#define _GS_BATCH_TEXTURE
-
-#if defined(_GS_BATCH_TEXTURE)
-#define location_key    texture2d*
-#elif defined(_GS_BATCH_IMAGE)
-#define location_key    const image*
-#endif
-
-class tex_batcher
+class textureop
 {
 public:
-    typedef unordered_map<location_key, rectf> location_map;
+    textureop(rendersys* rsys);
+    void copy_texture_rect(render_texture2d* dest, render_texture2d* src, const rectf& rc);
+    void transpose_texture_rect(unordered_access_view* dest, render_texture2d* src, const rectf& rc);
 
 public:
-    tex_batcher();
-    bool is_empty() const { return _rect_packer.is_empty(); }
-    float get_width() const { return _rect_packer.get_width() + _gap; }
-    float get_height() const { return _rect_packer.get_height() + _gap; }
-    void add_image(const image* p);
-    void add_texture(texture2d* p);
-    void arrange();
-    const location_map& get_location_map() const { return _location_map; }
-    texture2d* create_texture(rendersys* rsys) const;
-    void create_packed_image(image& img) const;
-    void tracing() const;
+    static void get_texture_dimension(render_texture2d* p, int& w, int& h);
+    static void get_assoc_device(render_texture2d* p, render_device** ppdev);
+    static bool convert_to_image(image& img, render_texture2d* src);
 
 protected:
-    rect_packer         _rect_packer;
-    location_map        _location_map;
-    float               _gap;
+    rendersys*          _rsys;
 
 private:
-    void prepare_input_list(rp_input_list& inputs);
+    render_device* get_device() const;
+    render_context* get_immediate_context() const;
+    template<class _cls>
+    bool check_valid_device(_cls* p) const;
 };
 
 __ariel_end__

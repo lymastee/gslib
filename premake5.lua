@@ -301,7 +301,8 @@ project "ariel"
 		'fxc /T vs_4_0 /E "ariel_smaa_blending_weight_calculation_vs" /Fd /Zi /Fh "ariel_smaa_blending_weight_calculation_vs.h" "../../src/ariel/smaa.hlsl"',
 		'fxc /T ps_4_1 /E "ariel_smaa_blending_weight_calculation_ps" /Fd /Zi /Fh "ariel_smaa_blending_weight_calculation_ps.h" "../../src/ariel/smaa.hlsl"',
 		'fxc /T vs_4_0 /E "ariel_smaa_neighborhood_blending_vs" /Fd /Zi /Fh "ariel_smaa_neighborhood_blending_vs.h" "../../src/ariel/smaa.hlsl"',
-		'fxc /T ps_4_1 /E "ariel_smaa_neighborhood_blending_ps" /Fd /Zi /Fh "ariel_smaa_neighborhood_blending_ps.h" "../../src/ariel/smaa.hlsl"'
+		'fxc /T ps_4_1 /E "ariel_smaa_neighborhood_blending_ps" /Fd /Zi /Fh "ariel_smaa_neighborhood_blending_ps.h" "../../src/ariel/smaa.hlsl"',
+		'fxc /T cs_5_0 /E "ariel_transpose_image_cs" /Fd /Zi /Fh "ariel_transpose_image_cs.h" "../../src/ariel/textureop.hlsl"'
 	}
 	files {
 		"include/ariel/batch.h",
@@ -312,7 +313,7 @@ project "ariel"
 		"include/ariel/framesys.h",
 		"include/ariel/fsyswin32.h",
 		"include/ariel/image.h",
-		"include/ariel/imagefx.h",
+		"include/ariel/imageop.h",
 		"include/ariel/imageio.h",
 		"include/ariel/loopblinn.h",
 		"include/ariel/mesh.h",
@@ -329,6 +330,7 @@ project "ariel"
 		"include/ariel/sysop.h",
 		"include/ariel/temporal.h",
 		"include/ariel/texbatch.h",
+		"include/ariel/textureop.h",
 		"include/ariel/type.h",
 		"include/ariel/utility.h",
 		"include/ariel/widget.h",
@@ -340,7 +342,7 @@ project "ariel"
 		"src/ariel/framesyswin32.cpp",
 		"src/ariel/fsyswin32.cpp",
 		"src/ariel/image.cpp",
-		"src/ariel/imagefx.cpp",
+		"src/ariel/imageop.cpp",
 		"src/ariel/imageio.cpp",
 		"src/ariel/loopblinn.cpp",
 		"src/ariel/mesh.cpp",
@@ -355,6 +357,8 @@ project "ariel"
 		"src/ariel/smaa.cpp",
 		"src/ariel/temporal.cpp",
 		"src/ariel/texbatch.cpp",
+		"src/ariel/textureop.cpp",
+		"src/ariel/textureop.hlsl",
 		"src/ariel/utility.cpp",
 		"src/ariel/widget.cpp",
 		"src/ariel/rose.hlsl",
@@ -615,7 +619,7 @@ project "testfreetype"
 	
 project "texpack"
 	language "C++"
-	kind "ConsoleApp"
+	kind "WindowedApp"
 	entrypoint ""
 	dependson {
 		"libpng",
@@ -625,7 +629,8 @@ project "texpack"
 		"ariel"
 	}
 	includedirs {
-		"include"
+		"include",
+		"framework"
 	}
 	libdirs {
 		"$(OutDir)"
@@ -642,7 +647,9 @@ project "texpack"
 		"snmpapi.lib"
 	}
 	files {
-		"test/texpack/main.cpp"
+		"test/texpack/main.cpp",
+		"framework/entrywin32.cpp",
+		"framework/entrywin32.h"
 	}
 	
 -- following are tools

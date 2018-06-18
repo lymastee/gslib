@@ -25,6 +25,7 @@
 
 #include <ariel/fsyswin32.h>
 #include <ariel/image.h>
+#include <ariel/scene.h>
 
 __ariel_begin__
 
@@ -235,6 +236,28 @@ bool fsys_win32::create_text_image(image& img, const gchar* str, int x, int y, c
         x += gm.gmCellIncX;
         y += gm.gmCellIncY;
     }
+    return true;
+}
+
+bool fsys_win32::create_text_texture(texture2d** tex, const gchar* str, int x, int y, const color& cr, int len)
+{
+    assert(str);
+    scene* scn = scene::get_singleton_ptr();
+    assert(scn);
+    rendersys* rsys = scn->get_rendersys();
+    assert(rsys);
+    if(len < 0)
+        len = strtool::length(str);
+    int w, h;
+    get_size(str, w, h, len);
+    image img;
+    img.create(image::fmt_rgba, w + x, h + y);
+    img.enable_alpha_channel(true);
+    if(!create_text_image(img, str, x, y, cr, len))
+        return false;
+    auto* p = rsys->create_texture2d(img, 1, D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0);
+    assert(p && tex);
+    *tex = p;
     return true;
 }
 

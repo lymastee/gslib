@@ -23,8 +23,9 @@
  * SOFTWARE.
  */
 
-#include <ariel/rose.h>
 #include <gslib/error.h>
+#include <ariel/rose.h>
+#include <ariel/textureop.h>
 
 #if use_rendersys_d3d_11
 #include <ariel/rosed3d11.cpp>
@@ -177,15 +178,16 @@ static void rose_filling_klm_coords(bat_triangle* triangle, _vf pt[3])
     }
 }
 
-static bool is_image_transposed(const image& img, const rectf& rc)
+static bool is_image_transposed(texture2d* img, const rectf& rc)
 {
-    assert((img.get_width() == rc.width() && img.get_height() == rc.height()) ||
-        (img.get_width() == rc.height() && img.get_height() == rc.width())
-    );
-    return !(img.get_width() == rc.width() && img.get_height() == rc.height());
+    assert(img);
+    int w, h;
+    textureop::get_texture_dimension(img, w, h);
+    assert((w == rc.width() && h == rc.height()) || (w == rc.height() && h == rc.width()));
+    return !(w == rc.width() && h == rc.height());
 }
 
-static vec2 rose_calc_tex_coords(const image* img, const vec2& p, const tex_batcher& batch)
+static vec2 rose_calc_tex_coords(texture2d* img, const vec2& p, const tex_batcher& batch)
 {
     assert(img);
     const auto& lm = batch.get_location_map();
@@ -196,7 +198,7 @@ static vec2 rose_calc_tex_coords(const image* img, const vec2& p, const tex_batc
     ms.scaling(1.f / batch.get_width(), 1.f / batch.get_height());
     m.multiply(mt, ms);
     vec3 pt;
-    is_image_transposed(*img, f->second) ? pt.multiply(vec3(p.y, p.x, 1.f), m) :
+    is_image_transposed(img, f->second) ? pt.multiply(vec3(p.y, p.x, 1.f), m) :
         pt.multiply(vec3(p.x, p.y, 1.f), m);
     return vec2(pt.x / pt.z, pt.y / pt.z);
 }
@@ -430,9 +432,9 @@ void rose_fill_batch_klm_tex::create_from_fill(bat_fill_batch* bat)
         auto* bind2 = reinterpret_cast<rose_bind_info_tex*>(joint2->get_binding());
         auto* bind3 = reinterpret_cast<rose_bind_info_tex*>(joint3->get_binding());
         assert(bind1 && bind2 && bind3);
-        _texbatch.add_image(bind1->img);
-        _texbatch.add_image(bind2->img);
-        _texbatch.add_image(bind3->img);
+        _texbatch.add_texture(bind1->img);
+        _texbatch.add_texture(bind2->img);
+        _texbatch.add_texture(bind3->img);
     });
     /* arrange texture batch */
     _texbatch.arrange();
@@ -480,8 +482,8 @@ void rose_fill_batch_klm_tex::create_from_stroke(bat_stroke_batch* bat)
         auto* os1 = reinterpret_cast<rose_bind_info_tex*>(sj1->get_binding());
         auto* os2 = reinterpret_cast<rose_bind_info_tex*>(sj2->get_binding());
         assert(os1 && os2);
-        _texbatch.add_image(os1->img);
-        _texbatch.add_image(os2->img);
+        _texbatch.add_texture(os1->img);
+        _texbatch.add_texture(os2->img);
     }
     /* arrange texture batch */
     _texbatch.arrange();
@@ -599,8 +601,8 @@ void rose_stroke_batch_coef_tex::create_vertices(bat_batch* bat)
         auto* os1 = reinterpret_cast<rose_bind_info_tex*>(sj1->get_binding());
         auto* os2 = reinterpret_cast<rose_bind_info_tex*>(sj2->get_binding());
         assert(os1 && os2);
-        _texbatch.add_image(os1->img);
-        _texbatch.add_image(os2->img);
+        _texbatch.add_texture(os1->img);
+        _texbatch.add_texture(os2->img);
     }
     /* arrange texture batch */
     _texbatch.arrange();
@@ -1205,7 +1207,7 @@ void rose_paint_solid_brush(graphics_obj& gfx, rose_bind_list_cr& bind_cache, co
     }
 }
 
-static void rose_paint_picture_joint(lb_joint* joint, rose_bind_list_tex& bind_cache, const image* img, const mat3& m)
+static void rose_paint_picture_joint(lb_joint* joint, rose_bind_list_tex& bind_cache, texture2d* img, const mat3& m)
 {
     assert(joint && img);
     vec3 tex;
@@ -1225,9 +1227,11 @@ void rose_paint_picture_brush(graphics_obj& gfx, const rectf& bound, rose_bind_l
     auto* img = static_cast<const painter_picture_data*>(ext.get())->get_image();
     assert(img);
     /* map the bound to image size */
+    int w, h;
+    textureop::get_texture_dimension(img, w, h);
     mat3 mt, ms, m;
     mt.translation(-bound.left, -bound.top);
-    ms.scaling(img->get_width() / bound.width(), img->get_height() / bound.height());
+    ms.scaling((float)w / bound.width(), (float)h / bound.height());
     m.multiply(mt, ms);
     auto& joints = gfx->get_joints();
     for(auto* p : joints) {
@@ -1276,9 +1280,11 @@ void rose_paint_picture_pen(graphics_obj& gfx, const rectf& bound, rose_bind_lis
     auto* img = static_cast<const painter_picture_data*>(ext.get())->get_image();
     assert(img);
     /* map the bound to image size */
+    int w, h;
+    textureop::get_texture_dimension(img, w, h);
     mat3 mt, ms, m;
     mt.translation(bound.left, bound.top);
-    ms.scaling(img->get_width() / bound.width(), img->get_height() / bound.height());
+    ms.scaling((float)w / bound.width(), (float)h / bound.height());
     m.multiply(mt, ms);
     auto& joints = gfx->get_joints();
     for(auto* p : joints) {

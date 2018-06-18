@@ -173,11 +173,10 @@ bool rendersys_d3d11::setup(uint hwnd, const configs& cfg)
     }
     if(!_device || !_swapchain)
         return false;
-    ID3D11Texture2D* buffer = nullptr;
+    com_ptr<ID3D11Texture2D> buffer;
     if(FAILED(_swapchain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&buffer)))
         return false;
-    bool fail = FAILED(_device->CreateRenderTargetView(buffer, 0, &_rtview));
-    buffer->Release();
+    bool fail = FAILED(_device->CreateRenderTargetView(buffer.get(), 0, &_rtview));
     if(fail)
         return false;
     _context->OMSetRenderTargets(1, &_rtview, 0);
@@ -190,7 +189,7 @@ bool rendersys_d3d11::setup(uint hwnd, const configs& cfg)
     vp.TopLeftY = 0;
     _context->RSSetViewports(1, &vp);
     /* enable alpha blending */
-    ID3D11BlendState* blendstate = nullptr;
+    com_ptr<ID3D11BlendState> blendstate;
     D3D11_BLEND_DESC bd;
     memset(&bd, 0, sizeof(bd));
     bd.RenderTarget[0].BlendEnable = TRUE;
@@ -204,8 +203,7 @@ bool rendersys_d3d11::setup(uint hwnd, const configs& cfg)
     fail = FAILED(_device->CreateBlendState(&bd, &blendstate));
     if(fail)
         return false;
-    _context->OMSetBlendState(blendstate, 0, 0xffffffff);
-    blendstate->Release();
+    _context->OMSetBlendState(blendstate.get(), 0, 0xffffffff);
     return true;
 }
 
@@ -458,6 +456,16 @@ shader_resource_view* rendersys_d3d11::create_shader_resource_view(render_resour
     return p;
 }
 
+unordered_access_view* rendersys_d3d11::create_unordered_access_view(render_resource* res)
+{
+    assert(res);
+    unordered_access_view* p = nullptr;
+    HRESULT hr = _device->CreateUnorderedAccessView(res, nullptr, &p);
+    if(FAILED(hr) || !p)
+        return nullptr;
+    return p;
+}
+
 render_sampler_state* rendersys_d3d11::create_sampler_state(sampler_state_filter filter)
 {
     D3D11_SAMPLER_DESC desc;
@@ -517,15 +525,53 @@ render_texture2d* rendersys_d3d11::create_texture2d(const image& img, uint mips,
     desc.BindFlags = bindflags;
     desc.CPUAccessFlags = cpuflags;
     desc.MiscFlags = 0;
+    if(mips > 1) {
+        desc.MiscFlags |= D3D11_RESOURCE_MISC_GENERATE_MIPS;
+        desc.BindFlags |= D3D11_BIND_RENDER_TARGET;
+    }
     D3D11_SUBRESOURCE_DATA subdata;
     subdata.pSysMem = img.get_data(0, 0);
     subdata.SysMemPitch = img.get_bytes_per_line();
     subdata.SysMemSlicePitch = 0;
     ID3D11Texture2D* tex = nullptr;
-    HRESULT hr = _device->CreateTexture2D(&desc, &subdata, &tex);
-    if(FAILED(hr))
+    if(FAILED(_device->CreateTexture2D(&desc, &subdata, &tex)))
         return nullptr;
     assert(tex);
+    if(mips > 1) {
+        com_ptr<ID3D11ShaderResourceView> spsrv;
+        _device->CreateShaderResourceView(tex, nullptr, &spsrv);
+        _context->GenerateMips(spsrv.get());
+    }
+    return tex;
+}
+
+render_texture2d* rendersys_d3d11::create_texture2d(int width, int height, uint format, uint mips, uint usage, uint bindflags, uint cpuflags)
+{
+    D3D11_TEXTURE2D_DESC desc;
+    desc.Width = (uint)width;
+    desc.Height = (uint)height;
+    desc.MipLevels = mips;
+    desc.ArraySize = 1;
+    desc.Format = (DXGI_FORMAT)format;
+    desc.SampleDesc.Count = 1;
+    desc.SampleDesc.Quality = 0;
+    desc.Usage = (D3D11_USAGE)usage;
+    desc.BindFlags = bindflags;
+    desc.CPUAccessFlags = cpuflags;
+    desc.MiscFlags = 0;
+    if(mips > 1) {
+        desc.MiscFlags |= D3D11_RESOURCE_MISC_GENERATE_MIPS;
+        desc.BindFlags |= D3D11_BIND_RENDER_TARGET;
+    }
+    ID3D11Texture2D* tex = nullptr;
+    if(FAILED(_device->CreateTexture2D(&desc, nullptr, &tex)))
+        return nullptr;
+    assert(tex);
+    if(mips > 1) {
+        com_ptr<ID3D11ShaderResourceView> spsrv;
+        _device->CreateShaderResourceView(tex, nullptr, &spsrv);
+        _context->GenerateMips(spsrv.get());
+    }
     return tex;
 }
 
@@ -679,5 +725,6 @@ void rendersys_d3d11::install_configs(const configs& cfg)
 void release_vertex_buffer(render_vertex_buffer* buf) { if(buf) buf->Release(); }
 void release_index_buffer(render_index_buffer* buf) { if(buf) buf->Release(); }
 void release_constant_buffer(render_constant_buffer* buf) { if(buf) buf->Release(); }
+void release_texture2d(render_texture2d* tex) { if(tex) tex->Release(); }
 
 __ariel_end__

@@ -27,7 +27,8 @@
 #include <gslib/error.h>
 #include <ariel/widget.h>
 #include <ariel/scene.h>
-#include <ariel/imagefx.h>
+#include <ariel/imageop.h>
+#include <ariel/textureop.h>
 
 __ariel_begin__
 
@@ -221,14 +222,23 @@ void widget::refresh(bool imm)
 button::button(wsys_manager* m): widget(m)
 {
     _source = nullptr;
+    _bkground = nullptr;
     _4states = false;
-    _btnstate = bs_zr;
+    _btnstate = bs_none;
+}
+
+button::~button()
+{
+    if(_bkground) {
+        release_texture2d(_bkground);
+        _bkground = nullptr;
+    }
 }
 
 void button::draw(painter* paint)
 {
-    if(_bkground.is_valid())
-        paint->draw_image(&_bkground, 0, 0);
+    if(_bkground)
+        paint->draw_image(_bkground, 0, 0);
 }
 
 void button::enable(bool b)
@@ -275,20 +285,22 @@ void button::on_leave(uint um, const point& pt)
     }
 }
 
-void button::set_image(const image* img, bool as)
+void button::set_image(texture2d* img, bool fs)
 {
+    assert(img);
     assert(!_source);
     if(_source != nullptr)
         return;
     _source = img;
-    _4states = as;
+    _4states = fs;
     refresh(false);
-    int w = img->get_width(), h = img->get_height();
-    if(as) w >>= 2;
+    int w, h;
+    textureop::get_texture_dimension(img, w, h);
+    if(fs) w >>= 2;
     _pos.right = _pos.left + w;
     _pos.bottom = _pos.top + h;
-    _bkground.create(image::fmt_rgba, w, h);
-    _bkground.enable_alpha_channel(img->has_alpha());
+    //_bkground.create(image::fmt_rgba, w, h);
+    //_bkground.enable_alpha_channel(img->has_alpha());
     _enable ? set_normal() : set_gray();
 }
 
@@ -296,9 +308,9 @@ void button::set_press()
 {
     if(!_source)
         return;
-    _4states ?
-        _bkground.copy(*_source, 0, 0, get_width(), get_height(), get_width() << 1, 0) :
-        imagefx::set_brightness(_bkground, *_source, 0.7f);
+    //_4states ?
+    //    _bkground.copy(*_source, 0, 0, get_width(), get_height(), get_width() << 1, 0) :
+    //    imageop::set_brightness(_bkground, *_source, 0.7f);
     refresh(refresh_immediately);
 }
 
@@ -306,9 +318,9 @@ void button::set_normal()
 {
     if(!_source)
         return;
-    _4states ?
-        _bkground.copy(*_source, 0, 0, get_width(), get_height(), 0, 0) :
-        _bkground.copy(*_source);
+    //_4states ?
+    //    _bkground.copy(*_source, 0, 0, get_width(), get_height(), 0, 0) :
+    //    _bkground.copy(*_source);
     refresh(refresh_immediately);
 }
 
@@ -316,9 +328,9 @@ void button::set_hover()
 {
     if(!_source)
         return;
-    _4states ?
-        _bkground.copy(*_source, 0, 0, get_width(), get_height(), get_width(), 0) :
-        imagefx::set_brightness(_bkground, *_source, 1.3f);
+    //_4states ?
+    //    _bkground.copy(*_source, 0, 0, get_width(), get_height(), get_width(), 0) :
+    //    imageop::set_brightness(_bkground, *_source, 1.3f);
     refresh(refresh_immediately);
 }
 
@@ -326,9 +338,9 @@ void button::set_gray()
 {
     if(!_source)
         return;
-    _4states ?
-        _bkground.copy(*_source, 0, 0, get_width(), get_height(), get_width() * 3, 0) :
-        imagefx::set_gray(_bkground, *_source);
+    //_4states ?
+    //    _bkground.copy(*_source, 0, 0, get_width(), get_height(), get_width() * 3, 0) :
+    //    imageop::set_gray(_bkground, *_source);
     refresh(refresh_immediately);
 }
 
@@ -579,7 +591,7 @@ void edit::on_keydown(uint um, unikey uk)
             int size = end - start + 1;
             size *= sizeof(gchar);
             assert(_manager);
-            _manager->set_clipboard(clipfmt_text, _textbuf.c_str() + start, size);
+            _manager->set_clipboard(cf_text, _textbuf.c_str() + start, size);
             if(uk == _t('X'))
                 del_select();
         }
@@ -882,7 +894,7 @@ scroller::scroller(wsys_manager* m): button(m)
     _vtscroll = false;
 }
 
-void scroller::set_scroller(int r1, int r2, bool vts, const image* img, bool as)
+void scroller::set_scroller(int r1, int r2, bool vts, texture2d* img, bool as)
 {
     assert(r1 <= r2 && img);
     set_image(img, as);
@@ -1157,6 +1169,7 @@ void wsys_manager::on_close()
 {
     _focus = nullptr;
     _capture = nullptr;
+    _hover = nullptr;
     if(_root)
         remove_widget(_root);
 }
@@ -1305,13 +1318,13 @@ void wsys_manager::set_ime(widget* ptr, point pt, const font& ft)
     _driver->set_ime(pt, ft);
 }
 
-void wsys_manager::set_clipboard(const gchar* fmt, const void* ptr, int size)
+void wsys_manager::set_clipboard(clipfmt fmt, const void* ptr, int size)
 {
     assert(_driver);
     //_driver->set_clipboard(fmt, ptr, size);
 }
 
-int wsys_manager::get_clipboard(const gchar* fmt, const void*& ptr)
+int wsys_manager::get_clipboard(clipfmt fmt, const void*& ptr)
 {
     assert(_driver);
     //return _driver->get_clipboard(fmt, ptr);

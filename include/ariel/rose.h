@@ -52,7 +52,7 @@ struct rose_bind_info_cr
 
 struct rose_bind_info_tex
 {
-    const image*        img;
+    texture2d*          img;
     vec2                tex;
 };
 

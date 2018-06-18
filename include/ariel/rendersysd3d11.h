@@ -54,8 +54,10 @@ public:
     virtual index_buffer* create_index_buffer(uint count, bool read, bool write, uint usage, const void* ptr) override;
     virtual constant_buffer* create_constant_buffer(uint stride, bool read, bool write, const void* ptr) override;
     virtual shader_resource_view* create_shader_resource_view(render_resource* res) override;
+    virtual unordered_access_view* create_unordered_access_view(render_resource* res) override;
     virtual sampler_state* create_sampler_state(sampler_state_filter filter) override;
     virtual texture2d* create_texture2d(const image& img, uint mips, uint usage, uint bindflags, uint cpuflags) override;
+    virtual texture2d* create_texture2d(int width, int height, uint format, uint mips, uint usage, uint bindflags, uint cpuflags) override;
     virtual void update_buffer(void* buf, int size, const void* ptr) override;
     virtual void set_vertex_format(vertex_format* vfmt) override;
     virtual void set_vertex_buffer(vertex_buffer* vb, uint stride, uint offset) override;
@@ -88,6 +90,7 @@ protected:
 
 public:
     render_device* get_device() const { return _device; }
+    render_context* get_immediate_context() const { return _context; }
 };
 
 template<class res_class>

@@ -23,43 +23,18 @@
  * SOFTWARE.
  */
 
-#ifndef fsyswin32_02c06bb0_546a_4008_a296_7cd2c199bade_h
-#define fsyswin32_02c06bb0_546a_4008_a296_7cd2c199bade_h
+#include <ariel/textureop.h>
 
-#include <windows.h>
-#include <gslib/std.h>
-#include <ariel/sysop.h>
+#if use_rendersys_d3d_11
+#include <ariel/textureopd3d11.cpp>
+#endif
 
 __ariel_begin__
 
-struct font_pair
+textureop::textureop(rendersys* rsys):
+    _rsys(rsys)
 {
-    font    _font;
-    HFONT   _handle;
-};
-
-typedef deque<font_pair> fplist;
-
-class fsys_win32:
-    public fontsys
-{
-public:
-    fsys_win32();
-    virtual ~fsys_win32();
-    virtual void initialize() override;
-    virtual int set_font(const font& f, int idx = -1) override;
-    virtual bool get_size(const gchar* str, int& w, int& h, int len = -1) override;
-    virtual bool create_text_image(image& img, const gchar* str, int x, int y, const color& cr, int len = -1) override;
-    virtual bool create_text_texture(texture2d** tex, const gchar* str, int x, int y, const color& cr, int len = -1) override;
-    virtual void draw(image& img, const gchar* str, int x, int y, const color& cr, int len = -1) override;
-
-protected:
-    HDC         _container_dc;
-    HFONT       _old_font;
-    fplist      _fplist;
-    int         _current;
-};
+    assert(rsys);
+}
 
 __ariel_end__
-
-#endif

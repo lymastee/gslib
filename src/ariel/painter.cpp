@@ -29,6 +29,7 @@
 #include <ariel/painter.h>
 #include <ariel/utility.h>
 #include <ariel/scene.h>
+#include <ariel/textureop.h>
 
 __ariel_begin__
 
@@ -138,7 +139,7 @@ void painter::on_draw_end()
 {
 }
 
-void painter::draw_image(const image* img, float x, float y)
+void painter::draw_image(texture2d* img, float x, float y)
 {
     assert(img);
     save();
@@ -148,7 +149,9 @@ void painter::draw_image(const image* img, float x, float y)
     brush.set_tag(painter_brush::picture);
     brush.set_extra(ext);
     set_brush(brush);
-    draw_rect(rectf(x, y, (float)img->get_width(), (float)img->get_height()));
+    int w, h;
+    textureop::get_texture_dimension(img, w, h);
+    draw_rect(rectf(x, y, (float)w, (float)h));
     restore();
 }
 
@@ -181,22 +184,21 @@ void painter::draw_text(const gchar* str, int x, int y, const color& cr, int len
     assert(scn);
     fontsys* fsys = scn->get_fontsys();
     assert(fsys);
-    int w, h;
-    fsys->get_size(str, w, h, length);
-    image* img = gs_new(image);
-    assert(img);
-    img->create(image::fmt_rgba, w, h);
-    img->enable_alpha_channel(true);
-    _text_image_cache.push_back(img);
-    fsys->create_text_image(*img, str, 0, 0, cr, length);
-    draw_image(img, (float)x, (float)y);
+    com_ptr<texture2d> tex;
+    if(!fsys->create_text_texture(&tex, str, 0, 0, cr, length)) {
+        assert(!"create text texture failed.");
+        return;
+    }
+    assert(tex);
+    _text_image_cache.push_back(tex.get());
+    draw_image(tex.detach(), (float)x, (float)y);
 }
 
 void painter::destroy_text_image_cache()
 {
     for(auto* img : _text_image_cache) {
         assert(img);
-        gs_del(image, img);
+        release_texture2d(img);
     }
     _text_image_cache.clear();
 }

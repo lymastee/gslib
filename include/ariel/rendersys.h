@@ -90,8 +90,10 @@ public:
     virtual index_buffer* create_index_buffer(uint count, bool read, bool write, uint usage, const void* ptr = 0) = 0;
     virtual constant_buffer* create_constant_buffer(uint stride, bool read, bool write, const void* ptr = 0) = 0;
     virtual shader_resource_view* create_shader_resource_view(render_resource* res) = 0;    /* texture view in GL */
+    virtual unordered_access_view* create_unordered_access_view(render_resource* res) = 0;
     virtual sampler_state* create_sampler_state(sampler_state_filter filter) = 0;
     virtual texture2d* create_texture2d(const image& img, uint mips, uint usage, uint bindflags, uint cpuflags) = 0;
+    virtual texture2d* create_texture2d(int width, int height, uint format, uint mips, uint usage, uint bindflags, uint cpuflags) = 0;
     virtual void update_buffer(void* buf, int size, const void* ptr) = 0;
     virtual void set_vertex_format(vertex_format* vfmt) = 0;
     virtual void set_vertex_buffer(vertex_buffer* vb, uint stride, uint offset) = 0;
@@ -123,6 +125,7 @@ public:
 extern void release_vertex_buffer(render_vertex_buffer* buf);
 extern void release_index_buffer(render_index_buffer* buf);
 extern void release_constant_buffer(render_constant_buffer* buf);
+extern void release_texture2d(render_texture2d* tex);
 
 template<class res_class>
 render_resource* convert_to_resource(res_class*);

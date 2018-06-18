@@ -4,7 +4,8 @@
 #include <ariel/widget.h>
 #include <ariel/scene.h>
 #include <gslib/error.h>
-#include <ariel/imagefx.h>
+#include <ariel/imageop.h>
+#include <ariel/textureop.h>
 
 using namespace gs;
 using namespace gs::ariel;
@@ -21,15 +22,21 @@ public:
     {
         if(!__super::create(ptr, name, rc, style))
             return false;
-        _bkgnd.create(image::fmt_rgba, rc.width(), rc.height());
-        _bkgnd.enable_alpha_channel(true);
-        _bkgnd.clear(color(0, 0, 0, 60));
-        set_bkground(&_bkgnd);
+        image img;
+        img.create(image::fmt_rgba, rc.width(), rc.height());
+        img.enable_alpha_channel(true);
+        img.clear(color(0, 0, 0, 60));
+        auto* rsys = scene::get_singleton_ptr()->get_rendersys();
+        assert(rsys);
+        auto* tex = rsys->create_texture2d(img, 1, D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0);
+        assert(tex);
+        _bkgnd.attach(tex);
+        set_bkground(tex);
         return true;
     }
 
 protected:
-    image       _bkgnd;
+    com_ptr<texture2d>  _bkgnd;
 };
 
 /* float text */
@@ -47,7 +54,7 @@ public:
     }
     virtual void draw(painter* cvs)
     {
-        cvs->draw_image(&_cpytext, 0, 0);
+        cvs->draw_image(_cpytext.get(), 0, 0);
     }
     void on_animation(uint)
     {
@@ -56,8 +63,8 @@ public:
             _manager->remove_widget(this);
         }
         else {
-            _cpytext.copy(_text);
-            imagefx::set_fade(_cpytext, _alpha);
+            //_cpytext.copy(_text);
+            //imageop::set_fade(_cpytext, _alpha);
             point pt(get_rect().left, get_rect().top);
             pt.y -= 2;
             move(pt);
@@ -71,13 +78,11 @@ public:
         pfs->set_font(ft);
         int w, h;
         pfs->get_size(str, w, h);
-        _text.create(image::fmt_rgba, w, h);
-        _text.enable_alpha_channel(true);
-        assert(_text.is_valid());
-        pfs->create_text_image(_text, str, 0, 0, color(200,20,20));
-        _cpytext.create(image::fmt_rgba, w, h);
-        _cpytext.enable_alpha_channel(true);
-        _cpytext.copy(_text);
+        pfs->create_text_texture(&_text, str, 0, 0, color(200,20,20));
+        rendersys* rsys = scene::get_singleton_ptr()->get_rendersys();
+        assert(rsys);
+        _cpytext.attach(rsys->create_texture2d(w, h, DXGI_FORMAT_R8G8B8A8_UNORM, 1, D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS, 0));
+        textureop(rsys).copy_texture_rect(_cpytext.get(), _text.get(), rectf(0, 0, (float)w, (float)h));
         _alpha = 1.0f;
         _fadeby = 0.02f;
         rect rc = get_rect();
@@ -102,11 +107,11 @@ public:
     }
 
 protected:
-    image       _text;
-    image       _cpytext;
-    real32      _alpha;
-    real32      _fadeby;
-    timer       _animtimer;
+    com_ptr<texture2d>  _text;
+    com_ptr<texture2d>  _cpytext;
+    real32              _alpha;
+    real32              _fadeby;
+    timer               _animtimer;
 };
 
 /* background */
@@ -122,26 +127,36 @@ public:
     {
         if(!__super::create(ptr, name, rc, style))
             return false;
-        if(!_bkgnd.load(_t("bkground.png")))
+
+        image bkgnd;
+        if(!bkgnd.load(_t("bkground.png")))
             return false;
+        rendersys* rsys = scene::get_singleton_ptr()->get_rendersys();
+        assert(rsys);
+        auto* p1 = rsys->create_texture2d(bkgnd, 1, D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0);
+        assert(p1);
+        _bkgnd.attach(p1);
 
         /* create sub-widgets */
-        _editptr = _manager->add_widget<weditctl>(this, _t("edit"), rect(36,20,150,18), sm_hitable|sm_visible);
-        assert(_editptr);
-        _editptr->set_text(_t("ÇëÊäÈë..."));
-
-        _btn = _manager->add_widget<button>(this, _t("clickme"), rect(195,12,0,0), sm_hitable|sm_visible);
-        assert(_btn);
-        _btn_image.load(_t("button.png"));
-        _btn->set_image(&_btn_image);
-
-        connect_notify(_btn, button::on_click, this, on_btn_clicked, 3);
+       _editptr = _manager->add_widget<weditctl>(this, _t("edit"), rect(36,20,150,18), sm_hitable|sm_visible);
+       assert(_editptr);
+       _editptr->set_text(_t("ÇëÊäÈë..."));
+       
+       _btn = _manager->add_widget<button>(this, _t("clickme"), rect(195,12,0,0), sm_hitable|sm_visible);
+       assert(_btn);
+       image btn_image;
+       btn_image.load(_t("button.png"));
+       _btn_image.attach(rsys->create_texture2d(btn_image, 1, D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0));
+       
+       _btn->set_image(_btn_image.get());
+       
+       connect_notify(_btn, button::on_click, this, on_btn_clicked, 3);
 
         return true;
     }
     virtual void draw(painter* cvs)
     {
-        cvs->draw_image(&_bkgnd, 0, 0);
+        cvs->draw_image(_bkgnd.get(), 0, 0);
     }
     void on_btn_clicked(uint um, unikey uk, const point& pt)
     {
@@ -154,10 +169,10 @@ public:
     }
 
 protected:
-    image       _bkgnd;
-    weditctl*   _editptr;
-    button*     _btn;
-    image       _btn_image;
+    com_ptr<texture2d>  _bkgnd;
+    weditctl*           _editptr;
+    button*             _btn;
+    com_ptr<texture2d>  _btn_image;
 };
 
 int gs_main()

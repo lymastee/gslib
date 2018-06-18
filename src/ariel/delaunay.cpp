@@ -196,7 +196,8 @@ static void dt_collect_intersect_edges_w(const vec2& p1, const vec2& p2, dt_edge
     /* which means the collection was over. */
     if(init->get_org_point() == p2)
         return;
-    /* overkill:
+    /*
+     * overkill:
      * if the init edge was overlap the p1 - p2 linked line, then we should skip it.
      * considered that the following detections were done from the org prev to itself,
      * so hereby we continue this procedure by its left next.
@@ -372,7 +373,8 @@ bool dt_edge::is_outside_boundary() const
     auto* i = _prev->get_org();
     auto* j = _next->get_dest();
     assert(i && j);
-    /* There is an exception:
+    /*
+     * There is an exception:
      * if the whole triangulation has only 1 triangle, this test will fail.
      */
     return i != j;

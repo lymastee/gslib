@@ -38,6 +38,7 @@
 #include <stack>
 #include <unordered_map>
 #include <unordered_set>
+#include <comip.h>
 
 #include <gslib/type.h>
 #include <gslib/pool.h>
@@ -296,6 +297,97 @@ class unordered_multiset:
     public std::unordered_multiset<_kty, _hs, _equ> {};
 
 #endif
+
+template<class _cls>
+class com_ptr
+{
+public:
+    typedef _cls* ptr_type;
+    typedef com_ptr<_cls> myref;
+
+public:
+    com_ptr() { _ptr = nullptr; }
+    ~com_ptr()
+    {
+        if(_ptr) {
+            _ptr->Release();
+            _ptr = nullptr;
+        }
+    }
+    com_ptr(_cls* p)
+    {
+        _ptr = p;
+        if(_ptr)
+            _ptr->AddRef();
+    }
+    com_ptr(const myref& p)
+    {
+        _ptr = p;
+        if(_ptr)
+            _ptr->AddRef();
+    }
+    com_ptr(IUnknown* p): _ptr(nullptr)
+    {
+        if(p != nullptr)
+            p->QueryInterface(__uuidof(_cls), (void**)&_ptr);
+    }
+    void attach(_cls* p)
+    {
+        if(_ptr)
+            _ptr->Release();
+        _ptr = p;
+    }
+    _cls* detach()
+    {
+        _cls* p = _ptr;
+        _ptr = nullptr;
+        return p;
+    }
+    void clear()
+    {
+        if(_ptr) {
+            _ptr->Release();
+            _ptr = nullptr;
+        }
+    }
+    _cls* operator=(_cls* p)
+    {
+        if(p) p->AddRef();
+        if(_ptr)
+            _ptr->Release();
+        return _ptr = p;
+    }
+    _cls* operator=(const myref& p)
+    {
+        if(p._ptr)
+            p._ptr->AddRef();
+        if(_ptr)
+            _ptr->Release();
+        return _ptr = p._ptr;
+    }
+    _cls* operator=(IUnknown* p)
+    {
+        _cls* tmp = nullptr;
+        if(p)
+            p->QueryInterface(__uuidof(_cls), (void**)&tmp);
+        if(_ptr)
+            _ptr->Release();
+        return _ptr = tmp;
+    }
+    _cls** operator&()
+    {
+        assert(!_ptr);
+        return &_ptr;
+    }
+    _cls* get() const { return _ptr; }
+    _cls* operator->() const { return _ptr; }
+    bool operator!() const { return !_ptr; }
+    bool operator == (_cls* p) const { return _ptr == p; }
+    bool operator != (_cls* p) const { return _ptr != p; }
+
+private:
+    _cls*           _ptr;
+};
 
 __gslib_end__
 

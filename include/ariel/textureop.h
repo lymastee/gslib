@@ -33,9 +33,28 @@ __ariel_begin__
 class textureop
 {
 public:
+    struct cb_configs
+    {
+        int             x, y, reserved1, reserved2;
+        vec4            cr;
+        float           arg;
+    };
+
+public:
     textureop(rendersys* rsys);
     void copy_texture_rect(render_texture2d* dest, render_texture2d* src, const rectf& rc);
+    void initialize_texture_rect(unordered_access_view* dest, const color& cr, const rectf& rc);
     void transpose_texture_rect(unordered_access_view* dest, render_texture2d* src, const rectf& rc);
+    void set_brightness(unordered_access_view* dest, render_texture2d* src, float s);
+    void set_gray(unordered_access_view* dest, render_texture2d* src);
+    void set_fade(unordered_access_view* dest, render_texture2d* src, float s);
+    void set_inverse(unordered_access_view* dest, render_texture2d* src);
+    void initialize_texture_rect(render_texture2d* dest, const color& cr, const rectf& rc);
+    void transpose_texture_rect(render_texture2d* dest, render_texture2d* src, const rectf& rc);
+    void set_brightness(render_texture2d* dest, render_texture2d* src, float s);
+    void set_gray(render_texture2d* dest, render_texture2d* src);
+    void set_fade(render_texture2d* dest, render_texture2d* src, float s);
+    void set_inverse(render_texture2d* dest, render_texture2d* src);
 
 public:
     static void get_texture_dimension(render_texture2d* p, int& w, int& h);
@@ -48,6 +67,7 @@ protected:
 private:
     render_device* get_device() const;
     render_context* get_immediate_context() const;
+    render_constant_buffer* get_constant_buffer() const;
     template<class _cls>
     bool check_valid_device(_cls* p) const;
 };

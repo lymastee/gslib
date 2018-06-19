@@ -302,7 +302,12 @@ project "ariel"
 		'fxc /T ps_4_1 /E "ariel_smaa_blending_weight_calculation_ps" /Fd /Zi /Fh "ariel_smaa_blending_weight_calculation_ps.h" "../../src/ariel/smaa.hlsl"',
 		'fxc /T vs_4_0 /E "ariel_smaa_neighborhood_blending_vs" /Fd /Zi /Fh "ariel_smaa_neighborhood_blending_vs.h" "../../src/ariel/smaa.hlsl"',
 		'fxc /T ps_4_1 /E "ariel_smaa_neighborhood_blending_ps" /Fd /Zi /Fh "ariel_smaa_neighborhood_blending_ps.h" "../../src/ariel/smaa.hlsl"',
-		'fxc /T cs_5_0 /E "ariel_transpose_image_cs" /Fd /Zi /Fh "ariel_transpose_image_cs.h" "../../src/ariel/textureop.hlsl"'
+		'fxc /T cs_5_0 /E "ariel_transpose_image_cs" /Fd /Zi /Fh "ariel_transpose_image_cs.h" "../../src/ariel/textureop.hlsl"',
+		'fxc /T cs_5_0 /E "ariel_initialize_image_cs" /Fd /Zi /Fh "ariel_initialize_image_cs.h" "../../src/ariel/textureop.hlsl"',
+		'fxc /T cs_5_0 /E "ariel_set_brightness_cs" /Fd /Zi /Fh "ariel_set_brightness_cs.h" "../../src/ariel/textureop.hlsl"',
+		'fxc /T cs_5_0 /E "ariel_set_gray_cs" /Fd /Zi /Fh "ariel_set_gray_cs.h" "../../src/ariel/textureop.hlsl"',
+		'fxc /T cs_5_0 /E "ariel_set_fade_cs" /Fd /Zi /Fh "ariel_set_fade_cs.h" "../../src/ariel/textureop.hlsl"',
+		'fxc /T cs_5_0 /E "ariel_set_inverse_cs" /Fd /Zi /Fh "ariel_set_inverse_cs.h" "../../src/ariel/textureop.hlsl"'
 	}
 	files {
 		"include/ariel/batch.h",

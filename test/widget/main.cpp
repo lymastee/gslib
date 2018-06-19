@@ -63,8 +63,9 @@ public:
             _manager->remove_widget(this);
         }
         else {
-            //_cpytext.copy(_text);
-            //imageop::set_fade(_cpytext, _alpha);
+            auto* rsys = scene::get_singleton_ptr()->get_rendersys();
+            assert(rsys);
+            textureop(rsys).set_fade(_cpytext.get(), _text.get(), _alpha);
             point pt(get_rect().left, get_rect().top);
             pt.y -= 2;
             move(pt);

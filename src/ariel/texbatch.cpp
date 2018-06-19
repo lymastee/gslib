@@ -169,6 +169,7 @@ render_texture2d* tex_batcher::create_texture(rendersys* rsys) const
     auto* uav = rsys->create_unordered_access_view(tex);
     assert(uav);
     spuav.attach(uav);
+    textureop(rsys).initialize_texture_rect(uav, color(0, 0, 0, 0), rectf(0.f, 0.f, w, h));
     for(const auto& value : _location_map)
         write_texture_source(rsys, uav, tex, value.first, value.second);
     return tex;

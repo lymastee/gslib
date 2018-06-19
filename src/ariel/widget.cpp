@@ -299,8 +299,9 @@ void button::set_image(texture2d* img, bool fs)
     if(fs) w >>= 2;
     _pos.right = _pos.left + w;
     _pos.bottom = _pos.top + h;
-    //_bkground.create(image::fmt_rgba, w, h);
-    //_bkground.enable_alpha_channel(img->has_alpha());
+    auto* rsys = scene::get_singleton_ptr()->get_rendersys();
+    assert(rsys);
+    _bkground = rsys->create_texture2d(w, h, DXGI_FORMAT_R8G8B8A8_UNORM, 1, D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS, 0);
     _enable ? set_normal() : set_gray();
 }
 
@@ -308,9 +309,11 @@ void button::set_press()
 {
     if(!_source)
         return;
-    //_4states ?
-    //    _bkground.copy(*_source, 0, 0, get_width(), get_height(), get_width() << 1, 0) :
-    //    imageop::set_brightness(_bkground, *_source, 0.7f);
+    auto* rsys = scene::get_singleton_ptr()->get_rendersys();
+    assert(rsys);
+    _4states ?
+        textureop(rsys).copy_texture_rect(_bkground, _source, rectf((float)(get_width() * 2), 0.f, (float)get_width(), (float)get_height())) :
+        textureop(rsys).set_brightness(_bkground, _source, 0.7f);
     refresh(refresh_immediately);
 }
 
@@ -318,9 +321,9 @@ void button::set_normal()
 {
     if(!_source)
         return;
-    //_4states ?
-    //    _bkground.copy(*_source, 0, 0, get_width(), get_height(), 0, 0) :
-    //    _bkground.copy(*_source);
+    auto* rsys = scene::get_singleton_ptr()->get_rendersys();
+    assert(rsys);
+    textureop(rsys).copy_texture_rect(_bkground, _source, rectf(0.f, 0.f, (float)get_width(), (float)get_height()));
     refresh(refresh_immediately);
 }
 
@@ -328,9 +331,11 @@ void button::set_hover()
 {
     if(!_source)
         return;
-    //_4states ?
-    //    _bkground.copy(*_source, 0, 0, get_width(), get_height(), get_width(), 0) :
-    //    imageop::set_brightness(_bkground, *_source, 1.3f);
+    auto* rsys = scene::get_singleton_ptr()->get_rendersys();
+    assert(rsys);
+    _4states ?
+        textureop(rsys).copy_texture_rect(_bkground, _source, rectf((float)get_width(), 0.f, (float)get_width(), (float)get_height())) :
+        textureop(rsys).set_brightness(_bkground, _source, 1.3f);
     refresh(refresh_immediately);
 }
 
@@ -338,9 +343,11 @@ void button::set_gray()
 {
     if(!_source)
         return;
-    //_4states ?
-    //    _bkground.copy(*_source, 0, 0, get_width(), get_height(), get_width() * 3, 0) :
-    //    imageop::set_gray(_bkground, *_source);
+    auto* rsys = scene::get_singleton_ptr()->get_rendersys();
+    assert(rsys);
+    _4states ?
+        textureop(rsys).copy_texture_rect(_bkground, _source, rectf((float)(get_width() * 3), 0.f, (float)get_width(), (float)get_height())) :
+        textureop(rsys).set_gray(_bkground, _source);
     refresh(refresh_immediately);
 }
 

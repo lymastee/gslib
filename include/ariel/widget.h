@@ -28,12 +28,11 @@
 
 #include <gslib/std.h>
 #include <gslib/dvt.h>
+#include <gslib/uuid.h>
 #include <ariel/sysop.h>
 #include <ariel/painter.h>
 
 __ariel_begin__
-
-class widget;
 
 class wsys_manager;
 
@@ -45,7 +44,7 @@ class widget:
 public:
     widget(wsys_manager* m);
     virtual ~widget();
-    virtual const gchar* get_type() const { return _t("widget"); }
+    virtual void* query_interface(const uuid& uid);
     virtual bool create(widget* ptr, const gchar* name, const rect& rc, uint style);
     virtual void close();
     virtual void show(bool b);
@@ -78,6 +77,7 @@ public:
     virtual void on_caret() {}
     virtual void on_focus(bool b) {}
     virtual void on_scroll(const point& pt, real32 scr, bool vert) {}
+    virtual void on_accelerator(unikey key, uint mask) {}
 
 protected:
     wsys_manager*   _manager;
@@ -91,14 +91,20 @@ protected:
 public:
     const string& get_name() const { return _name; }
     const rect& get_rect() const { return _pos; }
+    rectf get_rectf() const { return rectf(0.f, 0.f, (float)get_width(), (float)get_height()); }
     bool is_visible() const { return _show && (_style & sm_visible); }
     bool is_enable() const { return _enable; }
-    point& top_level(point& pt) const;
-    rect& top_level(rect& rc) const;
+    void hide() { show(false); }
+    void disable() { enable(false); }
+    point& to_global(point& pt) const;
+    rect& to_global(rect& rc) const;
     void move(const point& pt);
+    void resize(int w, int h);
     void refresh(bool imm);
     int get_width() const { return _pos.width(); }
     int get_height() const { return _pos.height(); }
+    bool register_accelerator(unikey key, uint mask);
+    widget* unregister_accelerator(unikey key, uint mask);
 
 protected:
     widget*         _last;
@@ -111,6 +117,32 @@ public:
     widget* get_last() const { return _last; }
     widget* get_next() const { return _next; }
     widget* get_child() const { return _child; }
+
+public:
+    template<class _lamb>
+    static int traverse_widget(widget* w, _lamb trav_to_stop)
+    {
+        assert(w);
+        for(auto* p = w; p; p = p->get_next()) {
+            if(auto r = trav_to_stop(p))
+                return r;
+        }
+        return 0;
+    }
+    template<class _lamb>
+    static int traverse_widget_reversed(widget* w, _lamb trav_to_stop)
+    {
+        assert(w);
+        for(auto* p = w; p; p = p->get_last()) {
+            if(auto r = trav_to_stop(p))
+                return r;
+        }
+        return 0;
+    }
+    template<class _lamb>
+    int traverse_child_widget(_lamb trav_to_stop) { return traverse_widget(_child, trav_to_stop); }
+    template<class _lamb>
+    int traverse_child_widget_reversed(_lamb trav_to_stop) { return traverse_widget_reversed(_child, trav_to_stop); }
 };
 
 class button:
@@ -123,7 +155,6 @@ public:
 public:
     button(wsys_manager* m);
     virtual ~button();
-    virtual const gchar* get_type() const override { return _t("button"); }
     virtual void draw(painter* paint) override;
     virtual void enable(bool b) override;
     virtual void on_press(uint um, unikey uk, const point& pt) override;
@@ -131,12 +162,11 @@ public:
     virtual void on_hover(uint um, const point& pt) override;
     virtual void on_leave(uint um, const point& pt) override;
 
-public:
-    void set_image(texture2d* img, bool fs = false);
-    void set_press();
-    void set_normal();
-    void set_hover();
-    void set_gray();
+protected:
+    virtual void set_press();
+    virtual void set_normal();
+    virtual void set_hover();
+    virtual void set_gray();
 
 protected:
     texture2d*      _source;
@@ -144,6 +174,8 @@ protected:
     bool            _4states;
 
 public:
+    void set_image(texture2d* img, bool fs = false);
+
     enum btnstate
     {
         bs_none     = 0,
@@ -167,7 +199,6 @@ public:
 
 public:
     edit(wsys_manager* m);
-    virtual const gchar* get_type() const override { return _t("edit"); }
     virtual bool create(widget* ptr, const gchar* name, const rect& rc, uint style) override;
     virtual void draw(painter* paint) override;
     virtual void on_press(uint um, unikey uk, const point& pt) override;
@@ -191,6 +222,12 @@ public:
     virtual void set_select(int start, int end);
     virtual void replace_select(const gchar* str);
 
+protected:
+    virtual void draw_background(painter* paint);
+    virtual void draw_normal_text(painter* paint);
+    virtual void draw_select_text(painter* paint);
+    virtual void draw_caret(painter* paint);
+
 public:
     void set_font(const font& ft) { _font = ft; }
     void set_bkground(texture2d* ptr) { _bkground = ptr; }
@@ -212,7 +249,6 @@ protected:
     color           _selcolor;
     color           _crtcolor;
     font            _font;
-    int             _font_idx;
 
 protected:
     int trim_if_overrun(bool alarm);
@@ -227,12 +263,11 @@ public:
 
 public:
     scroller(wsys_manager* m);
+    virtual bool create(widget* ptr, const gchar* name, const rect& rc, uint style) override;
+    virtual void on_hover(uint um, const point& pt) override;
     void set_scroller(int r1, int r2, bool vts, texture2d* img, bool as = false);
     void set_scroll(real32 s);
     real32 get_scroll() const { return _scrpos; }
-    virtual const gchar* get_type() const override { return _t("scroller"); }
-    virtual bool create(widget* ptr, const gchar* name, const rect& rc, uint style) override;
-    virtual void on_hover(uint um, const point& pt) override;
 
 protected:
     int             _rangemin, _rangemax;
@@ -266,6 +301,20 @@ protected:
 
 private:
     void initialize(wsys_driver* drv);
+};
+
+struct accel_key
+{
+    unikey          key;
+    uint            mask;
+
+public:
+    accel_key(): key((unikey)-1), mask(0) {}        /* invalid */
+    accel_key(unikey k, uint m): key(k), mask(m) {}
+    bool is_valid() const { return key == (unikey)-1; }
+    bool operator == (const accel_key& that) const { return key == that.key && mask == that.mask; }
+    bool from_string(const string& str);
+    const string& to_string(string& str) const;
 };
 
 class wsys_manager:
@@ -334,16 +383,16 @@ public:
     _ctor* add_widget(widget* ptr, const gchar* name, const rect& rc, uint style)
     {
         if(name && _widget_map.find(name) != _widget_map.end())
-            return 0;
+            return nullptr;
         if(!ptr && _root)
             ptr = _root;
         _ctor* p = gs_new(_ctor, this);
         assert(p);
         if(!p->create(ptr, name ? name : _t(""), rc, style)) {
             gs_del(_ctor, p);
-            return 0;
+            return nullptr;
         }
-        if(name != 0) {
+        if(name) {
             _widget_map.insert(
                 std::make_pair(name, p)
                 );
@@ -356,14 +405,28 @@ public:
     widget* find_widget(const string& name);
     bool remove_widget(widget* ptr);
     bool remove_widget(const string& name);
-    bool remove_widget(widget_map::iterator i);
+
+protected:
+    bool remove_widget_internal(widget* ptr);
 
 public:
     void set_ime(widget* ptr, point pt, const font& ft);
     void set_clipboard(clipfmt fmt, const void* ptr, int size);
     int get_clipboard(clipfmt fmt, const void*& ptr);
     int get_clipboard(clipboard_list& cl, int c);
+
+protected:
+    struct accel_key_hasher { size_t operator()(const accel_key& kval) const { return hash_bytes((const byte*)&kval, sizeof(kval)); } };
+    typedef unordered_map<accel_key, widget*, accel_key_hasher> accel_map;
+    friend bool try_proceed_accelerator(const accel_map&, unikey, uint);
+    accel_map       _accel_map;
+
+public:
+    bool register_accelerator(widget* w, unikey key, uint mask);
+    widget* unregister_accelerator(unikey key, uint mask);
 };
+
+extern const uuid uuid_widget;
 
 __ariel_end__
 

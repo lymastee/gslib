@@ -122,6 +122,8 @@ protected:
 
 public:
     painter_brush() { _tag = none; }
+    painter_brush(uint tag) { _tag = tag; }
+    painter_brush(uint tag, const color& cr) { _tag = tag; _color = cr; }
     void set_tag(uint tag) { _tag = tag; }
     uint get_tag() const { return _tag; }
     void set_color(const color& cr) { _color = cr; }
@@ -207,6 +209,8 @@ public:
     virtual painter_context& get_context() = 0;
 
 public:
+    virtual void set_font(const font& ft);
+    virtual void get_text_dimension(const gchar* str, int& w, int& h, int len = -1);
     virtual void on_draw_begin();
     virtual void on_draw_end();
     virtual void draw_image(texture2d* img, float x, float y);

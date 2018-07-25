@@ -133,6 +133,39 @@ float cubic_reparameterize(const vec4 para[2], const vec2& p)
     return -1.f;
 }
 
+static float best_cubic_reparameterize(const vec4 para[2], const vec2& p)
+{
+    float s = -1.f;
+    float min_dis = FLT_MAX;
+    vec4 tryreparax = para[0];
+    tryreparax.w -= p.x;
+    float tx[3];
+    int c1 = solve_univariate_cubic(tx, tryreparax);
+    for(int i = 0; i < c1; i ++) {
+        float t = tx[i];
+        float y = para[1].dot(vec4(t * t * t, t * t, t, 1.f));
+        float dis = abs(y - p.y);
+        if(dis < min_dis) {
+            s = t;
+            min_dis = dis;
+        }
+    }
+    vec4 tryreparay = para[1];
+    tryreparay.w -= p.y;
+    float ty[3];
+    int c2 = solve_univariate_cubic(ty, tryreparay);
+    for(int i = 0; i < c2; i ++) {
+        float t = ty[i];
+        float x = para[0].dot(vec4(t * t * t, t * t, t, 1.f));
+        float dis = abs(x - p.x);
+        if(dis < min_dis) {
+            s = t;
+            min_dis = dis;
+        }
+    }
+    return s;
+}
+
 bool is_concave_angle(const vec2& p1, const vec2& p2, const vec2& p3)
 {
     vec2 v1, v2;
@@ -306,63 +339,6 @@ int solve_univariate_quadratic(float t[2], const vec3& coef)
         t[1] = -sb - asq;
         return 2;
     }
-}
-
-static void get_cubic_pd(vec2& pd, const vec4& coef, const vec3& der, float t)
-{
-    float tsq = t * t, tcu = tsq * t;
-    pd.x = vec4dot(&coef, &vec4(tcu, tsq, t, 1.f));
-    pd.y = vec3dot(&der, &vec3(tsq, t, 1.f));
-}
-
-static float newton_iteration(const vec4& coef, const vec3& der, float t, float tolerance)
-{
-    vec2 pd;
-    get_cubic_pd(pd, coef, der, t);
-    float m = vec2ccw(&pd, &vec2(t, 1.f));
-    float x = -m / pd.y;
-    if(abs(x - t) < tolerance)
-        return x;
-    return newton_iteration(coef, der, x, tolerance);
-}
-
-static bool calc_univariate_cubic(float& t, const vec4& coef, const vec3& der, float start, float end, float tolerance)
-{
-    vec2 pdstart, pdend;
-    get_cubic_pd(pdstart, coef, der, start);
-    get_cubic_pd(pdend, coef, der, end);
-    if(pdstart.x > pdend.x && pdstart.y < 0) {
-        if(pdstart.x < 0)
-            return false;
-    }
-    else if(pdstart.x < pdend.x && pdstart.y > 0) {
-        if(pdstart.x > 0)
-            return false;
-    }
-    t = newton_iteration(coef, der, 0.5f * (start + end), tolerance);
-    return true;
-}
-
-int solve_univariate_cubic(float t[3], const vec4& coef, float tolerance)
-{
-    vec3 der;
-    get_first_derivate_coef(der, coef);
-    float dt[2];
-    int n = solve_univariate_quadratic(dt, der);
-    if(n == 2 && (dt[0] > dt[1]))
-        gs_swap(dt[0], dt[1]);
-    float dtasc[4] = { 0.f, 1.f, 1.f, 1.f };
-    int c = 1;
-    for(int i = 0; i < n; i ++) {
-        if(dt[i] > 0 && dt[i] < 1.f)
-            dtasc[c++] = dt[i];
-    }
-    int cc = 0;
-    for(int i = 0; i < c; i ++) {
-        if(calc_univariate_cubic(t[cc], coef, der, dtasc[i], dtasc[i+1], tolerance))
-            cc ++;
-    }
-    return cc;
 }
 
 static float cbrt(float d)
@@ -690,9 +666,10 @@ int get_cubic_inflection(float t[2], const vec3 ff[2], const vec2 sf[2])
     int cap = solve_univariate_quadratic(t, coef);
     int cnt = 0;
     /* filter the result within scope 0 - 1 */
+    const float tol = 1e-4f;
     for(int i = 0; i < cap; i ++) {
         float v = t[i];
-        if(v >= 0.f && v <= 1.f)
+        if(v >= tol && v <= 1.f - tol)
             t[cnt ++] = v;
     }
     return cnt;
@@ -1193,6 +1170,112 @@ void offset_cubic_bezier(vec2 c[4], const vec2 p[4], float d)
     intersectp_linear_linear(c[2], c[3], p[2], d3, v2);
 }
 
+float quad_bezier_length(const vec2 cp[3])
+{
+    vec2 t1, t2;
+    t1.add(cp[0], cp[2]).sub(t1, vec2().scale(cp[1], 2.f));
+    t2.sub(cp[1], cp[0]).scale(2.f);
+    float a = t1.lengthsq() * 4.f;
+    float b = t1.dot(t2) * 4.f;
+    float c = t2.lengthsq();
+    float ssabc = sqrtf(a + b + c);
+    return (2.f * sqrtf(a) * (2.f * a * ssabc + b * (ssabc - sqrtf(c))) + (b * b - 4.f * a * c) * (logf(b + 2.f * sqrtf(a * c)) -  logf(b + 2.f * a + 2.f * sqrtf(a) * ssabc))) / (8.f * powf(a, 1.5f));
+}
+
+float cubic_bezier_length(const vec2 cp[4], float tolerance)
+{
+    vector<vec2> quadctls;
+    cubic_to_quad_bezier(quadctls, cp, tolerance);
+    int size = (int)quadctls.size();
+    if(size <= 0 || (size - 1) % 2 != 0) {
+        assert(!"convert cubic to quad bezier failed.");
+        return 0.f;
+    }
+    float len = 0.f;
+    for(int i = 0; (i + 1) < size; i += 2)
+        len += quad_bezier_length(&quadctls.at(i));
+    return len;
+}
+
+static int cubic_to_quad_bezier_iterative(vector<vec2>& quadctls, const vec2 cp[4], float tolerance)
+{
+    float t[2];
+    int i = get_cubic_inflection(t, cp[0], cp[1], cp[2], cp[3]);
+    assert(i <= 2);
+    switch(i)
+    {
+    case 1:
+        {
+            vec2 dcp[7];
+            split_cubic_bezier(dcp, cp, t[0]);
+            cubic_to_quad_bezier_iterative(quadctls, dcp, tolerance);
+            return cubic_to_quad_bezier_iterative(quadctls, dcp + 3, tolerance);
+        }
+    case 2:
+        {
+            vec2 dcp[10];
+            if(t[0] > t[1])
+                gs_swap(t[0], t[1]);
+            split_cubic_bezier(dcp, cp, t[0], t[1]);
+            cubic_to_quad_bezier_iterative(quadctls, dcp, tolerance);
+            cubic_to_quad_bezier_iterative(quadctls, dcp + 3, tolerance);
+            return cubic_to_quad_bezier_iterative(quadctls, dcp + 6, tolerance);
+        }
+    }
+    vec2 d1, d2;
+    d1.sub(cp[1], cp[0]);
+    d2.sub(cp[3], cp[2]);
+    bool need_div = false;
+    if(is_parallel(d1, d2))
+        need_div = true;
+    else {
+        vec2 ip;
+        intersectp_linear_linear(ip, cp[0], cp[3], d1, d2);
+        float t1 = linear_reparameterize(cp[0], cp[1], ip);
+        float t2 = linear_reparameterize(cp[3], cp[2], ip);
+        if(t1 <= 0.f || t2 <= 0.f)
+            need_div = true;
+        else if(t1 < 1.f - 1e-4f || t2 < 1.f - 1e-4f) {
+            assert(!"should've had a inflection?");
+            need_div = true;
+        }
+        else {
+            vec2 v1, v2;
+            vec4 cpara[2];
+            get_cubic_parameter_equation(cpara, cp[0], cp[1], cp[2], cp[3]);
+            vec3 qpara[2];
+            get_quad_parameter_equation(qpara, cp[0], ip, cp[3]);
+            eval_quad(v2, qpara, 0.5f);
+            float s = best_cubic_reparameterize(cpara, v2);
+            if(s < 0.f)
+                need_div = true;
+            else {
+                eval_cubic(v1, cpara, s);
+                float d = vec2().sub(v2, v1).length();
+                if(d < tolerance) {
+                    quadctls.push_back(ip);
+                    quadctls.push_back(cp[3]);
+                    return (int)quadctls.size();
+                }
+                else
+                    need_div = true;
+            }
+        }
+    }
+    assert(need_div);
+    vec2 dcp[7];
+    split_cubic_bezier(dcp, cp, 0.5f);
+    cubic_to_quad_bezier_iterative(quadctls, dcp, tolerance);
+    return cubic_to_quad_bezier_iterative(quadctls, dcp + 3, tolerance);
+}
+
+int cubic_to_quad_bezier(vector<vec2>& quadctl, const vec2 cp[4], float tolerance)
+{
+    assert(quadctl.empty());
+    quadctl.push_back(cp[0]);
+    return cubic_to_quad_bezier_iterative(quadctl, cp, tolerance);
+}
+
 float quad_control_length(const vec2& a, const vec2& b, const vec2& c)
 {
     vec2 d1, d2;
@@ -1566,6 +1649,34 @@ bool point_in_triangle(const vec2& p, const vec2& p1, const vec2& p2, const vec2
     if(v <= 0.f)
         return false;
     return u + v < 1.f;
+}
+
+void trace_quad_strip(const vec2 cp[], int size)
+{
+    assert(cp && size > 0);
+    assert((size - 1) % 2 == 0);
+    trace(_t("@!\n"));
+    trace(_t("@moveTo %f, %f;\n"), cp[0].x, cp[0].y);
+    trace(_t("@dot %f, %f;\n"), cp[0].x, cp[0].y);
+    for(int i = 1; i < size; i += 2) {
+        trace(_t("@quadTo %f, %f, %f, %f;\n"), cp[i].x, cp[i].y, cp[i + 1].x, cp[i + 1].y);
+        trace(_t("@dot %f, %f;\n"), cp[i + 1].x, cp[i + 1].y);
+    }
+    trace(_t("@@\n"));
+}
+
+void trace_cubic_strip(const vec2 cp[], int size)
+{
+    assert(cp && size > 0);
+    assert((size - 1) % 3 == 0);
+    trace(_t("@!\n"));
+    trace(_t("@moveTo %f, %f;\n"), cp[0].x, cp[0].y);
+    trace(_t("@dot %f, %f;\n"), cp[0].x, cp[0].y);
+    for(int i = 1; i < size; i += 3) {
+        trace(_t("@cubicTo %f, %f, %f, %f, %f, %f;\n"), cp[i].x, cp[i].y, cp[i + 1].x, cp[i + 1].y, cp[i + 2].x, cp[i + 2].y);
+        trace(_t("@dot %f, %f;\n"), cp[i + 2].x, cp[i + 2].y);
+    }
+    trace(_t("@@\n"));
 }
 
 __ariel_end__

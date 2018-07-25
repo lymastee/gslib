@@ -341,7 +341,9 @@ public:
         _strtool::to_upper(_stl_rawstr(), _stl_cap());
     }
     int to_int() const { return _strtool::to_int(_stl_rawstr()); }
+    int to_int(int radix) const { return _strtool::to_int(_stl_rawstr(), radix); }
     int64 to_int64() const { return _strtool::to_int64(_stl_rawstr()); }
+    int64 to_int64(int radix) const { return _strtool::to_int64(_stl_rawstr(), radix); }
     real to_real() const { return _strtool::to_real(_stl_rawstr()); }
     void from(const char* str) { convert_from<element>(str); }
     void from(const wchar* str) { convert_from<element>(str); }

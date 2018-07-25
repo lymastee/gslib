@@ -83,8 +83,8 @@ static void write_texture_source(rendersys* rsys, unordered_access_view* uav, te
     assert(rsys);
     textureop texop(rsys);
     is_texture_transposed(src, rc) ?
-        texop.transpose_texture_rect(uav, src, rc) :
-        texop.copy_texture_rect(tex, src, rc);
+        texop.transpose_rect(uav, src, rc) :
+        texop.copy_rect(tex, src, rc);
 }
 
 tex_batcher::tex_batcher()
@@ -169,7 +169,7 @@ render_texture2d* tex_batcher::create_texture(rendersys* rsys) const
     auto* uav = rsys->create_unordered_access_view(tex);
     assert(uav);
     spuav.attach(uav);
-    textureop(rsys).initialize_texture_rect(uav, color(0, 0, 0, 0), rectf(0.f, 0.f, w, h));
+    textureop(rsys).initialize_rect(uav, color(0, 0, 0, 0), rectf(0.f, 0.f, w, h));
     for(const auto& value : _location_map)
         write_texture_source(rsys, uav, tex, value.first, value.second);
     return tex;

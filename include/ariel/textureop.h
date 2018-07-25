@@ -42,15 +42,16 @@ public:
 
 public:
     textureop(rendersys* rsys);
-    void copy_texture_rect(render_texture2d* dest, render_texture2d* src, const rectf& rc);
-    void initialize_texture_rect(unordered_access_view* dest, const color& cr, const rectf& rc);
-    void transpose_texture_rect(unordered_access_view* dest, render_texture2d* src, const rectf& rc);
+    render_texture2d* load(const string& path);
+    void copy_rect(render_texture2d* dest, render_texture2d* src, const rectf& rc);
+    void initialize_rect(unordered_access_view* dest, const color& cr, const rectf& rc);
+    void transpose_rect(unordered_access_view* dest, render_texture2d* src, const rectf& rc);
     void set_brightness(unordered_access_view* dest, render_texture2d* src, float s);
     void set_gray(unordered_access_view* dest, render_texture2d* src);
     void set_fade(unordered_access_view* dest, render_texture2d* src, float s);
     void set_inverse(unordered_access_view* dest, render_texture2d* src);
-    void initialize_texture_rect(render_texture2d* dest, const color& cr, const rectf& rc);
-    void transpose_texture_rect(render_texture2d* dest, render_texture2d* src, const rectf& rc);
+    void initialize_rect(render_texture2d* dest, const color& cr, const rectf& rc);
+    void transpose_rect(render_texture2d* dest, render_texture2d* src, const rectf& rc);
     void set_brightness(render_texture2d* dest, render_texture2d* src, float s);
     void set_gray(render_texture2d* dest, render_texture2d* src);
     void set_fade(render_texture2d* dest, render_texture2d* src, float s);

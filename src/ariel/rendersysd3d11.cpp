@@ -605,8 +605,7 @@ void rendersys_d3d11::set_index_buffer(index_buffer* ib, uint offset)
 void rendersys_d3d11::begin_render()
 {
     assert(_context);
-    static float ccr[] = { 0.f, 0.f, 0.f, 1.f };
-    _context->ClearRenderTargetView(_rtview, ccr);
+    _context->ClearRenderTargetView(_rtview, _bkcr);
 }
 
 void rendersys_d3d11::end_render()

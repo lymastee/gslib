@@ -27,6 +27,11 @@
 
 __ariel_begin__
 
+rendersys::rendersys():
+    _bkcr {0.f, 0.f, 0.f, 1.f}
+{
+}
+
 bool rendersys::is_vsync_enabled(const configs& cfg)
 {
     auto f = cfg.find(_t("vsync"));
@@ -42,6 +47,14 @@ bool rendersys::is_full_screen(const configs& cfg)
     if(f == cfg.end())
         return false;
     return f->second == _t("true") || f->second == _t("1");
+}
+
+void rendersys::set_background_color(const color& cr)
+{
+    _bkcr[0] = (float)cr.red / 255.f;
+    _bkcr[1] = (float)cr.green / 255.f;
+    _bkcr[2] = (float)cr.blue / 255.f;
+    _bkcr[3] = (float)cr.alpha / 255.f;
 }
 
 __ariel_end__

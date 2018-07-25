@@ -139,6 +139,25 @@ void painter::on_draw_end()
 {
 }
 
+void painter::set_font(const font& ft)
+{
+    scene* scn = scene::get_singleton_ptr();
+    assert(scn);
+    fontsys* fsys = scn->get_fontsys();
+    assert(fsys);
+    fsys->set_font(ft);
+}
+
+void painter::get_text_dimension(const gchar* str, int& w, int& h, int len)
+{
+    assert(str);
+    scene* scn = scene::get_singleton_ptr();
+    assert(scn);
+    fontsys* fsys = scn->get_fontsys();
+    assert(fsys);
+    fsys->get_size(str, w, h, len);
+}
+
 void painter::draw_image(texture2d* img, float x, float y)
 {
     assert(img);

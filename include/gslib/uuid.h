@@ -72,6 +72,7 @@ public:
     uuid(uuid_version ver, const gchar* name, int len) { generate(ver, name, len); }
     uuid(const string& str) { from_string(str.c_str(), str.length()); }
     uuid(const gchar* str, int len) { from_string(str, len); }
+    bool operator==(const uuid& that) const;
     bool is_valid() const;
     void generate(uuid_version ver);
     void generate(uuid_version ver, const gchar* name, int len);

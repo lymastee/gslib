@@ -311,6 +311,7 @@ project "ariel"
 	}
 	files {
 		"include/ariel/batch.h",
+		"include/ariel/classicstyle.h",
 		"include/ariel/clip.h",
 		"include/ariel/config.h",
 		"include/ariel/delaunay.h",
@@ -330,6 +331,7 @@ project "ariel"
 		"include/ariel/rendersys.h",
 		"include/ariel/rendersysd3d11.h",
 		"include/ariel/rose.h",
+		"include/ariel/style.h",
 		"include/ariel/scene.h",
 		"include/ariel/smaa.h",
 		"include/ariel/sysop.h",
@@ -340,6 +342,7 @@ project "ariel"
 		"include/ariel/utility.h",
 		"include/ariel/widget.h",
 		"src/ariel/batch.cpp",
+		"src/ariel/classicstyle.cpp",
 		"src/ariel/clip.cpp",
 		"src/ariel/delaunay.cpp",
 		"src/ariel/dirty.cpp",
@@ -359,6 +362,7 @@ project "ariel"
 		"src/ariel/rendersysd3d11.cpp",
 		"src/ariel/rose.cpp",
 		"src/ariel/scene.cpp",
+		"src/ariel/style.cpp",
 		"src/ariel/smaa.cpp",
 		"src/ariel/temporal.cpp",
 		"src/ariel/texbatch.cpp",
@@ -399,7 +403,8 @@ project "test111"
 		"libpng.lib",
 		"gslib.lib",
 		"ariel.lib",
-		"imm32.lib"
+		"imm32.lib",
+		"snmpapi.lib"
 	}
 	files {
 		"framework/entrywin32.h",
@@ -436,7 +441,8 @@ project "widget"
 		"libpng.lib",
 		"gslib.lib",
 		"ariel.lib",
-		"imm32.lib"
+		"imm32.lib",
+		"snmpapi.lib"
 	}
 	files {
 		"framework/entrywin32.h",

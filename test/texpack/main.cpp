@@ -2,6 +2,13 @@
 #include <ariel/texbatch.h>
 #include <gslib/uuid.h>
 #include <ariel/fsyswin32.h>
+#include <ariel/textureop.h>
+#include <ariel/rendersysd3d11.h>
+#include <ariel/widget.h>
+#include <ariel/scene.h>
+#include <gslib/error.h>
+#include <ariel/imageop.h>
+#include <windows.h>
 
 using namespace gs;
 using namespace gs::ariel;
@@ -16,12 +23,11 @@ using namespace gs::ariel;
 
 typedef std::vector<image> image_cache;
 
-static fsys_win32 fsyswin32;
-static fontsys* fsys = &fsyswin32;
 static string currentfolderpath;
 
-static void make_random_image(image& img)
+static void make_random_image(fontsys* fsys, image& img)
 {
+    assert(fsys);
     /* rand font */
     int fontsize = mtrand() % (max_font_size - min_font_size) + min_font_size;
     font f(_t("ËÎÌו"), fontsize);
@@ -53,8 +59,11 @@ static void make_random_image(image& img)
     img.save(fname.c_str());
 }
 
-int wmain()
+int gs_main()
 {
+    rendersys* rsys = scene::get_singleton_ptr()->get_rendersys();
+    fontsys* fsys = scene::get_singleton_ptr()->get_fontsys();
+    assert(rsys && fsys);
     /* current folder */
     gchar szfolder[MAX_PATH];
     GetCurrentDirectory(MAX_PATH, szfolder);
@@ -65,19 +74,31 @@ int wmain()
     _wsystem(cmd.c_str());
     cmd.format(_t("mkdir \"%s/unpacked\""), currentfolderpath.c_str());
     _wsystem(cmd.c_str());
-    fsys->initialize();
     tex_batcher batcher;
     image_cache cache(generate_counts);
     for(image& img : cache) {
-        make_random_image(img);
+        make_random_image(fsys, img);
+#ifdef _GS_BATCH_IMAGE
         batcher.add_image(&img);
+#else
+        auto* tex = rsys->create_texture2d(img, 1, D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0);
+        assert(tex);
+        batcher.add_texture(tex);
+#endif
     }
     batcher.arrange();
     batcher.tracing();
     image atlas;
+#ifdef _GS_BATCH_IMAGE
     batcher.create_packed_image(atlas);
+#else
+    auto* texatlas = batcher.create_texture(rsys);
+    assert(texatlas);
+    textureop::convert_to_image(atlas, texatlas);
+#endif
     string fname;
     fname.format(_t("%s/unpacked/packed.png"), szfolder);
     atlas.save(fname.c_str());
+    _wsystem(_t("pause"));
     return 0;
 }

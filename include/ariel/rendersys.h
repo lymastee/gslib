@@ -72,6 +72,7 @@ public:
     config_select_type(select_render_platform, vertex_format_desc);
 
 public:
+    rendersys();
     virtual ~rendersys() {}
     virtual bool setup(uint hwnd, const configs& cfg) = 0;
     virtual void destroy() = 0;
@@ -117,9 +118,11 @@ public:
 
 protected:
     render_device_info      _device_info;
+    float                   _bkcr[4];
 
 public:
     const render_device_info& get_device_info() const { return _device_info; }
+    void set_background_color(const color& cr);
 };
 
 extern void release_vertex_buffer(render_vertex_buffer* buf);

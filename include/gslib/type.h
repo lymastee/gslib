@@ -124,6 +124,7 @@ public:
     point_t(const proto& p): proto(p) {}
     point_t(type a, type b) { x = a; y = b; }
     void offset(type u, type v) { x += u; y += v; }
+    void offset(const proto& p) { x += p.x; y += p.y; }
     void set_point(type a, type b) { x = a; y = b; }
     bool operator == (const myref& that) const { return x == that.x && y == that.y; }
     bool operator != (const myref& that) const { return x != that.x || y != that.y; }
@@ -182,6 +183,10 @@ public:
         c.y = (top + bottom) / 2;
         return c;
     }
+    point top_left() const { return point(left, top); }
+    point top_right() const { return point(right, top); }
+    point bottom_left() const { return point(left, bottom); }
+    point bottom_right() const { return point(right, bottom); }
 };
 
 typedef rect_t<int> rect;

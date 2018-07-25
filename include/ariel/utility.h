@@ -26,6 +26,7 @@
 #ifndef utility_77d83a8d_bf54_4fbe_ab3c_b06d0be9e40e_h
 #define utility_77d83a8d_bf54_4fbe_ab3c_b06d0be9e40e_h
 
+#include <gslib/std.h>
 #include <ariel/config.h>
 #include <ariel/type.h>
 
@@ -73,7 +74,6 @@ extern void get_second_derivate(vec2& d, const vec2 df2[2], float t);
 extern float get_cubic_curvature(const vec2& p1, const vec2& p2, const vec2& p3, const vec2& p4, float t);
 extern int solve_univariate_quadratic(float t[2], const vec3& coef);
 extern int solve_univariate_cubic(float t[3], const vec4& coef);
-extern int solve_univariate_cubic(float t[3], const vec4& coef, float tolerance);
 extern int solve_univariate_quartic(float t[4], const float coef[5]);
 extern int get_cubic_inflection(float t[2], const vec2& a, const vec2& b, const vec2& c, const vec2& d);
 extern int get_cubic_inflection(float t[2], const vec3 ff[2], const vec2 sf[2]);
@@ -88,6 +88,9 @@ extern void split_quad_bezier(vec2 c[5], const vec2 p[3], float t);
 extern void split_cubic_bezier(vec2 c[7], const vec2 p[4], float t);
 extern void split_cubic_bezier(vec2 c[10], const vec2 p[4], float t1, float t2);
 extern void offset_cubic_bezier(vec2 c[4], const vec2 p[4], float d);
+extern float quad_bezier_length(const vec2 cp[3]);
+extern float cubic_bezier_length(const vec2 cp[4], float tolerance);
+extern int cubic_to_quad_bezier(vector<vec2>& quadctl, const vec2 cp[4], float tolerance);
 extern float quad_control_length(const vec2& a, const vec2& b, const vec2& c);
 extern float cubic_control_length(const vec2& a, const vec2& b, const vec2& c, const vec2& d);
 extern float point_line_distance(const vec2& p, const vec2& p1, const vec2& p2);
@@ -104,13 +107,13 @@ extern float get_rotate_angle(const vec2& d1, const vec2& d2);
 extern float get_rotate_angle(const vec2& a, const vec2& b, const vec2& c);
 extern void get_reduce_point(vec2& p, const vec2& a, const vec2& b, const vec2& c, const vec2& d);
 extern bool point_in_triangle(const vec2& p, const vec2& p1, const vec2& p2, const vec2& p3);
+extern void trace_quad_strip(const vec2 cp[], int size);
+extern void trace_cubic_strip(const vec2 cp[], int size);
 
 inline bool is_isosigned(float a, float b) { return (int)((*(uint*)&a ^ *(uint*)&b)) >= 0; }
 inline bool is_isosigned(double a, double b) { return (long long)((*(unsigned long long*)&a ^ *(unsigned long long*)&b)) >= 0; }
 inline bool fuzzy_zero(float f) { return (f <= 1e-10f && f >= -1e-10f); }
 inline bool fuzzy_zero(float f, float tol) { return f <= tol && f >= -tol; }
-//inline bool fuzzy_greater(float m, float n, float tol) { return m > (n + tol); }
-//inline bool fuzzy_less(float m, float n, float tol) { return m < (n - tol); }
 inline bool fuzzy_between(float a, float b, float c, float tol) { return b > a - tol && b < c + tol; }
 inline bool fuzzy_greater_inclusive(float m, float n, float tol) { return m > (n - tol); }
 inline bool fuzzy_less_inclusive(float m, float n, float tol) { return m < (n + tol); }

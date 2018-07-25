@@ -29,11 +29,10 @@
 
 __ariel_begin__
 
-static const int fplist_cap = 20;
 static MAT2 _stand_mat = { {0, 1}, {0, 0}, {0, 0}, {0, 1} };
 
 /* used for glyph buffers */
-#define byte gs::byte
+using gs::byte;
 static byte* _glyph_buf = 0;
 static int _gbsize = 0;
 
@@ -69,7 +68,6 @@ fsys_win32::fsys_win32()
 {
     _container_dc = 0;
     _old_font = 0;
-    _current = -1;
     alloc_glyph_buf();
 }
 
@@ -84,9 +82,8 @@ fsys_win32::~fsys_win32()
         DeleteDC(_container_dc);
         _container_dc = 0;
     }
-    for(fplist::iterator i = _fplist.begin(); i != _fplist.end(); ++ i)
-        DeleteObject(i->_handle);
-    _current = -1;
+    for(auto i = _font_map.begin(); i != _font_map.end(); ++ i)
+        DeleteObject(i->second);
     free_glyph_buf();
 }
 
@@ -99,57 +96,45 @@ void fsys_win32::initialize()
     ReleaseDC(0, hdc);
 }
 
-int fsys_win32::set_font(const font& f, int idx)
+void fsys_win32::set_font(const font& ft)
 {
-    int cap = (int)_fplist.size();
-    if(idx >= 0 && idx < cap) {
-        font_pair& fp = _fplist.at(idx);
-        if(fp._font == f) {
-            assert(_container_dc);
-            HFONT h = (HFONT)SelectObject(_container_dc, fp._handle);
-            if(!_old_font)
-                _old_font = h;
-            return _current = idx;
-        }
-    }
-    for(int i = 0; i < cap; i ++) {
-        font_pair& fp = _fplist.at(i);
-        if(fp._font == f) {
-            assert(_container_dc);
-            HFONT h = (HFONT)SelectObject(_container_dc, fp._handle);
-            if(!_old_font)
-                _old_font = h;
-            return _current = i;
-        }
-    }
-    if(cap >= fplist_cap)
-        _fplist.pop_front();
-    int w = f.weight % 10;
-    w *= 100;
-    font_pair fp;
-    fp._font = f;
-    dword dw = f.height > 18 ? PROOF_QUALITY : DEFAULT_QUALITY;
-    fp._handle = CreateFont(f.height, f.width, f.escape, f.orient, w, 
-        (f.mask & font::ftm_italic) ? 1 : 0, 
-        (f.mask & font::ftm_underline) ? 1 : 0, 
-        (f.mask & font::ftm_strikeout) ? 1 : 0,
-        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, dw, DEFAULT_PITCH, f.name.c_str()
-        );
     assert(_container_dc);
-    HFONT h = (HFONT)SelectObject(_container_dc, fp._handle);
+    if(ft.sysfont) {
+        HFONT h = (HFONT)SelectObject(_container_dc, (HFONT)ft.sysfont);
+        if(!_old_font)
+            _old_font = h;
+        return;
+    }
+    auto f = _font_map.find(ft);
+    if(f != _font_map.end()) {
+        ft.sysfont = (uint)f->second;
+        HFONT h = (HFONT)SelectObject(_container_dc, (HFONT)ft.sysfont);
+        if(!_old_font)
+            _old_font = h;
+        return;
+    }
+    int w = ft.weight % 10;
+    w *= 100;
+    dword dw = ft.height > 18 ? PROOF_QUALITY : DEFAULT_QUALITY;
+    HFONT h = CreateFont(ft.height, ft.width, ft.escape, ft.orient, w,
+        (ft.mask & font::ftm_italic) ? 1 : 0, 
+        (ft.mask & font::ftm_underline) ? 1 : 0, 
+        (ft.mask & font::ftm_strikeout) ? 1 : 0,
+        DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, dw, DEFAULT_PITCH, ft.name.c_str()
+        );
+    ft.sysfont = (uint)h;
+    _font_map.insert(std::make_pair(ft, h));
+    h = (HFONT)SelectObject(_container_dc, h);
     if(!_old_font)
         _old_font = h;
-    _fplist.push_back(fp);
-    return _current = (int)_fplist.size()-1;
 }
 
 bool fsys_win32::get_size(const gchar* str, int& w, int& h, int len)
 {
-    if(!str || _current == -1) {
+    if(!str) {
         w = 0, h = 0;
         return false;
     }
-    assert(_current >= 0 && _current < (int)_fplist.size());
     int slen = strtool::length(str);
     if(len < 0 || len > slen)
         len = slen;
@@ -163,13 +148,12 @@ bool fsys_win32::get_size(const gchar* str, int& w, int& h, int len)
 
 bool fsys_win32::create_text_image(image& img, const gchar* str, int x, int y, const color& cr, int len)
 {
-    if(!str || !img.is_valid() || _current == -1 || x < 0 || y < 0)
+    if(!str || !img.is_valid() || x < 0 || y < 0)
         return false;
     int w = img.get_width(), h = img.get_height();
     if(x > w || y > h)
         return false;
     assert(_glyph_buf && _gbsize);  /* out of memory! */
-    assert(_current >= 0 && _current < (int)_fplist.size());
     GLYPHMETRICS gm;
     TEXTMETRIC tm;
     BOOL b = GetTextMetrics(_container_dc, &tm);
@@ -263,13 +247,12 @@ bool fsys_win32::create_text_texture(texture2d** tex, const gchar* str, int x, i
 
 void fsys_win32::draw(image& img, const gchar* str, int x, int y, const color& cr, int len)
 {
-    if(!str || !img.is_valid() || _current == -1 || x < 0 || y < 0)
+    if(!str || !img.is_valid() || x < 0 || y < 0)
         return;
     int w = img.get_width(), h = img.get_height();
     if(x > w || y > h)
         return;
     assert(_glyph_buf && _gbsize);
-    assert(_current >= 0 && _current < (int)_fplist.size());
     GLYPHMETRICS gm;
     TEXTMETRIC tm;
     BOOL b = GetTextMetrics(_container_dc, &tm);

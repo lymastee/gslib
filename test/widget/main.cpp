@@ -6,6 +6,7 @@
 #include <gslib/error.h>
 #include <ariel/imageop.h>
 #include <ariel/textureop.h>
+#include <ariel/utility.h>
 
 using namespace gs;
 using namespace gs::ariel;
@@ -83,7 +84,7 @@ public:
         rendersys* rsys = scene::get_singleton_ptr()->get_rendersys();
         assert(rsys);
         _cpytext.attach(rsys->create_texture2d(w, h, DXGI_FORMAT_R8G8B8A8_UNORM, 1, D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS, 0));
-        textureop(rsys).copy_texture_rect(_cpytext.get(), _text.get(), rectf(0, 0, (float)w, (float)h));
+        textureop(rsys).copy_rect(_cpytext.get(), _text.get(), rectf(0, 0, (float)w, (float)h));
         _alpha = 1.0f;
         _fadeby = 0.02f;
         rect rc = get_rect();

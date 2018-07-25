@@ -148,8 +148,9 @@ struct base_ptr_delegator
     _inner* operator=(_inner* ptr) { return _puppet = ptr; }
 };
 
+#if defined(_MSC_VER) && (_MSC_VER < 1910)
 /* the same as the default std version */
-inline size_t string_hash(const gchar str[], int size)
+inline size_t hash_bytes(const byte str[], int size)
 {
     size_t val = 2166136261U;
     size_t first = 0;
@@ -159,9 +160,24 @@ inline size_t string_hash(const gchar str[], int size)
         val = 16777619U * val ^ (size_t)str[first];
     return val;
 }
+#else
+inline size_t hash_bytes(const byte str[], int size)
+{ return std::_Hash_bytes(str, size); }
+#endif
 
-inline size_t string_hash(const string& str) { return string_hash(str.c_str(), str.size()); }
-inline size_t string_hash(const gchar str[]) { return string_hash(str, strtool::length(str)); }
+#ifdef _UNICODE
+inline size_t string_hash(const string& str) { return hash_bytes((const byte*)str.c_str(), str.size() * sizeof(wchar)); }
+#else
+inline size_t string_hash(const string& str) { return hash_bytes((const byte*)str.c_str(), str.size()); }
+#endif
+
+class hasher:
+    public std::_Fnv1a_hasher
+{
+public:
+    size_t add_bytes(const byte* first, int len) { return _Add_bytes(first, first + len); }
+    size_t get_value() const { return _Val; }
+};
 
 /* switch to namespace tr1 and replace the hash for string */
 __gslib_end__
@@ -175,8 +191,7 @@ class hash<gs::string>
 #endif
 {
 public:
-    size_t operator()(const gs::string& kval) const
-    { return string_hash(kval); }
+    size_t operator()(const gs::string& kval) const { return string_hash(kval); }
 };
 
 };

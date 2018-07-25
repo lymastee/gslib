@@ -30,6 +30,7 @@
 #include <gslib/type.h>
 #include <gslib/string.h>
 #include <gslib/math.h>
+#include <gslib/std.h>
 
 __ariel_begin__
 
@@ -71,6 +72,10 @@ public:
     int         weight; /* 0-9 */
     uint        mask;
 
+private:
+    friend class fsys_win32;
+    mutable uint sysfont;
+
 public:
     font()
     {
@@ -80,6 +85,7 @@ public:
         orient = 0;
         weight = 0;
         mask = 0;
+        sysfont = 0;
     }
     font(const font& that)
     {
@@ -90,6 +96,7 @@ public:
         orient  = that.orient;
         weight  = that.weight;
         mask    = that.mask;
+        sysfont = that.sysfont;
     }
     font(const gchar* n, int size)
     {
@@ -100,6 +107,7 @@ public:
         orient = 0;
         weight = 0;
         mask = 0;
+        sysfont = 0;
     }
     font& operator = (const font& that)
     {
@@ -148,6 +156,17 @@ public:
             return true;
         return false;
     }
+    size_t hash_value() const
+    {
+        hasher h;
+        h.add_bytes((const byte*)name.c_str(), name.length() * sizeof(gchar));
+        h.add_bytes((const byte*)&height, sizeof(height));
+        h.add_bytes((const byte*)&width, sizeof(width));
+        h.add_bytes((const byte*)&escape, sizeof(escape));
+        h.add_bytes((const byte*)&orient, sizeof(orient));
+        h.add_bytes((const byte*)&weight, sizeof(weight));
+        return h.add_bytes((const byte*)&mask, sizeof(mask));
+    }
 };
 
 struct viewport
@@ -161,5 +180,19 @@ struct viewport
 };
 
 __ariel_end__
+
+namespace std {
+
+template<>
+class hash<gs::ariel::font>
+#if defined(_MSC_VER) && (_MSC_VER < 1914)
+    : public unary_function<gs::ariel::font, size_t>
+#endif
+{
+public:
+    size_t operator()(const gs::ariel::font& ft) const { return ft.hash_value(); }
+};
+
+};
 
 #endif

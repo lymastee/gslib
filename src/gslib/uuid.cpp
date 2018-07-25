@@ -44,6 +44,15 @@ uuid::uuid()
     memset(raw, 0, sizeof(uuid_raw));
 }
 
+bool uuid::operator==(const uuid& that) const
+{
+    if(this == &that)
+        return true;
+    return data1 == that.data1 &&
+        data2 == that.data2 && data3 == that.data3 &&
+        *((uint64*)data4) == *((uint64*)that.data4);
+}
+
 bool uuid::is_valid() const
 {
     if(!data1)

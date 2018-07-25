@@ -32,13 +32,7 @@
 
 __ariel_begin__
 
-struct font_pair
-{
-    font    _font;
-    HFONT   _handle;
-};
-
-typedef deque<font_pair> fplist;
+typedef unordered_map<font, HFONT> font_map;
 
 class fsys_win32:
     public fontsys
@@ -47,7 +41,7 @@ public:
     fsys_win32();
     virtual ~fsys_win32();
     virtual void initialize() override;
-    virtual int set_font(const font& f, int idx = -1) override;
+    virtual void set_font(const font& f) override;
     virtual bool get_size(const gchar* str, int& w, int& h, int len = -1) override;
     virtual bool create_text_image(image& img, const gchar* str, int x, int y, const color& cr, int len = -1) override;
     virtual bool create_text_texture(texture2d** tex, const gchar* str, int x, int y, const color& cr, int len = -1) override;
@@ -56,8 +50,7 @@ public:
 protected:
     HDC         _container_dc;
     HFONT       _old_font;
-    fplist      _fplist;
-    int         _current;
+    font_map    _font_map;
 };
 
 __ariel_end__

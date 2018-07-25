@@ -35,7 +35,16 @@
 
 __ariel_begin__
 
-void textureop::copy_texture_rect(render_texture2d* dest, render_texture2d* src, const rectf& rc)
+render_texture2d* textureop::load(const string& path)
+{
+    image img;
+    if(!img.load(path))
+        return nullptr;
+    assert(_rsys);
+    return _rsys->create_texture2d(img, 1, D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0);
+}
+
+void textureop::copy_rect(render_texture2d* dest, render_texture2d* src, const rectf& rc)
 {
     assert(dest && src);
     if(!check_valid_device(dest) || !check_valid_device(src))
@@ -56,7 +65,7 @@ void textureop::copy_texture_rect(render_texture2d* dest, render_texture2d* src,
     dc->CopySubresourceRegion(dest, 0, (uint)floor(rc.left), (uint)floor(rc.top), 0, src, 0, &box);
 }
 
-void textureop::initialize_texture_rect(unordered_access_view* dest, const color& cr, const rectf& rc)
+void textureop::initialize_rect(unordered_access_view* dest, const color& cr, const rectf& rc)
 {
     assert(dest);
     if(!check_valid_device(dest))
@@ -105,7 +114,7 @@ void textureop::initialize_texture_rect(unordered_access_view* dest, const color
     dc->CSSetConstantBuffers(0, 1, &cb);
 }
 
-void textureop::transpose_texture_rect(unordered_access_view* dest, render_texture2d* src, const rectf& rc)
+void textureop::transpose_rect(unordered_access_view* dest, render_texture2d* src, const rectf& rc)
 {
     assert(dest && src);
     if(!check_valid_device(dest) || !check_valid_device(src))
@@ -333,7 +342,7 @@ void textureop::set_inverse(unordered_access_view* dest, render_texture2d* src)
     dc->CSSetUnorderedAccessViews(0, 1, &uav, nullptr);
 }
 
-void textureop::initialize_texture_rect(render_texture2d* dest, const color& cr, const rectf& rc)
+void textureop::initialize_rect(render_texture2d* dest, const color& cr, const rectf& rc)
 {
     assert(dest);
     if(!check_valid_device(dest))
@@ -341,10 +350,10 @@ void textureop::initialize_texture_rect(render_texture2d* dest, const color& cr,
     com_ptr<unordered_access_view> spuav;
     spuav.attach(_rsys->create_unordered_access_view(dest));
     assert(spuav);
-    initialize_texture_rect(spuav.get(), cr, rc);
+    initialize_rect(spuav.get(), cr, rc);
 }
 
-void textureop::transpose_texture_rect(render_texture2d* dest, render_texture2d* src, const rectf& rc)
+void textureop::transpose_rect(render_texture2d* dest, render_texture2d* src, const rectf& rc)
 {
     assert(dest && src);
     if(!check_valid_device(dest))
@@ -352,7 +361,7 @@ void textureop::transpose_texture_rect(render_texture2d* dest, render_texture2d*
     com_ptr<unordered_access_view> spuav;
     spuav.attach(_rsys->create_unordered_access_view(dest));
     assert(spuav);
-    transpose_texture_rect(spuav.get(), src, rc);
+    transpose_rect(spuav.get(), src, rc);
 }
 
 void textureop::set_brightness(render_texture2d* dest, render_texture2d* src, float s)

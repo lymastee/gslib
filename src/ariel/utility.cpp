@@ -117,7 +117,7 @@ float cubic_reparameterize(const vec4 para[2], const vec2& p)
     for(int i = 0; i < c1; i ++) {
         float t = tx[i];
         float y = para[1].dot(vec4(t * t * t, t * t, t, 1.f));
-        if(fuzz_cmp(y, p.y, 0.1f) == 0)
+        if(fuzz_cmp(y, p.y, 0.1f) == 0.f)
             return t;
     }
     vec4 tryreparay = para[1];
@@ -127,7 +127,7 @@ float cubic_reparameterize(const vec4 para[2], const vec2& p)
     for(int i = 0; i < c2; i ++) {
         float t = ty[i];
         float x = para[0].dot(vec4(t * t * t, t * t, t, 1.f));
-        if(fuzz_cmp(x, p.x, 0.1f) == 0)
+        if(fuzz_cmp(x, p.x, 0.1f) == 0.f)
             return t;
     }
     return -1.f;
@@ -452,7 +452,7 @@ int solve_univariate_quartic(float t[4], const float coef[5])
                 t[0] = k0;
                 cnt = 1;
             }
-            else if(p0 > 1e-10) {
+            else if(p0 > 1e-10f) {
                 t[0] = k0;
                 cnt = 1;
             }
@@ -463,7 +463,7 @@ int solve_univariate_quartic(float t[4], const float coef[5])
                 cnt = 2;
             }
         }
-        else if(discr > 1e-10) {
+        else if(discr > 1e-10f) {
             float sq = sqrtf(discr);
             x1 = -p0 - sq;
             x2 = -p0 + sq;
@@ -478,11 +478,11 @@ int solve_univariate_quartic(float t[4], const float coef[5])
                 t[2] = k0;
                 cnt = 3;
             }
-            else if(x2 < -1e-10) {
+            else if(x2 < -1e-10f) {
                 t[0] = k0;
                 cnt = 1;
             }
-            else if(x1 > 1e-10) {
+            else if(x1 > 1e-10f) {
                 u = sqrtf(x1);
                 v = sqrtf(x2);
                 t[0] = k0 - v;
@@ -527,21 +527,21 @@ int solve_univariate_quartic(float t[4], const float coef[5])
                 float cb = cbrt(-q);
                 x1 = k + cb + cb;
                 x2 = k - cb;
-                if(x1 > 1e-10 && x2 > 1e-10 || x1 < -1e-10 && x2 < -1e-10) {
+                if(x1 > 1e-10f && x2 > 1e-10f || x1 < -1e-10f && x2 < -1e-10f) {
                     float dsq = 2.f * sqrtf(x1 * x2);
                     t[0] = k0 - dsq + x2;
                     t[1] = k0 + dsq + x2;
                     t[2] = k0 - x2;
                     cnt = 3;
                 }
-                else if(x1 < -1e-10 && x2 > 1e-10 || x1 > 1e-10 && x2 < -1e-10) {
+                else if(x1 < -1e-10f && x2 > 1e-10f || x1 > 1e-10f && x2 < -1e-10f) {
                     t[0] = k0 - x2;
                     t[1] = k0 + x2;
                     cnt = 2;
                 }
             }
         }
-        else if(discr > 1e-10) {
+        else if(discr > 1e-10f) {
             discr = sqrtf(discr);
             t1 = -q - discr;
             t2 = -q + discr;
@@ -552,7 +552,7 @@ int solve_univariate_quartic(float t[4], const float coef[5])
             n = 0.8660254f * (t2 - t1);
             float r = sqrtf(m * m + n * n);
             float x = atan2f(n, m);
-            if(x1 > 0) {
+            if(x1 > 0.f) {
                 float dsqcf = 2.f * sqrtf(x1 * r) * cosf(x * 0.5f);
                 t[0] = k0 + r - dsqcf;
                 t[1] = k0 + r + dsqcf;
@@ -578,12 +578,12 @@ int solve_univariate_quartic(float t[4], const float coef[5])
                 discr = sqrtf(-discr);
                 float x = atan2f(discr, -q);
                 t1 = sqrtf(-p) * cosf(x * 0.3333333f);
-                t2 = sqrtf(-3 * p) * sinf(x * 0.3333333f);
+                t2 = sqrtf(-3.f * p) * sinf(x * 0.3333333f);
                 x1 = k - t1 - t2;
                 x2 = k - t1 + t2;
                 x3 = k + t1 + t1;
             }
-            if(x1 > 1e-10) {
+            if(x1 > 1e-10f) {
                 float sq12 = sqrtf(x1 * x2);
                 float sq13 = sqrtf(x1 * x3);
                 float sq23 = sqrtf(x2 * x3);
@@ -593,7 +593,7 @@ int solve_univariate_quartic(float t[4], const float coef[5])
                 t[3] = k0 + sq12 + sq13 + sq23;
                 cnt = 4;
             }
-            else if(x3 < -1e-10) {
+            else if(x3 < -1e-10f) {
                 float sq12 = sqrtf(x1 * x2);
                 float sq13 = sqrtf(x1 * x3);
                 float sq23 = sqrtf(x2 * x3);
@@ -604,7 +604,7 @@ int solve_univariate_quartic(float t[4], const float coef[5])
                 cnt = 4;
             }
             else {
-                if(x2 > 0) {
+                if(x2 > 0.f) {
                     float sq = sqrtf(x2 * x3);
                     t[0] = k0 - sq;
                     t[1] = k0 + sq;
@@ -663,6 +663,8 @@ int get_cubic_inflection(float t[2], const vec3 ff[2], const vec2 sf[2])
         c * i + b * j - f * g - e * h,
         c * j - f * h
         );
+    if(fuzzy_zero(coef.x))
+        return 0;
     int cap = solve_univariate_quadratic(t, coef);
     int cnt = 0;
     /* filter the result within scope 0 - 1 */
@@ -1009,7 +1011,7 @@ static int get_non_inflection_cubic_intersections(vec2 ip[4], const vec2 cp1[4],
  * To solve the cubic - cubic intersection, we use the following strategy:
  * 1.split the cubics into 2 groups by inflection, so that each of the intersection count would be no more than 4.
  * 2.assume that b0, b1, b2, b3 was the 4 control points of the cubic bezier, solve b0 - b1, b1 - b2, b2 - b3 line intersections with the other curve.
- * 3.reparametric the intersection points and get the t-value, treat them as the initial value for the newton-ralph iteration
+ * 3.reparametrize the intersection points and get the t-value, treat them as the initial value for the newton-raphson iteration
  * 4.get the t-values of each iterate process, filter the duplicated roots
  * 5.get the point value of each t-value, if you need the original t-value, reparametrize them by the original cubic.
  */
@@ -1118,7 +1120,7 @@ void split_cubic_bezier(vec2 c[7], const vec2 p[4], float t)
  * Tri-division of a cubic bezier
  * be caution that you can't make it like this:
  * divide by t1, then divide by t2 * (1 - t1), this was so wrong.
- * There wasn't a convenient way to transform the t arg while dividing.
+ * There wasn't a convenient way to transform the t-value while dividing.
  * So we decided to:
  * 1.get p2 of t2
  * 2.divide by t1 and got curve1, curve2
@@ -1170,12 +1172,24 @@ void offset_cubic_bezier(vec2 c[4], const vec2 p[4], float d)
     intersectp_linear_linear(c[2], c[3], p[2], d3, v2);
 }
 
+static float get_triangle_area(const vec2 cp[3])
+{
+    return 0.5f * (cp[0].x * cp[1].y + cp[1].x * cp[2].y + cp[2].x * cp[0].y - cp[0].x * cp[2].y - cp[1].x * cp[0].y - cp[2].x * cp[1].y);
+}
+
 float quad_bezier_length(const vec2 cp[3])
 {
+    if(abs(get_triangle_area(cp)) < 1e-6f) {
+        vec2 d;
+        d.sub(cp[2], cp[0]);
+        return d.length();
+    }
     vec2 t1, t2;
     t1.add(cp[0], cp[2]).sub(t1, vec2().scale(cp[1], 2.f));
     t2.sub(cp[1], cp[0]).scale(2.f);
     float a = t1.lengthsq() * 4.f;
+    if(fuzzy_zero(a))
+        return 0.f;
     float b = t1.dot(t2) * 4.f;
     float c = t2.lengthsq();
     float ssabc = sqrtf(a + b + c);
@@ -1197,8 +1211,16 @@ float cubic_bezier_length(const vec2 cp[4], float tolerance)
     return len;
 }
 
-static int cubic_to_quad_bezier_iterative(vector<vec2>& quadctls, const vec2 cp[4], float tolerance)
+static int cubic_to_quad_bezier_iteration(vector<vec2>& quadctls, const vec2 cp[4], float tolerance)
 {
+    float ctlen = cubic_control_length(cp[0], cp[1], cp[2], cp[3]);
+    if(ctlen < tolerance) {
+        vec2 center;
+        center.add(cp[0], cp[3]).scale(0.5f);
+        quadctls.push_back(center);
+        quadctls.push_back(cp[3]);
+        return (int)quadctls.size();
+    }
     float t[2];
     int i = get_cubic_inflection(t, cp[0], cp[1], cp[2], cp[3]);
     assert(i <= 2);
@@ -1208,8 +1230,8 @@ static int cubic_to_quad_bezier_iterative(vector<vec2>& quadctls, const vec2 cp[
         {
             vec2 dcp[7];
             split_cubic_bezier(dcp, cp, t[0]);
-            cubic_to_quad_bezier_iterative(quadctls, dcp, tolerance);
-            return cubic_to_quad_bezier_iterative(quadctls, dcp + 3, tolerance);
+            cubic_to_quad_bezier_iteration(quadctls, dcp, tolerance);
+            return cubic_to_quad_bezier_iteration(quadctls, dcp + 3, tolerance);
         }
     case 2:
         {
@@ -1217,9 +1239,9 @@ static int cubic_to_quad_bezier_iterative(vector<vec2>& quadctls, const vec2 cp[
             if(t[0] > t[1])
                 gs_swap(t[0], t[1]);
             split_cubic_bezier(dcp, cp, t[0], t[1]);
-            cubic_to_quad_bezier_iterative(quadctls, dcp, tolerance);
-            cubic_to_quad_bezier_iterative(quadctls, dcp + 3, tolerance);
-            return cubic_to_quad_bezier_iterative(quadctls, dcp + 6, tolerance);
+            cubic_to_quad_bezier_iteration(quadctls, dcp, tolerance);
+            cubic_to_quad_bezier_iteration(quadctls, dcp + 3, tolerance);
+            return cubic_to_quad_bezier_iteration(quadctls, dcp + 6, tolerance);
         }
     }
     vec2 d1, d2;
@@ -1265,15 +1287,15 @@ static int cubic_to_quad_bezier_iterative(vector<vec2>& quadctls, const vec2 cp[
     assert(need_div);
     vec2 dcp[7];
     split_cubic_bezier(dcp, cp, 0.5f);
-    cubic_to_quad_bezier_iterative(quadctls, dcp, tolerance);
-    return cubic_to_quad_bezier_iterative(quadctls, dcp + 3, tolerance);
+    cubic_to_quad_bezier_iteration(quadctls, dcp, tolerance);
+    return cubic_to_quad_bezier_iteration(quadctls, dcp + 3, tolerance);
 }
 
 int cubic_to_quad_bezier(vector<vec2>& quadctl, const vec2 cp[4], float tolerance)
 {
     assert(quadctl.empty());
     quadctl.push_back(cp[0]);
-    return cubic_to_quad_bezier_iterative(quadctl, cp, tolerance);
+    return cubic_to_quad_bezier_iteration(quadctl, cp, tolerance);
 }
 
 float quad_control_length(const vec2& a, const vec2& b, const vec2& c)

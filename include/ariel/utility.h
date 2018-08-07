@@ -112,7 +112,7 @@ extern void trace_cubic_strip(const vec2 cp[], int size);
 
 inline bool is_isosigned(float a, float b) { return (int)((*(uint*)&a ^ *(uint*)&b)) >= 0; }
 inline bool is_isosigned(double a, double b) { return (long long)((*(unsigned long long*)&a ^ *(unsigned long long*)&b)) >= 0; }
-inline bool fuzzy_zero(float f) { return (f <= 1e-10f && f >= -1e-10f); }
+inline bool fuzzy_zero(float f) { return (f <= 1e-4f && f >= -1e-4f); }
 inline bool fuzzy_zero(float f, float tol) { return f <= tol && f >= -tol; }
 inline bool fuzzy_between(float a, float b, float c, float tol) { return b > a - tol && b < c + tol; }
 inline bool fuzzy_greater_inclusive(float m, float n, float tol) { return m > (n - tol); }

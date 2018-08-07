@@ -388,7 +388,7 @@ edit::edit(wsys_manager* m): widget(m)
     _txtcolor = color(0, 0, 0);
     _selcolor = color(0, 125, 255);
     _crtcolor = color(0, 0, 0);
-    _font = font(_t("ËÎÌו"), 14);
+    _font = font(_t("simsun"), 14);
 }
 
 bool edit::create(widget* ptr, const gchar* name, const rect& rc, uint style)
@@ -1305,7 +1305,7 @@ void wsys_manager::initialize(const rect& rc)
     connect_notify(_caret, timer::on_timer, this, on_caret, 1);
     _caret->start(600);
     /* IME support */
-    set_ime(0, point(0, 0), font(_t("ËÎÌו"), 14));
+    set_ime(0, point(0, 0), font(_t("simsun"), 14));
 }
 
 void wsys_manager::set_dimension(int w, int h)

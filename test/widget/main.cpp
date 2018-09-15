@@ -8,6 +8,8 @@
 #include <ariel/textureop.h>
 #include <ariel/utility.h>
 
+#include <ariel/classicstyle.h>
+
 using namespace gs;
 using namespace gs::ariel;
 
@@ -177,16 +179,102 @@ protected:
     com_ptr<texture2d>  _btn_image;
 };
 
+static void trace_quad(const vec2 cp[3])
+{
+    trace(_t("@!\n"));
+    trace(_t("@moveTo %f, %f;\n"), cp[0].x, cp[0].y);
+    trace(_t("@quadTo %f, %f, %f, %f;\n"), cp[1].x, cp[1].y, cp[2].x, cp[2].y);
+    trace(_t("@@\n"));
+}
+
+static void trace_cubic(const vec2 cp[4])
+{
+    trace(_t("@!\n"));
+    trace(_t("@moveTo %f, %f;\n"), cp[0].x, cp[0].y);
+    trace(_t("@cubicTo %f, %f, %f, %f, %f, %f;\n"), cp[1].x, cp[1].y, cp[2].x, cp[2].y, cp[3].x, cp[3].y);
+    trace(_t("@@\n"));
+}
+
+static void trace_quad_ctls(const vector<vec2>& quadctls)
+{
+    trace_quad_strip(&quadctls.front(), (int)quadctls.size());
+}
+
+static float stupid_cubic_length(const vec2 cp[4], int steps)
+{
+    vector<vec2> intsps;
+    intsps.resize(steps);
+    ariel::cubic_interpolate(&intsps.front(), cp[0], cp[1], cp[2], cp[3], steps);
+    float len = 0.f;
+    for(int i = 1; i < steps; i ++)
+        len += vec2().sub(intsps.at(i - 1), intsps.at(i)).length();
+    return len;
+}
+
+// int gs_main()
+// {
+//     //vec2 cp[4] = { vec2(172.f, 271.f), vec2(58.f, 158.f), vec2(268.f, 18.f), vec2(302.f, 235.f) };
+//     //vec2 cp[4] = { vec2(29.f, 303.f), vec2(242.f, 60.f), vec2(152.f, 65.f), vec2(359.f, 299.f) };
+//     //vec2 cp[4] = { vec2(21.f, 289.f), vec2(131.f, 109.f), vec2(282.f, 105.f), vec2(441.f, 272.f) };
+//     vec2 cp[4] = { vec2(28.f, 244.f), vec2(116.f, 69.f), vec2(305.f, 240.f), vec2(452.f, 63.f) };
+//     trace_cubic(cp);
+//     vector<vec2> qq;
+//     float tol = 5.f;
+//     ariel::cubic_to_quad_bezier(qq, cp, tol);
+//     trace_quad_ctls(qq);
+// 
+//     float len1 = stupid_cubic_length(cp, 100);
+//     float len2 = cubic_bezier_length(cp, tol);
+// 
+//     wsys_manager* wsys = scene::get_singleton_ptr()->get_ui_system();
+//     painter* ptex = wsys->get_painter();
+//     assert(ptex);
+//     ptex->set_hints(painter::hint_anti_alias, true);
+//     wbkground* root = wsys->add_widget<wbkground>(
+//         0, _t("wbkground"), rect(0, 0, wsys->get_width(), wsys->get_height()),
+//         sm_hitable|sm_visible
+//         );
+//     framesys::get_framesys()->refresh();
+//     return framesys::get_framesys()->run();
+// }
+
 int gs_main()
 {
     wsys_manager* wsys = scene::get_singleton_ptr()->get_ui_system();
     painter* ptex = wsys->get_painter();
-    assert(ptex);
     ptex->set_hints(painter::hint_anti_alias, true);
-    wbkground* root = wsys->add_widget<wbkground>(
-        0, _t("wbkground"), rect(0, 0, wsys->get_width(), wsys->get_height()),
+
+    auto* bk = wsys->add_widget<classic_style::background>(
+        nullptr, _t("background"), rect(0, 0, wsys->get_width(), wsys->get_height()),
         sm_hitable|sm_visible
         );
+    bk->flush_style();
+
+    auto* btn1 = wsys->add_widget<classic_style::button>(
+        bk, _t("button1"), rect(10, 10, 100, 20), sm_hitable|sm_visible
+        );
+    btn1->set_value(_t("caption"), _t("button1"));
+    btn1->flush_style();
+
+    auto* edit1 = wsys->add_widget<classic_style::edit>(
+        bk, _t("edit1"), rect(10, 40, 100, 20), sm_hitable|sm_visible
+        );
+    edit1->flush_style();
+    
+    auto* menu1 = wsys->add_widget<classic_style::menu>(
+        bk, _t("menu1"), rect(10, 70, 1, 1), sm_hitable|sm_visible
+        );
+    assert(menu1);
+    classic_style::create_menu_from_script(menu1,
+        _t("Menu Test 1,Ctrl+A:@MenuTestCmd1;")
+        _t("[separator];")
+        _t("Menu Test 2, Ctrl+B:{")
+        _t("Menu Test 2-1,:@MenuTestCmd2;")
+        _t("}")
+        );
+    menu1->flush_style();
+    menu1->startup();
+
     framesys::get_framesys()->refresh();
     return framesys::get_framesys()->run();
 }

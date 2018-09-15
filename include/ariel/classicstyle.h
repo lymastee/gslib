@@ -108,8 +108,10 @@ public:
     virtual const string& get_content_name(int index) const override;
 
 protected:
-    color               _fill_color;
-    color               _stroke_color;
+    color               _normal_fill_color;
+    color               _normal_stroke_color;
+    color               _focused_fill_color;
+    color               _focused_stroke_color;
     string              _text_font_name;
     int                 _text_font_size;
     color               _text_font_color;
@@ -132,6 +134,7 @@ public:
     virtual const string& get_content_name(int index) const override;
 
 protected:
+    color               _border_color;
     color               _separator_color;
     int                 _separator_space;
     int                 _text_horizontal_margin;
@@ -141,7 +144,7 @@ protected:
 };
 
 class menu_cmd_style_sheet:
-    public menu_style_sheet
+    public ariel::style_sheet
 {
 public:
     menu_cmd_style_sheet();
@@ -157,7 +160,7 @@ protected:
 };
 
 class menu_sub_style_sheet:
-    public menu_style_sheet
+    public ariel::style_sheet
 {
 public:
     menu_sub_style_sheet();
@@ -237,6 +240,8 @@ public:
 protected:
     painter_brush       _normal_brush;
     painter_pen         _normal_pen;
+    painter_brush       _focused_brush;
+    painter_pen         _focused_pen;
     font                _text_font;
 
 protected:
@@ -290,20 +295,26 @@ public:
 
 class menu_sub_item:
     public menu_item,
-    public ariel::button,
+    public ariel::widget,
     public menu_sub_style_sheet
 {
 public:
-    menu_sub_item(wsys_manager* m): ariel::button(m), _sub_menu(nullptr) {}
+    menu_sub_item(wsys_manager* m): ariel::widget(m), _sub_menu(nullptr), _brush_ptr(nullptr), _pen_ptr(nullptr) {}
     virtual item_type get_type() const override { return sub_item; }
     virtual ariel::widget* to_widget() override { return this; }
     virtual void* query_interface(const uuid& uid) override;
     virtual void draw(painter* paint) override;
+    virtual void on_press(uint um, unikey uk, const point& pt) override;
+    virtual void on_click(uint um, unikey uk, const point& pt) override;
+    virtual void on_hover(uint um, const point& pt) override;
+    virtual void on_leave(uint um, const point& pt) override;
     virtual void flush_style() override;
 
 protected:
     menu_group*         _sub_menu;
     string              _caption;
+    painter_brush*      _brush_ptr;
+    painter_pen*        _pen_ptr;
 
 public:
     void set_sub_menu(menu_group* p) { _sub_menu = p; }
@@ -315,21 +326,27 @@ public:
 
 class menu_cmd_item:
     public menu_item,
-    public ariel::button,
+    public ariel::widget,
     public menu_cmd_style_sheet
 {
 public:
-    menu_cmd_item(wsys_manager* m): ariel::button(m), _menu_notify(nullptr) {}
+    menu_cmd_item(wsys_manager* m): ariel::widget(m), _menu_notify(nullptr), _brush_ptr(nullptr), _pen_ptr(nullptr) {}
     virtual item_type get_type() const override { return cmd_item; }
     virtual ariel::widget* to_widget() override { return this; }
     virtual void* query_interface(const uuid& uid) override;
     virtual void draw(painter* paint) override;
+    virtual void on_press(uint um, unikey uk, const point& pt) override;
+    virtual void on_click(uint um, unikey uk, const point& pt) override;
+    virtual void on_hover(uint um, const point& pt) override;
+    virtual void on_leave(uint um, const point& pt) override;
     virtual void flush_style() override;
 
 protected:
     menu_cmd_notify*    _menu_notify;
     string              _caption;
     accel_key           _accel_key;
+    painter_brush*      _brush_ptr;
+    painter_pen*        _pen_ptr;
 
 public:
     void set_cmd_notify(menu_cmd_notify* p) { _menu_notify = p; }
@@ -350,9 +367,16 @@ class menu_group:
 
 public:
     menu_group(wsys_manager* m): ariel::widget(m), _menu(nullptr) {}
+    virtual void draw(painter* paint) override;
     virtual void refresh_menu_group_size();
     virtual menu_separator* add_separator() { return add_item<menu_separator>(sm_visible); }
-    virtual menu_sub_item* add_sub_item() { return add_item<menu_sub_item>(sm_hitable|sm_visible); }
+    virtual menu_sub_item* add_sub_item()
+    {
+        auto* p = add_item<menu_sub_item>(sm_hitable|sm_visible);
+        assert(p);
+        p->flush_style();
+        return p;
+    }
     virtual menu_cmd_item* add_cmd_item();
 
 protected:
@@ -380,12 +404,14 @@ public:
     friend class menu_separator;
     friend class menu_cmd_item;
     friend class menu_sub_item;
+    friend class menu_group;
     typedef vector<menu_group*> menu_stack;
 
 public:
-    menu(wsys_manager* m): ariel::widget(m) {}
+    menu(wsys_manager* m): ariel::widget(m), _last_hover(nullptr) {}
     virtual void close() override;
     virtual void show(bool b) override;
+    virtual bool create(widget* ptr, const gchar* name, const rect& rc, uint style) override;
     virtual void on_press(uint um, unikey uk, const point& pt) override;
     virtual void on_click(uint um, unikey uk, const point& pt) override;
     virtual void on_hover(uint um, const point& pt) override;
@@ -401,6 +427,7 @@ public:
 
 protected:
     menu_stack          _menu_stack;
+    painter_pen         _menu_border_pen;
     painter_brush       _menu_normal_brush;
     painter_pen         _menu_normal_pen;
     painter_brush       _menu_hover_brush;
@@ -408,13 +435,25 @@ protected:
     painter_brush       _menu_press_brush;
     painter_pen         _menu_press_pen;
     font                _menu_font;
+    ariel::widget*      _last_hover;
 
 public:
     menu_item* hit_item(const point& pt);
     menu_group* hit_group(const point& pt);
+
+protected:
+    void on_current_hover(ariel::widget* ptr, uint um, const point& pt);
+    void on_select_menu_item(menu_item* item);
 };
 
 extern const uuid uuid_menu_item;
+
+/*
+ * name_caption[necessary], accel_key[optional] : @command;
+ * name_caption[necessary], accel_key[optional] : { ... };
+ * [separator_name];
+ */
+extern bool create_menu_from_script(menu* pmenu, const string& script);
 
 };
 

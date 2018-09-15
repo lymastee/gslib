@@ -94,15 +94,19 @@ public:
     rectf get_rectf() const { return rectf(0.f, 0.f, (float)get_width(), (float)get_height()); }
     bool is_visible() const { return _show && (_style & sm_visible); }
     bool is_enable() const { return _enable; }
+    bool is_focused() const;
     void hide() { show(false); }
     void disable() { enable(false); }
     point& to_global(point& pt) const;
     rect& to_global(rect& rc) const;
+    point& to_local(point& pt) const;
+    rect& to_local(rect& rc) const;
     void move(const point& pt);
     void resize(int w, int h);
     void refresh(bool imm);
     int get_width() const { return _pos.width(); }
     int get_height() const { return _pos.height(); }
+    wsys_manager* get_manager() const { return _manager; }
     bool register_accelerator(unikey key, uint mask);
     widget* unregister_accelerator(unikey key, uint mask);
 
@@ -311,7 +315,7 @@ struct accel_key
 public:
     accel_key(): key((unikey)-1), mask(0) {}        /* invalid */
     accel_key(unikey k, uint m): key(k), mask(m) {}
-    bool is_valid() const { return key == (unikey)-1; }
+    bool is_valid() const { return key != (unikey)-1; }
     bool operator == (const accel_key& that) const { return key == that.key && mask == that.mask; }
     bool from_string(const string& str);
     const string& to_string(string& str) const;
@@ -350,6 +354,8 @@ public:
     widget* set_capture(widget* ptr, bool b);
     widget* set_focus(widget* ptr);
     void on_caret(uint);
+    widget* get_capture() const { return _capture; }
+    widget* get_focus() const { return _focus; }
 
 public:
     virtual ~wsys_manager();
@@ -386,10 +392,10 @@ public:
             return nullptr;
         if(!ptr && _root)
             ptr = _root;
-        _ctor* p = gs_new(_ctor, this);
+        _ctor* p = new _ctor(this);
         assert(p);
         if(!p->create(ptr, name ? name : _t(""), rc, style)) {
-            gs_del(_ctor, p);
+            delete p;
             return nullptr;
         }
         if(name) {

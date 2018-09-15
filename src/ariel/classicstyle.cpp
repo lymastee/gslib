@@ -71,10 +71,14 @@ static const style_sheet_pair __button_style_sheet_pairs[] =
 
 static const style_sheet_pair __edit_style_sheet_pairs[] =
 {
-    std::make_pair(sst_color, _t("fill_color")),
-    std::make_pair(sst_color, _t("stroke_color")),
-    std::make_pair(sst_float, _t("fill_opacity")),
-    std::make_pair(sst_float, _t("stroke_opacity")),
+    std::make_pair(sst_color, _t("normal_fill_color")),
+    std::make_pair(sst_color, _t("normal_stroke_color")),
+    std::make_pair(sst_float, _t("normal_fill_opacity")),
+    std::make_pair(sst_float, _t("normal_stroke_opacity")),
+    std::make_pair(sst_color, _t("focused_fill_color")),
+    std::make_pair(sst_color, _t("focused_stroke_color")),
+    std::make_pair(sst_float, _t("focused_fill_opacity")),
+    std::make_pair(sst_float, _t("focused_stroke_opacity")),
     std::make_pair(sst_string, _t("text_font_name")),
     std::make_pair(sst_integer, _t("text_font_size")),
     std::make_pair(sst_color, _t("text_font_color")),
@@ -83,6 +87,7 @@ static const style_sheet_pair __edit_style_sheet_pairs[] =
 
 static const style_sheet_pair __menu_style_sheet_pairs[] =
 {
+    std::make_pair(sst_color, _t("border_color")),
     std::make_pair(sst_color, _t("separator_color")),
     std::make_pair(sst_integer, _t("separator_space")),
     std::make_pair(sst_integer, _t("text_horizontal_margin")),
@@ -104,6 +109,8 @@ static const style_sheet_pair __menu_sub_style_sheet_pairs[] =
 
 widget_style_sheet::widget_style_sheet()
 {
+    _fill_color = color(245, 246, 247);
+    _stroke_color = color(245, 246, 247, 0);
 }
 
 bool widget_style_sheet::get_value(const string& name, string& value)
@@ -175,6 +182,7 @@ const string& widget_style_sheet::get_content_name(int index) const
 
 background_style_sheet::background_style_sheet()
 {
+    _bkground_color = color(245, 246, 247);
 }
 
 bool background_style_sheet::get_value(const string& name, string& value)
@@ -226,6 +234,15 @@ const string& background_style_sheet::get_content_name(int index) const
 
 button_style_sheet::button_style_sheet()
 {
+    _normal_fill_color = color(245, 246, 247);
+    _normal_stroke_color = color(245, 246, 247, 0);
+    _hover_fill_color = color(232, 239, 247);
+    _hover_stroke_color = color(164, 206, 249);
+    _press_fill_color = color(201, 224, 247);
+    _press_stroke_color = color(98, 162, 228);
+    _caption_font_name.assign(_t("Tahoma"));
+    _caption_font_size = 14;
+    _caption_font_color = color(0, 0, 0);
 }
 
 bool button_style_sheet::get_value(const string& name, string& value)
@@ -380,27 +397,42 @@ const string& button_style_sheet::get_content_name(int index) const
 
 edit_style_sheet::edit_style_sheet()
 {
+    _normal_fill_color = color(255, 255, 255);
+    _normal_stroke_color = color(23, 23, 23);
+    _focused_fill_color = color(255, 255, 255);
+    _focused_stroke_color = color(0, 120, 215);
+    _text_font_name.assign(_t("simsun"));
+    _text_font_size = 14;
+    _text_font_color = color(0, 0, 0);
 }
 
 bool edit_style_sheet::get_value(const string& name, string& value)
 {
     if(name == __edit_style_sheet_pairs[0].second)
-        return from_color(value, _fill_color);
+        return from_color(value, _normal_fill_color);
     else if(name == __edit_style_sheet_pairs[1].second)
-        return from_color(value, _stroke_color);
+        return from_color(value, _normal_stroke_color);
     else if(name == __edit_style_sheet_pairs[2].second)
-        return from_float(value, (float)_fill_color.alpha / 255.f);
+        return from_float(value, (float)_normal_fill_color.alpha / 255.f);
     else if(name == __edit_style_sheet_pairs[3].second)
-        return from_float(value, (float)_stroke_color.alpha / 255.f);
-    else if(name == __edit_style_sheet_pairs[4].second) {
+        return from_float(value, (float)_normal_stroke_color.alpha / 255.f);
+    else if(name == __edit_style_sheet_pairs[4].second)
+        return from_color(value, _focused_fill_color);
+    else if(name == __edit_style_sheet_pairs[5].second)
+        return from_color(value, _focused_stroke_color);
+    else if(name == __edit_style_sheet_pairs[6].second)
+        return from_float(value, (float)_focused_fill_color.alpha / 255.f);
+    else if(name == __edit_style_sheet_pairs[7].second)
+        return from_float(value, (float)_focused_stroke_color.alpha / 255.f);
+    else if(name == __edit_style_sheet_pairs[8].second) {
         value = _text_font_name;
         return true;
     }
-    else if(name == __edit_style_sheet_pairs[5].second)
+    else if(name == __edit_style_sheet_pairs[9].second)
         return from_integer(value, _text_font_size);
-    else if(name == __edit_style_sheet_pairs[6].second)
+    else if(name == __edit_style_sheet_pairs[10].second)
         return from_color(value, _text_font_color);
-    else if(name == __edit_style_sheet_pairs[7].second)
+    else if(name == __edit_style_sheet_pairs[11].second)
         return from_float(value, (float)_text_font_color.alpha / 255.f);
     return false;
 }
@@ -408,9 +440,9 @@ bool edit_style_sheet::get_value(const string& name, string& value)
 void edit_style_sheet::set_value(const string& name, const string& value)
 {
     if(name == __edit_style_sheet_pairs[0].second)
-        verify(to_color(_fill_color, value));
+        verify(to_color(_normal_fill_color, value));
     else if(name == __edit_style_sheet_pairs[1].second)
-        verify(to_color(_stroke_color, value));
+        verify(to_color(_normal_stroke_color, value));
     else if(name == __edit_style_sheet_pairs[2].second) {
         float f;
         verify(to_float(f, value));
@@ -418,7 +450,7 @@ void edit_style_sheet::set_value(const string& name, const string& value)
             assert(!"invalid opacity for edit_style_sheet.");
             return;
         }
-        _fill_color.alpha = round(f * 255.f);
+        _normal_fill_color.alpha = round(f * 255.f);
     }
     else if(name == __edit_style_sheet_pairs[3].second) {
         float f;
@@ -427,15 +459,37 @@ void edit_style_sheet::set_value(const string& name, const string& value)
             assert(!"invalid opacity for edit_style_sheet.");
             return;
         }
-        _stroke_color.alpha = round(f * 255.f);
+        _normal_stroke_color.alpha = round(f * 255.f);
     }
     else if(name == __edit_style_sheet_pairs[4].second)
-        _text_font_name = value;
+        verify(to_color(_focused_fill_color, value));
     else if(name == __edit_style_sheet_pairs[5].second)
-        verify(to_integer(_text_font_size, value));
-    else if(name == __edit_style_sheet_pairs[6].second)
-        verify(to_color(_text_font_color, value));
+        verify(to_color(_focused_stroke_color, value));
+    else if(name == __edit_style_sheet_pairs[6].second) {
+        float f;
+        verify(to_float(f, value));
+        if(f < 0.f || f > 1.f) {
+            assert(!"invalid opacity for edit_style_sheet.");
+            return;
+        }
+        _focused_fill_color.alpha = round(f * 255.f);
+    }
     else if(name == __edit_style_sheet_pairs[7].second) {
+        float f;
+        verify(to_float(f, value));
+        if(f < 0.f || f > 1.f) {
+            assert(!"invalid opacity for edit_style_sheet.");
+            return;
+        }
+        _focused_stroke_color.alpha = round(f * 255.f);
+    }
+    else if(name == __edit_style_sheet_pairs[8].second)
+        _text_font_name = value;
+    else if(name == __edit_style_sheet_pairs[9].second)
+        verify(to_integer(_text_font_size, value));
+    else if(name == __edit_style_sheet_pairs[10].second)
+        verify(to_color(_text_font_color, value));
+    else if(name == __edit_style_sheet_pairs[11].second) {
         float f;
         verify(to_float(f, value));
         if(f < 0.f || f > 1.f) {
@@ -476,21 +530,35 @@ const string& edit_style_sheet::get_content_name(int index) const
 
 menu_style_sheet::menu_style_sheet()
 {
+    _border_color = color(53, 53, 53);
+    _separator_color = color(190, 195, 203);
+    _separator_space = 1;
+    _text_horizontal_margin = 5;
+    _text_vertical_margin = 5;
+    _caption_reserved_space = 40;
+    _accel_reserved_space = 20;
+    _caption_font_name.assign(_t("Tahoma"));
+    _caption_font_size = 14;
+    _normal_fill_color = color(255, 255, 255);
+    _hover_fill_color = _press_fill_color;
+    _hover_stroke_color = _press_stroke_color;
 }
 
 bool menu_style_sheet::get_value(const string& name, string& value)
 {
     if(name == __menu_style_sheet_pairs[0].second)
-        return from_color(value, _separator_color);
+        return from_color(value, _border_color);
     else if(name == __menu_style_sheet_pairs[1].second)
-        return from_integer(value, _separator_space);
+        return from_color(value, _separator_color);
     else if(name == __menu_style_sheet_pairs[2].second)
-        return from_integer(value, _text_horizontal_margin);
+        return from_integer(value, _separator_space);
     else if(name == __menu_style_sheet_pairs[3].second)
-        return from_integer(value, _text_vertical_margin);
+        return from_integer(value, _text_horizontal_margin);
     else if(name == __menu_style_sheet_pairs[4].second)
-        return from_integer(value, _caption_reserved_space);
+        return from_integer(value, _text_vertical_margin);
     else if(name == __menu_style_sheet_pairs[5].second)
+        return from_integer(value, _caption_reserved_space);
+    else if(name == __menu_style_sheet_pairs[6].second)
         return from_integer(value, _accel_reserved_space);
     return button_style_sheet::get_value(name, value);
 }
@@ -498,16 +566,18 @@ bool menu_style_sheet::get_value(const string& name, string& value)
 void menu_style_sheet::set_value(const string& name, const string& value)
 {
     if(name == __menu_style_sheet_pairs[0].second)
-        verify(to_color(_separator_color, value));
+        verify(to_color(_border_color, value));
     else if(name == __menu_style_sheet_pairs[1].second)
-        verify(to_integer(_separator_space, value));
+        verify(to_color(_separator_color, value));
     else if(name == __menu_style_sheet_pairs[2].second)
-        verify(to_integer(_text_horizontal_margin, value));
+        verify(to_integer(_separator_space, value));
     else if(name == __menu_style_sheet_pairs[3].second)
-        verify(to_integer(_text_vertical_margin, value));
+        verify(to_integer(_text_horizontal_margin, value));
     else if(name == __menu_style_sheet_pairs[4].second)
-        verify(to_integer(_caption_reserved_space, value));
+        verify(to_integer(_text_vertical_margin, value));
     else if(name == __menu_style_sheet_pairs[5].second)
+        verify(to_integer(_caption_reserved_space, value));
+    else if(name == __menu_style_sheet_pairs[6].second)
         verify(to_integer(_accel_reserved_space, value));
     else
         button_style_sheet::set_value(name, value);
@@ -680,12 +750,18 @@ void button::draw(painter* paint)
 {
     assert(paint);
     int w, h;
+    paint->save();
     paint->set_brush(_current_brush);
     paint->set_pen(_current_pen);
-    paint->draw_rect(get_rectf());
-    paint->set_font(_caption_font);
-    paint->get_text_dimension(_caption.c_str(), w, h);
-    paint->draw_text(_caption.c_str(), (get_width() - w) / 2, (get_height() - h) / 2, _caption_font_color, _caption.length());
+    rectf rc = get_rectf();
+    rc.move_to(0.f, 0.f);
+    paint->draw_rect(rc);
+    paint->restore();
+    if(!_caption.empty()) {
+        paint->set_font(_caption_font);
+        paint->get_text_dimension(_caption.c_str(), w, h);
+        paint->draw_text(_caption.c_str(), (get_width() - w) / 2, (get_height() - h) / 2, _caption_font_color, _caption.length());
+    }
 }
 
 void button::flush_style()
@@ -752,8 +828,10 @@ void edit::draw(painter* paint)
 
 void edit::flush_style()
 {
-    setup_brush_by_color(_normal_brush, _fill_color);
-    setup_pen_by_color(_normal_pen, _stroke_color);
+    setup_brush_by_color(_normal_brush, _normal_fill_color);
+    setup_pen_by_color(_normal_pen, _normal_stroke_color);
+    setup_brush_by_color(_focused_brush, _focused_fill_color);
+    setup_pen_by_color(_focused_pen, _focused_stroke_color);
     setup_font(_text_font, _text_font_name, _text_font_size);
 }
 
@@ -761,8 +839,14 @@ void edit::draw_background(painter* paint)
 {
     assert(paint);
     paint->save();
-    paint->set_brush(_normal_brush);
-    paint->set_pen(_normal_pen);
+    if(is_focused()) {
+        paint->set_brush(_focused_brush);
+        paint->set_pen(_focused_pen);
+    }
+    else {
+        paint->set_brush(_normal_brush);
+        paint->set_pen(_normal_pen);
+    }
     paint->draw_rect(get_rectf());
     paint->restore();
 }
@@ -797,6 +881,20 @@ void menu_sub_item::draw(painter* paint)
 {
     assert(paint);
     assert(get_parent());
+    /* draw button */
+    paint->save();
+    if(_sub_menu && _sub_menu->is_visible()) {
+        paint->set_brush(_menu->_menu_press_brush);
+        paint->set_pen(_menu->_menu_press_pen);
+    }
+    else {
+        paint->set_brush(*_brush_ptr);
+        paint->set_pen(*_pen_ptr);
+    }
+    rectf rc = get_rectf();
+    rc.move_to(0.f, 0.f);
+    paint->draw_rect(rc);
+    paint->restore();
     auto* parent = static_cast<menu_group*>(get_parent());
     float iconw = (float)parent->_icon_width;
     /* draw caption */
@@ -812,6 +910,7 @@ void menu_sub_item::draw(painter* paint)
     const int arrow_width = 4, arrow_height = 6;
     x = (float)get_width() - arrow_width - _menu->_text_horizontal_margin;
     y = ((float)get_height() - arrow_height) * 0.5f;
+    paint->save();
     painter_brush brush(painter_brush::solid);
     brush.set_color(_menu->_caption_font_color);
     paint->set_brush(brush);
@@ -821,11 +920,46 @@ void menu_sub_item::draw(painter* paint)
     path.line_to(x + arrow_width, y + arrow_height / 2);
     path.close_path();
     paint->draw_path(path);
+    paint->restore();
+}
+
+void menu_sub_item::on_press(uint um, unikey uk, const point& pt)
+{
+    assert(_menu);
+    _brush_ptr = &_menu->_menu_press_brush;
+    _pen_ptr = &_menu->_menu_press_pen;
+    _menu->on_select_menu_item(this);
+}
+
+void menu_sub_item::on_click(uint um, unikey uk, const point& pt)
+{
+    assert(_menu);
+    _brush_ptr = &_menu->_menu_hover_brush;
+    _pen_ptr = &_menu->_menu_hover_pen;
+    _menu->on_select_menu_item(this);
+}
+
+void menu_sub_item::on_hover(uint um, const point& pt)
+{
+    assert(_menu);
+    _brush_ptr = &_menu->_menu_hover_brush;
+    _pen_ptr = &_menu->_menu_hover_pen;
+    _menu->on_select_menu_item(this);
+}
+
+void menu_sub_item::on_leave(uint um, const point& pt)
+{
+    assert(_menu);
+    _brush_ptr = &_menu->_menu_normal_brush;
+    _pen_ptr = &_menu->_menu_normal_pen;
 }
 
 void menu_sub_item::flush_style()
 {
     set_caption(menu_sub_style_sheet::_caption);
+    assert(_menu);
+    _brush_ptr = &_menu->_menu_normal_brush;
+    _pen_ptr = &_menu->_menu_normal_pen;
 }
 
 static void retrieve_text_dimensions(const string& str, int& w, int& h)
@@ -848,11 +982,24 @@ void menu_sub_item::get_caption_dimensions(int& w, int& h) const
     h = th + _menu->_text_vertical_margin + _menu->_text_vertical_margin;
 }
 
+void* menu_cmd_item::query_interface(const uuid& uid)
+{
+    return (uid == uuid_menu_item) ? static_cast<menu_item*>(this) : __super::query_interface(uid);
+}
+
 void menu_cmd_item::draw(painter* paint)
 {
     assert(paint);
     assert(get_parent());
     auto* parent = static_cast<menu_group*>(get_parent());
+    /* draw button */
+    paint->save();
+    paint->set_brush(*_brush_ptr);
+    paint->set_pen(*_pen_ptr);
+    rectf rc = get_rectf();
+    rc.move_to(0.f, 0.f);
+    paint->draw_rect(rc);
+    paint->restore();
     /* draw caption */
     assert(_menu);
     paint->set_font(_menu->_menu_font);
@@ -872,15 +1019,46 @@ void menu_cmd_item::draw(painter* paint)
     paint->draw_text(str.c_str(), round(x), round(y), _menu->_caption_font_color, str.length());
 }
 
-void* menu_cmd_item::query_interface(const uuid& uid)
+void menu_cmd_item::on_press(uint um, unikey uk, const point& pt)
 {
-    return (uid == uuid_menu_item) ? static_cast<menu_item*>(this) : __super::query_interface(uid);
+    assert(_menu);
+    _brush_ptr = &_menu->_menu_press_brush;
+    _pen_ptr = &_menu->_menu_press_pen;
+    _menu->on_select_menu_item(this);
+}
+
+void menu_cmd_item::on_click(uint um, unikey uk, const point& pt)
+{
+    assert(_menu);
+    _brush_ptr = &_menu->_menu_hover_brush;
+    _pen_ptr = &_menu->_menu_hover_pen;
+    _menu->on_select_menu_item(this);
+    if(_menu_notify)
+        _menu_notify->on_menu_command(this);
+}
+
+void menu_cmd_item::on_hover(uint um, const point& pt)
+{
+    assert(_menu);
+    _brush_ptr = &_menu->_menu_hover_brush;
+    _pen_ptr = &_menu->_menu_hover_pen;
+    _menu->on_select_menu_item(this);
+}
+
+void menu_cmd_item::on_leave(uint um, const point& pt)
+{
+    assert(_menu);
+    _brush_ptr = &_menu->_menu_normal_brush;
+    _pen_ptr = &_menu->_menu_normal_pen;
 }
 
 void menu_cmd_item::flush_style()
 {
     set_caption(menu_cmd_style_sheet::_caption);
     set_accel_key(menu_cmd_style_sheet::_accel_key);
+    assert(_menu);
+    _brush_ptr = &_menu->_menu_normal_brush;
+    _pen_ptr = &_menu->_menu_normal_pen;
 }
 
 void menu_cmd_item::get_caption_dimensions(int& w, int& h) const
@@ -906,6 +1084,18 @@ void menu_cmd_item::get_accel_key_dimensions(int& w, int& h) const
     assert(_menu);
     w = tw + _menu->_text_horizontal_margin + _menu->_accel_reserved_space;
     h = th + _menu->_text_vertical_margin + _menu->_text_vertical_margin;
+}
+
+void menu_group::draw(painter* paint)
+{
+    assert(paint);
+    paint->save();
+    paint->set_brush(painter_brush());
+    paint->set_pen(_menu->_menu_border_pen);
+    rectf rc = get_rectf();
+    rc.move_to(0.f, 0.f);
+    paint->draw_rect(rc);
+    paint->restore();
 }
 
 void menu_group::refresh_menu_group_size()
@@ -944,12 +1134,12 @@ void menu_group::refresh_menu_group_size()
     };
     traverse_child_widget(retrieve_dimensions);
     /* setup dimensions */
-    _item_height = _icon_width = item_height;
+    _icon_width = 0;
     _caption_text_width = caption_text_width;
     _accel_text_width = accel_text_width;
     int total_width = _icon_width + caption_text_width + accel_text_width;
     /* do arrangement */
-    int next_item_pos = 0;
+    int next_item_pos = 1;
     auto arrange_items = [&](ariel::widget* w)-> int {
         assert(w);
         auto* item = reinterpret_cast<menu_item*>(w->query_interface(uuid_menu_item));
@@ -958,14 +1148,14 @@ void menu_group::refresh_menu_group_size()
         {
         case menu_item::separator:
             {
-                w->move(rect(0, next_item_pos, total_width, _menu->_separator_space));
+                w->move(rect(1, next_item_pos, total_width, _menu->_separator_space));
                 next_item_pos += _menu->_separator_space;
                 break;
             }
         case menu_item::sub_item:
         case menu_item::cmd_item:
             {
-                w->move(rect(0, next_item_pos, total_width, item_height));
+                w->move(rect(1, next_item_pos, total_width, item_height));
                 next_item_pos += item_height;
                 break;
             }
@@ -973,13 +1163,14 @@ void menu_group::refresh_menu_group_size()
         return 0;
     };
     traverse_child_widget(arrange_items);
-    resize(total_width, next_item_pos);
+    resize(total_width + 2, next_item_pos + 1);
 }
 
 menu_cmd_item* menu_group::add_cmd_item()
 {
     auto* p = add_item<menu_cmd_item>(sm_hitable|sm_visible);
     assert(p);
+    p->flush_style();
     auto* pmenu = static_cast<menu*>(get_parent());
     assert(pmenu == _menu);
     p->set_cmd_notify(pmenu);
@@ -1031,18 +1222,64 @@ void menu::show(bool b)
     __super::show(b);
 }
 
+bool menu::create(widget* ptr, const gchar* name, const rect& rc, uint style)
+{
+    if(!__super::create(ptr, name, rc, style))
+        return false;
+    hide();
+    return true;
+}
+
 void menu::on_press(uint um, unikey uk, const point& pt)
 {
+    if(auto* item = hit_item(pt)) {
+        auto* w = item->to_widget();
+        if(w) {
+            point pt1 = pt;
+            to_global(pt1);
+            w->to_local(pt1);
+            on_current_hover(w, um, pt1);
+            w->on_press(um, uk, pt1);
+            return;
+        }
+    }
+    on_current_hover(nullptr, um, pt);
 }
 
 void menu::on_click(uint um, unikey uk, const point& pt)
 {
+    if(auto* item = hit_item(pt)) {
+        auto* w = item->to_widget();
+        if(w) {
+            point pt1 = pt;
+            to_global(pt1);
+            w->to_local(pt1);
+            on_current_hover(w, um, pt1);
+            w->on_click(um, uk, pt1);
+            return;
+        }
+    }
+    on_current_hover(nullptr, um, pt);
+    assert(_manager);
+    _manager->set_focus(nullptr);
+    capture(false);
+    hide();
 }
 
 void menu::on_hover(uint um, const point& pt)
 {
-    if(auto* item = hit_item(pt))
-        item->to_widget()->on_hover(um, pt);
+    if(auto* item = hit_item(pt)) {
+        auto* w = item->to_widget();
+        if(w) {
+            point pt1 = pt;
+            to_global(pt1);
+            w->to_local(pt1);
+            on_current_hover(w, um, pt1);
+            w->on_hover(um, pt1);
+            return;
+        }
+    }
+    on_current_hover(nullptr, um, pt);
 }
 
 void menu::on_keydown(uint um, unikey uk)
@@ -1051,6 +1288,14 @@ void menu::on_keydown(uint um, unikey uk)
 
 void menu::flush_style()
 {
+    setup_pen_by_color(_menu_border_pen, _border_color);
+    setup_brush_by_color(_menu_normal_brush, _normal_fill_color);
+    setup_pen_by_color(_menu_normal_pen, _normal_stroke_color);
+    setup_brush_by_color(_menu_hover_brush, _hover_fill_color);
+    setup_pen_by_color(_menu_hover_pen, _hover_stroke_color);
+    setup_brush_by_color(_menu_press_brush, _press_fill_color);
+    setup_pen_by_color(_menu_press_pen, _press_stroke_color);
+    setup_font(_menu_font, _caption_font_name, _caption_font_size);
 }
 
 void menu::startup()
@@ -1068,17 +1313,11 @@ void menu::on_sub_menu(menu_sub_item* item)
 {
     assert(item && item->get_parent());
     auto* hold = static_cast<menu_group*>(item->get_parent());
-    for( ; !_menu_stack.empty(); _menu_stack.pop_back()) {
-        auto* p = _menu_stack.back();
-        if(p == hold)
-            break;
-        p->hide();
-    }
-    assert(!_menu_stack.empty());
     auto* sub_menu = item->get_sub_menu();
     assert(sub_menu);
     auto pos = item->get_rect().top_right();
     pos.offset(hold->get_rect().top_left());
+    pos.offset(2, 0);
     sub_menu->move(pos);
     sub_menu->show(true);
     _menu_stack.push_back(sub_menu);
@@ -1124,9 +1363,10 @@ void menu::refresh_menu_size()
 menu_group* menu::register_menu_group()
 {
     assert(_manager);
-    auto* p = _manager->add_widget<menu_group>(this, nullptr, rect(), 0);
+    auto* p = _manager->add_widget<menu_group>(this, nullptr, rect(), sm_hitable|sm_visible);
     assert(p);
     p->set_menu(this);
+    p->hide();
     return p;
 }
 
@@ -1144,7 +1384,7 @@ menu_item* menu::hit_item(const point& pt)
         return nullptr;
     auto localpt = pt;
     const auto& local_bias = group->get_rect().top_left();
-    localpt.offset(-localpt.x, -localpt.y);
+    localpt.offset(-local_bias.x, -local_bias.y);
     return group->hit_item(localpt);
 }
 
@@ -1159,6 +1399,155 @@ menu_group* menu::hit_group(const point& pt)
             return *i;
     }
     return nullptr;
+}
+
+void menu::on_current_hover(ariel::widget* ptr, uint um, const point& pt)
+{
+    if(_last_hover == ptr)
+        return;
+    if(_last_hover)
+        _last_hover->on_leave(um, pt);
+    _last_hover = ptr;
+}
+
+void menu::on_select_menu_item(menu_item* item)
+{
+    assert(item);
+    auto* w = item->to_widget();
+    assert(w && w->get_parent());
+    auto* hold = static_cast<menu_group*>(w->get_parent());
+    for( ; !_menu_stack.empty(); _menu_stack.pop_back()) {
+        auto* p = _menu_stack.back();
+        if(p == hold)
+            break;
+        p->hide();
+    }
+    assert(!_menu_stack.empty());
+    switch(item->get_type())
+    {
+    case menu_item::sub_item:
+        on_sub_menu(static_cast<menu_sub_item*>(item));
+        break;
+    }
+}
+
+#define menu_script_blanks  _t(" \t\v\r\n\f")
+
+static int skip_blanks(const string& str, int start)
+{
+    if(start >= str.length())
+        return str.length();
+    static string blanks(menu_script_blanks);
+    return (int)str.find_first_not_of(blanks, start);
+}
+
+static int acquire_token(string& tok, const string& str, const string& eos, int start)
+{
+    int next = (int)str.find_first_of(eos, start);
+    if(next == start)
+        return next;
+    tok.assign(str, start, next - start);
+    return next;
+}
+
+static menu_group* create_menu_group_from_script(menu* pmenu, const string& script, int& start)
+{
+    assert(pmenu);
+    int next = skip_blanks(script, start);
+    if(next >= script.length())
+        return nullptr;
+    auto* mgroup = pmenu->register_menu_group();
+    assert(mgroup);
+    for(;;) {
+        if(script.at(next) == _t('}')) {
+            start = next;
+            mgroup->refresh_menu_group_size();
+            return mgroup;
+        }
+        if(script.at(next) == _t('[')) {
+            string name;
+            int endofname = acquire_token(name, script, _t("]"), next);
+            if(endofname >= script.length()) {
+                assert(!"unexpected end of menu script.");
+                return nullptr;
+            }
+            if(++endofname < script.length() && script.at(endofname) == _t(';'))
+                ++ endofname;
+            next = endofname;
+            auto* sep = mgroup->add_separator();
+            assert(sep);
+            continue;
+        }
+        string name, accelkey;
+        int endofname = acquire_token(name, script, _t(","), next);
+        if(endofname >= script.length())
+            return nullptr;
+        next = skip_blanks(script, endofname + 1);
+        if(next >= script.length()) {
+            assert(!"unexpected end of menu script.");
+            return nullptr;
+        }
+        int endofkey = acquire_token(accelkey, script, _t(":"), next);
+        if(endofkey >= script.length())
+            return nullptr;
+        next = skip_blanks(script, endofkey + 1);
+        if(next >= script.length()) {
+            assert(!"unexpected end of menu script.");
+            return nullptr;
+        }
+        accel_key key;
+        bool has_accel = !accelkey.empty();
+        if(has_accel && !key.from_string(accelkey)) {
+            assert(!"invalid accelerator key of menu script.");
+            return nullptr;
+        }
+        auto ctl = script.at(next);
+        if(ctl == _t('@')) {
+            auto* cmd = mgroup->add_cmd_item();
+            assert(cmd);
+            cmd->set_caption(name);
+            if(has_accel)
+                cmd->set_accel_key(key);
+            next = acquire_token(string(), script, _t(";"), next);
+            if(next >= script.length()) {
+                assert(!"unexpected end of menu script.");
+                return nullptr;
+            }
+            next ++;
+        }
+        else if(ctl == _t('{')) {
+            auto* subitem = mgroup->add_sub_item();
+            assert(subitem);
+            subitem->set_caption(name);
+            auto* submgroup = create_menu_group_from_script(pmenu, script, ++ next);
+            if(!submgroup) {
+                assert(!"parse sub menu script failed.");
+                return nullptr;
+            }
+            subitem->set_sub_menu(submgroup);
+            assert(script.at(next) == _t('}'));
+            if(next + 1 < script.length() && script.at(next) == _t(';'))
+                next ++;
+            next ++;
+        }
+        else {
+            assert(!"unexpected control text of menu script.");
+            return nullptr;
+        }
+        assert(next <= script.length());
+        next = skip_blanks(script, next);
+        if(next >= script.length())
+            break;
+    }
+    start = next;
+    mgroup->refresh_menu_group_size();
+    return mgroup;
+}
+
+bool create_menu_from_script(menu* pmenu, const string& script)
+{
+    int next = 0;
+    return create_menu_group_from_script(pmenu, script, next) != nullptr;
 }
 
 };

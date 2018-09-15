@@ -200,6 +200,11 @@ void widget::on_leave(uint um, const point& pt)
 {
 }
 
+bool widget::is_focused() const
+{
+    return _manager ? (_manager->get_focus() == this) : false;
+}
+
 point& widget::to_global(point& pt) const
 {
     pt.offset(_pos.left, _pos.top);
@@ -214,6 +219,22 @@ rect& widget::to_global(rect& rc) const
     if(!_parent)
         return rc;
     return _parent->to_global(rc);
+}
+
+point& widget::to_local(point& pt) const
+{
+    point org(0, 0);
+    to_global(org);
+    pt.offset(-org.x, -org.y);
+    return pt;
+}
+
+rect& widget::to_local(rect& rc) const
+{
+    point org(0, 0);
+    to_global(org);
+    rc.offset(-org.x, -org.y);
+    return rc;
 }
 
 void widget::move(const point& pt)
@@ -1074,7 +1095,7 @@ void timer::on_notified()
 {
     if(_single) {
         _single = false;        /* ensure delete once */
-        gs_del(timer, this);
+        delete this;
     }
 }
 
@@ -1104,6 +1125,7 @@ bool accel_key::from_string(const string& str)
             s += _cststrlen(_t("Alt+"));
             len -= _cststrlen(_t("Alt+"));
         }
+        else break;
     }
     if(len <= 0) {
         assert(!"no accel key.");
@@ -1278,7 +1300,7 @@ wsys_manager::wsys_manager()
 wsys_manager::~wsys_manager()
 {
     if(_caret) {
-        gs_del(timer, _caret);
+        delete _caret;
         _caret = nullptr;
     }
 }
@@ -1300,7 +1322,7 @@ void wsys_manager::initialize(const rect& rc)
     set_dimension(rc.width(), rc.height());
     /* timer */
     assert(!_caret && _driver);
-    _caret = gs_new(timer, this);
+    _caret = new timer(this);
     assert(_caret);
     connect_notify(_caret, timer::on_timer, this, on_caret, 1);
     _caret->start(600);
@@ -1350,13 +1372,13 @@ void wsys_manager::update(widget* w)
     _painter->save();
     _painter->set_tranform(m);
     w->draw(_painter);
-    _painter->restore();
     if(widget* c = w->_child) {
         while(c->_next)
             c = c->_next;
         for( ; c; c = c->_last)
             update(c);
     }
+    _painter->restore();
 }
 
 widget* wsys_manager::hit_test(widget* ptr, point pt)
@@ -1477,7 +1499,11 @@ bool wsys_manager::on_mouse_up(uint um, unikey uk, const point& pt)
 bool wsys_manager::on_mouse_move(uint um, const point& pt)
 {
     if(_capture) {
-        _capture->on_hover(um, pt);
+        point pt1;
+        _capture->to_global(pt1);
+        pt1.x = pt.x - pt1.x;
+        pt1.y = pt.y - pt1.y;
+        _capture->on_hover(um, pt1);
         return true;
     }
     point pt1;

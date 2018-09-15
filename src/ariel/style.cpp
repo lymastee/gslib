@@ -43,7 +43,6 @@ const string& get_style_sheet_type_name(style_sheet_type sst)
 
 style_sheet::style_sheet()
 {
-    flush_style();
 }
 
 bool style_sheet::from_color(string& str, const color& cr)

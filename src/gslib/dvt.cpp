@@ -181,14 +181,14 @@ notify_holder::~notify_holder()
     }
     for(auto* notify : _notifiers) {
         assert(notify);
-        gs_del(notify_code, notify);
+        delete notify;
     }
     _notifiers.clear();
 }
 
 notify_code* notify_holder::add_notifier(int n)
 {
-    auto* notify = gs_new(notify_code, n);
+    auto* notify = new notify_code(n);
     assert(notify);
     _notifiers.push_back(notify);
     return notify;
@@ -209,7 +209,7 @@ void notify_collector::cleanup()
 {
     for(auto* p : _holders) {
         assert(p);
-        gs_del(notify_holder, p);
+        delete p;
     }
     _holders.clear();
 }

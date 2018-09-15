@@ -198,7 +198,8 @@ void painter::draw_rect(const rectf& rc, const color& cr)
 
 void painter::draw_text(const gchar* str, int x, int y, const color& cr, int length)
 {
-    assert(str);
+    if(!str || !length)
+        return;
     scene* scn = scene::get_singleton_ptr();
     assert(scn);
     fontsys* fsys = scn->get_fontsys();

@@ -411,6 +411,8 @@ int solve_univariate_cubic(float t[3], const vec4& coef)
         else {
             fcomplex ca(a, 0), cb(b, 0), cc(c, 0);
             fcomplex cdelta = cb * cb + cc * cc * cc;
+            if(abs(cdelta.real()) > 1e18f)
+                return 0;
             fcomplex sqd[2], cbrt1[3], cbrt2[3];
             csqrt(sqd, cdelta);
             ccbrt(cbrt1, cb + sqd[0]);
@@ -682,7 +684,7 @@ void intersectp_linear_linear(vec2& ip, const vec2& p1, const vec2& p2, const ve
     assert((d1.x != 0 || d1.y != 0) && "won't be parallel");
     float dxy = d1.x * d2.y, dyx = d2.x * d1.y;
     ip.y = (d1.y * d2.y * (p2.x - p1.x) + dxy * p1.y - dyx * p2.y) / (dxy - dyx);
-    ip.x = (d1.y != 0) ? ((ip.y - p1.y) * d1.x / d1.y + p1.x) :
+    ip.x = !fuzzy_zero(d1.y) ? ((ip.y - p1.y) * d1.x / d1.y + p1.x) :
         ((ip.y - p2.y) * d2.x / d2.y + p2.x);
 }
 

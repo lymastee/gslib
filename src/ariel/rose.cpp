@@ -842,9 +842,9 @@ void graphics_obj_entity::add_cubic_seg(path_seg& seg, const painter_node* node1
 
 graphics_obj::graphics_obj(float w, float h)
 {
-    __super::reset(gs_new(graphics_obj_entity, w, h), [](graphics_obj_entity* p) {
+    __super::reset(new graphics_obj_entity(w, h), [](graphics_obj_entity* p) {
         assert(p);
-        gs_del(graphics_obj_entity, p);
+        delete p;
     });
 }
 
@@ -1057,7 +1057,7 @@ void rose::prepare_stroke(const painter_path& path, const painter_pen& pen)
 
 rose_batch* rose::create_fill_batch_cr()
 {
-    auto* ptr = gs_new(rose_fill_batch_cr);
+    auto* ptr = new rose_fill_batch_cr;
     ptr->set_vertex_shader(_vsf_cr);
     ptr->set_pixel_shader(_psf_cr);
     ptr->set_vertex_format(_vf_cr);
@@ -1067,7 +1067,7 @@ rose_batch* rose::create_fill_batch_cr()
 
 rose_batch* rose::create_fill_batch_klm_cr()
 {
-    auto* ptr = gs_new(rose_fill_batch_klm_cr);
+    auto* ptr = new rose_fill_batch_klm_cr;
     ptr->set_vertex_shader(_vsf_klm_cr);
     ptr->set_pixel_shader(_psf_klm_cr);
     ptr->set_vertex_format(_vf_klm_cr);
@@ -1078,7 +1078,7 @@ rose_batch* rose::create_fill_batch_klm_cr()
 rose_batch* rose::create_fill_batch_klm_tex()
 {
     auto* sstate = acquire_default_sampler_state();
-    auto* ptr = gs_new(rose_fill_batch_klm_tex, sstate);
+    auto* ptr = new rose_fill_batch_klm_tex(sstate);
     ptr->set_vertex_shader(_vsf_klm_tex);
     ptr->set_pixel_shader(_psf_klm_tex);
     ptr->set_vertex_format(_vf_klm_tex);
@@ -1090,7 +1090,7 @@ rose_batch* rose::create_stroke_batch_cr()
 {
     if(!query_antialias())
         return create_fill_batch_cr();
-    auto* ptr = gs_new(rose_stroke_batch_coef_cr);
+    auto* ptr = new rose_stroke_batch_coef_cr;
     ptr->set_vertex_shader(_vss_coef_cr);
     ptr->set_pixel_shader(_pss_coef_cr);
     ptr->set_vertex_format(_vf_coef_cr);
@@ -1103,7 +1103,7 @@ rose_batch* rose::create_stroke_batch_tex()
     if(!query_antialias())
         return create_fill_batch_klm_tex();
     auto* sstate = acquire_default_sampler_state();
-    auto* ptr = gs_new(rose_stroke_batch_coef_tex, sstate);
+    auto* ptr = new rose_stroke_batch_coef_tex(sstate);
     ptr->set_vertex_shader(_vss_coef_tex);
     ptr->set_pixel_shader(_pss_coef_tex);
     ptr->set_vertex_format(_vf_coef_tex);
@@ -1114,7 +1114,7 @@ rose_batch* rose::create_stroke_batch_tex()
 rose_batch* rose::create_stroke_batch_assoc(rose_fill_batch_klm_tex* assoc)
 {
     assert(assoc);
-    auto* ptr = gs_new(rose_stroke_batch_assoc_with_klm_tex, assoc);
+    auto* ptr = new rose_stroke_batch_assoc_with_klm_tex(assoc);
     ptr->set_vertex_shader(_vss_coef_tex);
     ptr->set_pixel_shader(_pss_coef_tex);
     ptr->set_vertex_format(_vf_coef_tex);
@@ -1124,7 +1124,7 @@ rose_batch* rose::create_stroke_batch_assoc(rose_fill_batch_klm_tex* assoc)
 
 void rose::clear_batches()
 {
-    for(auto* p : _batches) { gs_del(rose_batch, p); }
+    for(auto* p : _batches) { delete p; }
     _batches.clear();
 }
 

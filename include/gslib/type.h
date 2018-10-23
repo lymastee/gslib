@@ -26,77 +26,7 @@
 #ifndef type_3f1a28e2_0da6_44b6_84db_29542f5a65c0_h
 #define type_3f1a28e2_0da6_44b6_84db_29542f5a65c0_h
 
-#include <assert.h>
-#include <gslib/config.h>
-
-__gslib_begin__
-
-#ifdef _GS_X86
-
-typedef char int8;
-typedef short int16;
-typedef int int32;
-typedef long long int64;
-typedef wchar_t wchar;
-typedef float real32;
-typedef double real;
-typedef unsigned char byte;
-typedef unsigned short word;
-typedef unsigned int dword;
-typedef unsigned long long qword;
-typedef dword uint;
-typedef word uint16;
-typedef qword uint64;
-
-#ifdef _UNICODE
-typedef wchar gchar;
-#else
-typedef char gchar;
-#endif
-
-template<class t>
-struct typeof { typedef void type; };
-
-/* virtual class ptr convert tools */
-template<class ccp, class bcp>
-inline int virtual_bias()
-{
-    static typeof<ccp>::type c;
-    static const int bias = (int)&c - (int)static_cast<bcp>(&c);
-    return bias;
-}
-
-template<class ccp, class bcp>
-inline ccp virtual_cast(bcp p)
-{
-    byte* ptr = (byte*)p;
-    ptr += virtual_bias<ccp, bcp>();
-    return reinterpret_cast<ccp>(ptr);
-}
-
-#endif  /* end of __gs_x86__ */
-
-template<class _ty>
-inline _ty gs_min(_ty a, _ty b) { return a < b ? a : b; }
-template<class _ty>
-inline _ty gs_max(_ty a, _ty b) { return a > b ? a : b; }
-template<class _ty>
-inline _ty gs_clamp(_ty v, _ty a, _ty b)
-{
-    assert(a <= b);
-    return gs_min(b, gs_max(a, v));
-}
-
-template<class _ty>
-inline void gs_swap(_ty& a, _ty& b)
-{
-    auto t = a;
-    a = b;
-    b = t;
-}
-
-__gslib_end__
-
+#include <gslib/basetype.h>
 #include <gslib/math.h>
 
 __gslib_begin__

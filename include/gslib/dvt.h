@@ -129,29 +129,29 @@ class notify_code
     typedef unsigned long ulong;
 
 public:
-    notify_code(int n);
+    notify_code(int argsize);
     ~notify_code();
     void finalize(uint old_func, uint host, uint action);
     uint get_code_address() const { return (uint)_ptr; }
 
 private:
-    int             _type;
+    int             _argsize;
     byte*           _ptr;
     int             _len;
     ulong           _oldpro;
 };
 
-#define connect_typed_notify(targettype, target, trigger, host, action, ntftype) { \
+#define connect_typed_notify(targettype, target, trigger, host, action, argsize) { \
     auto& vo = vtable_ops<targettype>(nullptr); \
     (target)->ensure_dvt_available<targettype>(); \
-    auto* notify = (target)->add_notifier(ntftype); \
+    auto* notify = (target)->add_notifier(argsize); \
     assert(notify); \
     uint old_func = vo.replace_vtable_method(target, vo.get_virtual_method_index(method_address(trigger)), notify->get_code_address()); \
     notify->finalize(old_func, (uint)host, method_address(action)); \
 }
 
-#define connect_notify(target, trigger, host, action, ntftype) \
-    connect_typed_notify(std::remove_reference_t<decltype(*target)>, target, trigger, host, action, ntftype)
+#define connect_notify(target, trigger, host, action, argsize) \
+    connect_typed_notify(std::remove_reference_t<decltype(*target)>, target, trigger, host, action, argsize)
 
 class notify_holder
 {
@@ -178,7 +178,7 @@ public:
         _backvtsize = vo.size_of_vtable();
         _backvt = vo.create_per_instance_vtable(static_cast<_cls*>(this));
     }
-    notify_code* add_notifier(int n);
+    notify_code* add_notifier(int argsize);
     /*
      * In case the holder would be tagged more than once by the garbage collector, the cause might be
      * a message re-entrant of the msg callback function. So here we tag it.

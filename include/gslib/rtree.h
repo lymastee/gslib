@@ -229,7 +229,7 @@ public:
     {
         wrapper_list in, out;
         for(auto& p : input) {
-            auto* w = gs_new(wrapper);
+            auto* w = new wrapper;
             w->born();
             auto& v = w->get_ref();
             v.set_bind_arg(p.get_bind_arg());
@@ -290,7 +290,7 @@ protected:
         assert(!input.empty());
         int size = (int)input.size();
         if(size <= max_record) {
-            auto* p = gs_new(wrapper);
+            auto* p = new wrapper;
             set_as_children(p, input);
             set_bound_rect(p);
             output.push_back(p);
@@ -345,7 +345,7 @@ protected:
                     wrapper_list ch;
                     for(int j = i; j < size; j ++)
                         ch.push_back(sorted.at(j)->assoc_wrapper);
-                    auto* w = gs_new(wrapper);
+                    auto* w = new wrapper;
                     set_as_children(w, ch);
                     set_bound_rect(w);
                     output.push_back(w);
@@ -358,8 +358,8 @@ protected:
                         ch1.push_back(sorted.at(j + i)->assoc_wrapper);
                     for(int j = i + size1; j < size; j ++)
                         ch2.push_back(sorted.at(j)->assoc_wrapper);
-                    auto* w1 = gs_new(wrapper);
-                    auto* w2 = gs_new(wrapper);
+                    auto* w1 = new wrapper;
+                    auto* w2 = new wrapper;
                     set_as_children(w1, ch1);
                     set_bound_rect(w1);
                     set_as_children(w2, ch2);
@@ -372,7 +372,7 @@ protected:
             wrapper_list ch;
             for(int j = 0; j < max_record; j ++)
                 ch.push_back(sorted.at(i + j)->assoc_wrapper);
-            auto* w = gs_new(wrapper);
+            auto* w = new wrapper;
             set_as_children(w, ch);
             set_bound_rect(w);
             output.push_back(w);

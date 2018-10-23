@@ -77,14 +77,14 @@ void painter_path::resize(int len)
         return;
     for(int i = len; i < total; i ++) {
         auto* n = get_node(i);
-        gs_del(node, n);
+        delete n;
     }
     _nodelist.resize(len);
 }
 
 void painter_path::destroy()
 {
-    std::for_each(_nodelist.begin(), _nodelist.end(), [](node* p) { gs_del(node, p); });
+    std::for_each(_nodelist.begin(), _nodelist.end(), [](node* p) { delete p; });
     _nodelist.clear();
 }
 

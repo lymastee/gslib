@@ -57,7 +57,7 @@ clip_line* clip_joint::get_prev_above(float y) const
     assert(prev);
     if(prev->get_point().y > y)
         return get_prev_line();
-    return 0;
+    return nullptr;
 }
 
 clip_line* clip_joint::get_next_above(float y) const
@@ -66,7 +66,7 @@ clip_line* clip_joint::get_next_above(float y) const
     assert(next);
     if(next->get_point().y > y)
         return get_next_line();
-    return 0;
+    return nullptr;
 }
 
 clip_line* clip_joint::get_prev_below(float y) const
@@ -75,7 +75,7 @@ clip_line* clip_joint::get_prev_below(float y) const
     assert(prev);
     if(prev->get_point().y < y)
         return get_prev_line();
-    return 0;
+    return nullptr;
 }
 
 clip_line* clip_joint::get_next_below(float y) const
@@ -84,13 +84,13 @@ clip_line* clip_joint::get_next_below(float y) const
     assert(next);
     if(next->get_point().y < y)
         return get_next_line();
-    return 0;
+    return nullptr;
 }
 
 clip_end_joint::clip_end_joint(const vec2& pt)
 {
     _point = pt;
-    _info[0] = _info[1] = 0;
+    _info[0] = _info[1] = nullptr;
 }
 
 void clip_end_joint::set_path_info(int i, path_info* pnf)
@@ -104,15 +104,15 @@ clip_interpolate_joint::clip_interpolate_joint(const vec2& pt)
 {
     _point = pt;
     _ratio = 0.f;
-    _info = 0;
+    _info = nullptr;
 }
 
 clip_intersect_joint::clip_intersect_joint(const vec2& pt)
 {
     _point = pt;
-    _orient[0] = _orient[1] = 0;
-    _cut[0] = _cut[1] = 0;
-    _symmetric = 0;
+    _orient[0] = _orient[1] = nullptr;
+    _cut[0] = _cut[1] = nullptr;
+    _symmetric = nullptr;
 }
 
 path_info* clip_intersect_joint::get_path_info() const
@@ -136,7 +136,7 @@ path_info* clip_intersect_joint::get_path_info() const
         }
     default:
         assert(!"unexpected in clip_intersect_joint::get_path_info.");
-        return 0;
+        return nullptr;
     }
 }
 
@@ -147,13 +147,13 @@ clip_joint* clip_line::get_another_joint(const clip_joint* joint) const
     else if(_joint[1] == joint)
         return _joint[0];
     assert(!"unexpected.");
-    return 0;
+    return nullptr;
 }
 
 clip_line* clip_line::get_prev_line() const
 {
     if(!_joint[0])
-        return 0;
+        return nullptr;
     assert(_joint[0]->get_next_line() == this);
     return _joint[0]->get_prev_line();
 }
@@ -161,7 +161,7 @@ clip_line* clip_line::get_prev_line() const
 clip_line* clip_line::get_next_line() const
 {
     if(!_joint[1])
-        return 0;
+        return nullptr;
     assert(_joint[1]->get_prev_line() == this);
     return _joint[1]->get_next_line();
 }
@@ -181,7 +181,7 @@ static void destroy_ptr_list(_list& l)
         return;
     std::for_each(l.begin(), l.end(), [](_list::value_type& ptr) {
         assert(ptr);
-        gs_del(_node, ptr);
+        delete ptr;
     });
     l.clear();
 }
@@ -344,7 +344,7 @@ int clip_polygon::create_path_infos(const painter_path& path, int start)
         auto tag = node->get_tag();
         if(tag == painter_path::pt_moveto)
             break;
-        _pnf_holdings.push_back(gs_new(path_info, last, node));
+        _pnf_holdings.push_back(new path_info(last, node));
         last = node;
     }
     assert(first != last && first->get_point() == last->get_point());
@@ -398,7 +398,7 @@ clip_end_joint* clip_polygon::create_end_joint(path_info* pnf1, path_info* pnf2)
     int c = pnf1->get_point_count();
     assert(c <= 4);
     pnf1->get_points(pt, c);
-    clip_end_joint* j = gs_new(clip_end_joint, pt[c - 1]);
+    clip_end_joint* j = new clip_end_joint(pt[c - 1]);
     assert(j);
     j->set_path_info(0, pnf1);
     j->set_path_info(1, pnf2);
@@ -409,7 +409,7 @@ clip_end_joint* clip_polygon::create_end_joint(path_info* pnf1, path_info* pnf2)
 clip_interpolate_joint* clip_polygon::create_interpolate_joint(path_info* pnf, const vec2& p, float t)
 {
     assert(pnf);
-    clip_interpolate_joint* j = gs_new(clip_interpolate_joint, p);
+    clip_interpolate_joint* j = new clip_interpolate_joint(p);
     assert(j);
     j->set_path_info(pnf);
     j->set_ratio(t);
@@ -419,7 +419,7 @@ clip_interpolate_joint* clip_polygon::create_interpolate_joint(path_info* pnf, c
 
 clip_line* clip_polygon::create_line(clip_joint* joint1, clip_joint* joint2)
 {
-    clip_line* e = gs_new(clip_line);
+    clip_line* e = new clip_line;
     assert(e);
     e->set_joint(0, joint1);
     e->set_joint(1, joint2);
@@ -483,7 +483,7 @@ clip_end_joint* clip_polygon::create_segment(clip_joint* joint1, path_info* pnf1
 clip_mirror_joint* clip_polygon::create_mirror_joint(clip_joint* joint)
 {
     assert(joint);
-    clip_mirror_joint* p = gs_new(clip_mirror_joint);
+    clip_mirror_joint* p = new clip_mirror_joint;
     assert(p);
     p->set_mirror(joint);
     _joint_holdings.push_back(p);
@@ -493,7 +493,7 @@ clip_mirror_joint* clip_polygon::create_mirror_joint(clip_joint* joint)
 clip_final_joint* clip_polygon::create_final_joint(clip_joint* joint)
 {
     /* joint could be null, which indicates a control point. */
-    clip_final_joint* p = gs_new(clip_final_joint);
+    clip_final_joint* p = new clip_final_joint;
     assert(p);
     p->set_mirror(joint);
     _joint_holdings.push_back(p);
@@ -512,7 +512,7 @@ void clip_polygon::adopt(clip_polygon& poly)
 
 clip_sweep_line::~clip_sweep_line()
 {
-    for(auto* p : _joint_holdings) { gs_del(clip_sweep_joint, p); }
+    for(auto* p : _joint_holdings) { delete p; }
     _sorted_by_x.clear();
     _joint_holdings.clear();
 }
@@ -527,7 +527,7 @@ void clip_sweep_line::add_joint(clip_sweep_joint* joint)
 clip_sweep_joint* clip_sweep_line::create_joint(clip_joint* joint)
 {
     assert(joint);
-    auto* p = gs_new(clip_sweep_endpoint, joint);
+    auto* p = new clip_sweep_endpoint(joint);
     add_joint(p);
     return p;
 }
@@ -557,9 +557,9 @@ clip_sweep_joint* clip_sweep_line::create_joint(clip_line* line, float y)
 {
     assert(line);
     if(!clip_range_test_y(line, y))
-        return 0;
+        return nullptr;
     float x = calc_sweep_line_x(line->get_joint(0), line->get_joint(1), y);
-    auto* p = gs_new(clip_sweep_relay);
+    auto* p = new clip_sweep_relay;
     p->set_line(line);
     p->set_point(vec2(x, y));
     add_joint(p);
@@ -588,7 +588,7 @@ clip_sweep_joint* clip_sweep_line::ensure_unique_create(clip_joint* joint)
             }
         }
     }
-    return found ? 0 : create_joint(joint);
+    return found ? nullptr : create_joint(joint);
 }
 
 const vec2& clip_sweeper::get_another_point() const
@@ -629,7 +629,7 @@ clip_mirror_joint* clip_patch::create_assumed_mj(const clip_sweeper& sweeper)
         assert(j);
         return create_mirror_joint(j);
     }
-    return 0;
+    return nullptr;
 }
 
 clip_line* clip_patch::fix_line_front(clip_line* line, clip_mirror_joint* mj)
@@ -737,7 +737,7 @@ clip_sweep_line_algorithm::clip_sweep_line_algorithm()
 
 void clip_sweep_line_algorithm::destroy()
 {
-    for(auto* p : _sweep_lines) { gs_del(clip_sweep_line, p); }
+    for(auto* p : _sweep_lines) { delete p; }
     _sweep_lines.clear();
     destroy_ptr_list<clip_joint, clip_joints>(_joint_holdings);
     destroy_ptr_list<clip_line, clip_lines>(_line_holdings);
@@ -765,7 +765,7 @@ static bool is_clockwise(const clip_polygon* poly)
 {
     assert(poly);
     float x = -FLT_MAX;
-    clip_joint* detectp = 0;
+    clip_joint* detectp = nullptr;
     auto* line1 = poly->get_line_start();
     assert(line1);
     auto* joint1 = line1->get_joint(0);
@@ -977,7 +977,7 @@ clip_sweep_line* clip_sweep_line_algorithm::create_sweep_line(clip_joint* joint)
     auto* prev = joint->get_prev_line();
     auto* next = joint->get_next_line();
     assert(prev && next);
-    auto* line = gs_new(clip_sweep_line, joint->get_point().y);
+    auto* line = new clip_sweep_line(joint->get_point().y);
     line->create_joint(joint);
     _sweep_lines.push_back(line);
     return line;
@@ -1424,7 +1424,7 @@ public:
     typedef clip_sweep_lines::iterator iterator;
     clip_back_tracer() {}
     clip_back_tracer(iterator f, iterator t): _from(f), _to(t) {}
-    clip_sweep_line* get_line() const { return _from == _to ? 0 : *_from; }
+    clip_sweep_line* get_line() const { return _from == _to ? nullptr : *_from; }
     template<class _lamb>
     void run(_lamb lamb) const
     {
@@ -1563,8 +1563,8 @@ void clip_sweep_line_algorithm::proceed_intersection(clip_sweep_line* line, clip
     vec2 ip;
     intersectp_linear_linear(ip, p[0], q[0], d[0], d[1]);
     line->set_y(ip.y);
-    auto* joint = gs_new(clip_intersect_joint, ip);
-    auto* symm = gs_new(clip_intersect_joint, ip);
+    auto* joint = new clip_intersect_joint(ip);
+    auto* symm = new clip_intersect_joint(ip);
     assert(joint && symm);
     _joint_holdings.push_back(joint);
     _joint_holdings.push_back(symm);
@@ -1573,8 +1573,8 @@ void clip_sweep_line_algorithm::proceed_intersection(clip_sweep_line* line, clip
     _sorted_by_y.insert(joint);
     _intersections.push_back(joint);
     line->create_joint(joint);
-    auto* hand1 = gs_new(clip_line);
-    auto* hand2 = gs_new(clip_line);
+    auto* hand1 = new clip_line;
+    auto* hand2 = new clip_line;
     assert(hand1 && hand2);
     _line_holdings.push_back(hand1);
     _line_holdings.push_back(hand2);
@@ -1585,7 +1585,7 @@ void clip_sweep_line_algorithm::proceed_intersection(clip_sweep_line* line, clip
 
 clip_sweep_line_algorithm::iterator clip_sweep_line_algorithm::insert_sweep_line(iterator i, iterator j)
 {
-    clip_sweep_line* line = gs_new(clip_sweep_line);
+    clip_sweep_line* line = new clip_sweep_line;
     assert(line);
     return _sweep_lines.insert(j, line);
 }
@@ -1601,7 +1601,7 @@ static clip_joint* clip_find_prev(clip_joint* joint)
         if((tag != ct_intersect_joint) && (tag != ct_pivot_joint))
             return j;
     }
-    return 0;
+    return nullptr;
 }
 
 static clip_joint* clip_find_next(clip_joint* joint)
@@ -1615,7 +1615,7 @@ static clip_joint* clip_find_next(clip_joint* joint)
         if((tag != ct_intersect_joint) && (tag != ct_pivot_joint))
             return j;
     }
-    return 0;
+    return nullptr;
 }
 
 void clip_sweep_line_algorithm::finish_intersection(clip_intersect_joint* joint)
@@ -1718,7 +1718,7 @@ static path_info* retrieve_path_info(clip_joint* joint1, clip_joint* joint2)
             return p1->get_path_info(0);
     }
     assert(!"unexpected situation.");
-    return 0;
+    return nullptr;
 }
 
 void clip_sweep_line_algorithm::create_spliters()
@@ -1957,7 +1957,7 @@ static clip_joint* find_next_mirror_specific_joint(clip_joint* joint, clip_joint
         if(is_mirror_specific_joint(joint, lamb))
             return joint;
     }
-    return 0;
+    return nullptr;
 }
 
 void clip_sweep_line_algorithm::replace_curves(clip_polygon& poly)
@@ -2007,7 +2007,7 @@ static clip_joint* strip_off(clip_joint* joint)
         return static_cast<clip_final_joint*>(joint)->get_mirror();
     default:
         assert(!"unexpected.");
-        return 0;
+        return nullptr;
     }
 }
 
@@ -2023,7 +2023,7 @@ void clip_sweep_line_algorithm::replace_curve(clip_polygon& poly, clip_joint*& s
     assert(t == ct_mirror_joint || t == ct_final_joint);
     auto* fj1 = (t == ct_final_joint) ? static_cast<clip_final_joint*>(joint1) :
         poly.create_final_joint(m1);
-    clip_final_joint* fj2 = 0;
+    clip_final_joint* fj2 = nullptr;
     if(joint1 == joint2)
         fj2 = fj1;
     else {
@@ -2044,9 +2044,9 @@ void clip_sweep_line_algorithm::replace_curve(clip_polygon& poly, clip_joint*& s
         clip_connect(fj1, joint1->get_next_line(), fj2);
         clip_connect(fj2, joint2->get_next_line());
     };
-    curve_spliter* csp = 0;
-    const vec2* p1 = 0;
-    const vec2* p2 = 0;
+    curve_spliter* csp = nullptr;
+    const vec2* p1 = nullptr;
+    const vec2* p2 = nullptr;
     if(mt1 == ct_end_joint && mt2 == ct_end_joint) {
         /* a straight line or a curve needn't be splitted. */
         auto* mj1 = static_cast<clip_end_joint*>(m1);
@@ -2260,13 +2260,13 @@ static const vec2& get_assembly_node_point(const clip_assembly_node& node)
 static clip_joint* get_assembly_bind_joint(const clip_assembly_node& node)
 {
     if(node.get_tag() != ant_sweeper)
-        return 0;
+        return nullptr;
     auto& c1 = node.to_const_class1();
     auto* s = c1.get_up_sweeper();
     assert(s && s->joint);
     auto* sj = s->joint;
     if(sj->get_tag() != cst_endpoint)
-        return 0;
+        return nullptr;
     auto* ep = static_cast<clip_sweep_endpoint*>(sj);
     return ep->get_joint();
 }
@@ -2274,13 +2274,13 @@ static clip_joint* get_assembly_bind_joint(const clip_assembly_node& node)
 static clip_joint* get_assembly_dual_joint(const clip_assembly_node& node)
 {
     if(node.get_tag() != ant_point)
-        return 0;
+        return nullptr;
     auto& c2 = node.to_const_class2();
     auto* s = c2.get_sweeper();
     assert(s && s->joint);
     auto* sj = s->joint;
     if(sj->get_tag() != cst_endpoint)
-        return 0;
+        return nullptr;
     auto* ep = static_cast<clip_sweep_endpoint*>(sj);
     return ep->get_joint();
 }
@@ -2359,8 +2359,8 @@ clip_result_iter clip_assembler::close_patch(iterator i, const clip_assembly_swe
         auto* p = patch.create_assumed_mj(right_u);
         patch.fix_line_front(patch.get_line_start(), p);
     }
-    clip_mirror_joint* left = 0;
-    clip_mirror_joint* right = 0;
+    clip_mirror_joint* left = nullptr;
+    clip_mirror_joint* right = nullptr;
     if(left_d.get_point() == right_d.get_point())
         left = right = patch.create_assumed_mj(left_d);
     else {
@@ -2632,7 +2632,7 @@ bool clip_assembler::try_split_patch(iterator piter)
     auto is_select_joint = [](clip_joint* p)->bool {
         assert(p);
         auto* m = strip_off(p);
-        if(m == 0)
+        if(m == nullptr)
             return false;
         auto t = m->get_type();
         return t == ct_intersect_joint || t == ct_pivot_joint;
@@ -2654,7 +2654,7 @@ bool clip_assembler::try_split_patch(iterator piter)
     int cap = (int)sel_joints.size();
     if(cap <= 1)
         return false;
-    clip_joint *sp1 = 0, *sp2 = 0;
+    clip_joint *sp1 = nullptr, *sp2 = nullptr;
     for(int c = 0; c < cap; c ++) {
         sp1 = sel_joints.at(c);
         for(int i = c + 1; i < cap; i ++) {
@@ -2664,7 +2664,7 @@ bool clip_assembler::try_split_patch(iterator piter)
                 break;
             }
         }
-        if(sp2 != 0)
+        if(sp2 != nullptr)
             break;
     }
     if(!sp2)
@@ -2730,7 +2730,7 @@ void clip_assembler_exclude::proceed(clip_sweep_lines& sweeplines)
 {
     /* feed an empty root to achieve the multi top entries. */
     assert(!_result.is_valid());
-    auto r = _result.birth<clip_polygon>(clip_result_iter(0));
+    auto r = _result.birth<clip_polygon>(clip_result_iter(nullptr));
     assert(r);
     assert(sweeplines.size() >= 2);
     auto i = sweeplines.begin();
@@ -2812,7 +2812,7 @@ static clip_assembly_nodes::iterator find_assembly_related_node(clip_assembly_no
         auto* prevj = oj->get_prev_joint();
         auto* nextj = oj->get_next_joint();
         assert(prevj && nextj);
-        clip_joint* f = 0;
+        clip_joint* f = nullptr;
         if(prevj->get_point().y == oj->get_point().y)
             f = prevj;
         else if(nextj->get_point().y == oj->get_point().y)
@@ -2864,7 +2864,7 @@ static clip_assembly_nodes::iterator find_assembly_dual_node(clip_assembly_nodes
         auto* prevj = oj->get_prev_joint();
         auto* nextj = oj->get_next_joint();
         assert(prevj && nextj);
-        clip_joint* f = 0;
+        clip_joint* f = nullptr;
         if(prevj->get_point().y == oj->get_point().y)
             f = prevj;
         else if(nextj->get_point().y == oj->get_point().y)
@@ -2964,7 +2964,7 @@ void clip_assembler_exclude::proceed_sweepers()
         _iter_st.swap(iterator_stack());
     if(_nodes.empty())
         return;
-    _last_sib = iterator(0);
+    _last_sib = iterator(nullptr);
     auto r = _result.get_root();
     assert(r);
     _iter_st.push(r);
@@ -2982,7 +2982,7 @@ void clip_assembler_exclude::proceed_sweepers()
                 _iter_st.pop();
             }
             else {
-                _last_sib = iterator(0);
+                _last_sib = iterator(nullptr);
                 _iter_st.push(patch_iter);
             }
             ++ i;
@@ -3008,12 +3008,12 @@ static clip_joint* detect_ring_joint(clip_patch& patch)
     auto* line2 = patch.get_line_end();
     assert(line1 && line2);
     if(line1 == line2)
-        return 0;
+        return nullptr;
     auto* joint1 = line1->get_joint(0);
     if(!joint1) {
         line1 = line1->get_next_line();
         if(line1 == line2)
-            return 0;
+            return nullptr;
         joint1 = line1->get_joint(0);
     }
     assert(joint1);
@@ -3021,7 +3021,7 @@ static clip_joint* detect_ring_joint(clip_patch& patch)
     if(!joint2) {
         line2 = line2->get_prev_line();
         if(line1 == line2)
-            return 0;
+            return nullptr;
         joint2 = line2->get_joint(1);
     }
     assert(joint2);
@@ -3035,7 +3035,7 @@ static clip_joint* detect_ring_joint(clip_patch& patch)
         if(p == p1 || p == p2)
             return joint;
     }
-    return 0;
+    return nullptr;
 }
 
 void clip_assembler_exclude::finish_proceed_patches(iterator p)
@@ -3172,7 +3172,7 @@ void clip_create_polygons(clip_polygons& polygons, const painter_path& path)
     if(!cap)
         return;
     for(int i = 0; i < cap;) {
-        clip_polygon* polygon = gs_new(clip_polygon);
+        clip_polygon* polygon = new clip_polygon;
         polygons.push_back(polygon);
         i = polygon->create(path, i);
     }

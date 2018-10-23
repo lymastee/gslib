@@ -36,7 +36,7 @@ struct _mono_rel
 {
     _meta*          _next;
 
-    _mono_rel() { _next = 0; }
+    _mono_rel() { _next = nullptr; }
     _meta* next() const { return _next; }
     void set_next(_meta* ptr) { _next = ptr; }
     _meta* operator+(int d) const
@@ -72,7 +72,7 @@ struct _dual_rel
 {
     _meta           *_prev, *_next;
 
-    _dual_rel() { _prev = _next = 0; }
+    _dual_rel() { _prev = _next = nullptr; }
     _meta* prev() const { return _prev; }
     _meta* next() const { return _next; }
     void set_prev(_meta* ptr) { _prev = ptr; }
@@ -127,7 +127,7 @@ struct _pack_rel
     _meta       *_from, *_to;
     int         _size;
 
-    _pack_rel() { _from = _to = 0, _size = 0; }
+    _pack_rel() { _from = _to = nullptr, _size = 0; }
     _pack_rel(_meta* from, _meta* to) { _from = from, _to = to, _size = 0; }
     _meta* from() const { return _from; }
     _meta* to() const { return _to; }
@@ -235,7 +235,7 @@ struct _graph_ortho_wrapper:
 
     value*          _value;
 
-    wrapper() { _value = 0; }
+    wrapper() { _value = nullptr; }
     value* get_ptr() { return _value; }
     const value* const_ptr() const { return _value; }
     value& get_ref() { return *_value; }
@@ -243,16 +243,16 @@ struct _graph_ortho_wrapper:
     relation& get_relation() { return static_cast<relation&>(*this); }
     const relation& const_relation() const { return static_cast<const relation&>(*this); }
     template<class _cst>
-    void born() { _value = gs_new(_cst); }
-    void born() { _value = gs_new(value); }
-    void kill() { gs_del(value, _value); }
+    void born() { _value = new _cst; }
+    void born() { _value = new value; }
+    void kill() { delete _value; }
     void copy(const wrapper* a) { assert(!"prevent."); }
     void attach(wrapper* a)
     {
         assert(a && a->_value);
         kill();
         _value = a->_value;
-        a->_value = 0;
+        a->_value = nullptr;
     }
     int get_parents_count() const { return parents_count(); }
     int get_children_count() const { return children_count(); }
@@ -262,8 +262,8 @@ template<class _wrapper>
 struct _graph_allocator
 {
     typedef _wrapper wrapper;
-    static wrapper* born() { return gs_new(wrapper); }
-    static void kill(wrapper* w) { gs_del(wrapper, w); }
+    static wrapper* born() { return new wrapper; }
+    static void kill(wrapper* w) { delete w; }
 };
 
 template<class _val>
@@ -325,8 +325,8 @@ public:
     typedef _graph_ortho_const_iterator<_ty, _wrapper> iterator;
 
 public:
-    iterator(const wrapper* w = 0) { _cvptr = w; }
-    bool is_valid() const { return _cvptr != 0; }
+    iterator(const wrapper* w = nullptr) { _cvptr = w; }
+    bool is_valid() const { return _cvptr != nullptr; }
     const value* get_ptr() const { return _cvptr->const_ptr(); }
     const value* operator->() const { return _cvptr->const_ptr(); }
     const value& operator*() const { return _cvptr->const_ref(); }
@@ -351,7 +351,7 @@ public:
     typedef _graph_ortho_iterator<_ty, _wrapper> iterator;
 
 public:
-    iterator(wrapper* w = 0) { _vptr = w; }
+    iterator(wrapper* w = nullptr) { _vptr = w; }
     value* get_ptr() const { return _vptr->get_ptr(); }
     value* operator->() const { return _vptr->get_ptr(); }
     value& operator*() const { return _vptr->get_ref(); }
@@ -384,7 +384,7 @@ public:
     typedef _graph_ortho_iterator iterator;
 
 public:
-    ortho_graph() { _vptr = 0; }
+    ortho_graph() { _vptr = nullptr; }
     ~ortho_graph() { destroy(); }
     void destroy()
     {
@@ -507,9 +507,9 @@ protected:
     void _fix_peer_rel(wrapper* w1, wrapper* w2, wrapper* w3)
     {
         assert(w2 && (w1 || w3));
-        if(w1 != 0)
+        if(w1 != nullptr)
             peer_rel::shake(w1, w2);
-        if(w3 != 0)
+        if(w3 != nullptr)
             peer_rel::shake(w2, w3);
     }
     void _fix_upper_rel(wrapper* n, wrapper* w)
@@ -517,7 +517,7 @@ protected:
         assert(n && w);
         upper_rel& urel = w->parents();
         wrapper* u1 = urel.from();
-        if(u1 == 0)
+        if(u1 == nullptr)
             return;
         wrapper* u2 = urel.to();
         lower_rel& lrel = u1->children();
@@ -539,7 +539,7 @@ protected:
         assert(n && w);
         lower_rel& lrel = w->children();
         wrapper* l1 = lrel.from();
-        if(l1 == 0)
+        if(l1 == nullptr)
             return;
         wrapper* l2 = lrel.to();
         upper_rel& urel = l1->parents();
@@ -561,7 +561,7 @@ protected:
         assert(w);
         upper_rel& urel = w->parents();
         wrapper* u1 = urel.from();
-        if(u1 == 0)
+        if(u1 == nullptr)
             return;
         wrapper* u2 = urel.to();
         assert(u2);
@@ -571,14 +571,14 @@ protected:
         assert(l1 && l2);
         wrapper *from = l1, *to = l2;
         if(l1 == w && l2 == w)
-            from = to = 0;
+            from = to = nullptr;
         else if(l1 == w)
             from = w->next();
         else if(l2 == w)
             to = w->prev();
         _set_range_lower(u1, u2, from, to, lrel.size() - 1);
-        urel.set_from(0);
-        urel.set_to(0);
+        urel.set_from(nullptr);
+        urel.set_to(nullptr);
         urel.set_size(0);
     }
     void _fix_lower_rel(wrapper* w)
@@ -586,7 +586,7 @@ protected:
         assert(w);
         lower_rel& lrel = w->children();
         wrapper* l1 = lrel.from();
-        if(l1 == 0)
+        if(l1 == nullptr)
             return;
         wrapper* l2 = lrel.to();
         assert(l2);
@@ -598,8 +598,8 @@ protected:
         if(u1 == w && u2 == w);
         else if(u1 == w || u2 == w) {
             u1 == w ? from = w->next() : to = w->prev();
-            lrel.set_from(0);
-            lrel.set_to(0);
+            lrel.set_from(nullptr);
+            lrel.set_to(nullptr);
             lrel.set_size(0);
         }
         _set_range_upper(l1, l2, from, to, urel.size() - 1);

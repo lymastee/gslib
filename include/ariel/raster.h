@@ -79,7 +79,7 @@ public:
         void interpolate(painter_linestrip& c, const node* last) const override { c.add_point(_pt); }
 
     protected:
-        vec2        _pt;
+        vec2            _pt;
     };
 
     typedef node_tpl<pt_moveto> move_to_node;
@@ -96,7 +96,7 @@ public:
         void interpolate(painter_linestrip& c, const node* last) const override;
 
     protected:
-        vec2        _c;
+        vec2            _c;
     };
 
     class cubic_to_node:
@@ -112,7 +112,7 @@ public:
         void interpolate(painter_linestrip& c, const node* last) const override;
 
     protected:
-        vec2        _c[2];
+        vec2            _c[2];
     };
 
     typedef vector<node*> node_list;
@@ -123,7 +123,7 @@ public:
     friend class raster;
 
 protected:
-    node_list       _nodelist;
+    node_list           _nodelist;
 
 public:
     painter_path() {}
@@ -150,10 +150,10 @@ public:
     void rarc_to(float x, float y, float r) { rarc_to(vec2(x, y), r); }
     void quad_to(float x1, float y1, float x2, float y2) { quad_to(vec2(x1, y1), vec2(x2, y2)); }
     void cubic_to(float x1, float y1, float x2, float y2, float x3, float y3) { cubic_to(vec2(x1, y1), vec2(x2, y2), vec2(x3, y3)); }
-    void move_to(const vec2& pt) { _nodelist.push_back(gs_new(move_to_node, pt)); }
-    void line_to(const vec2& pt) { _nodelist.push_back(gs_new(line_to_node, pt)); }
-    void quad_to(const vec2& p1, const vec2& p2) { _nodelist.push_back(gs_new(quad_to_node, p1, p2)); }
-    void cubic_to(const vec2& p1, const vec2& p2, const vec2& p3) { _nodelist.push_back(gs_new(cubic_to_node, p1, p2, p3)); }
+    void move_to(const vec2& pt) { _nodelist.push_back(new move_to_node(pt)); }
+    void line_to(const vec2& pt) { _nodelist.push_back(new line_to_node(pt)); }
+    void quad_to(const vec2& p1, const vec2& p2) { _nodelist.push_back(new quad_to_node(p1, p2)); }
+    void cubic_to(const vec2& p1, const vec2& p2, const vec2& p3) { _nodelist.push_back(new cubic_to_node(p1, p2, p3)); }
     void arc_to(const vec2& p1, const vec2& p2, float r);
     void arc_to(const vec2& pt, float r);
     void rarc_to(const vec2& pt, float r);
@@ -191,10 +191,10 @@ enum curve_type
 
 struct __gs_novtable curve_spliter abstract
 {
-    vec2            fixedpt;
-    float           ratio;
-    curve_spliter*  child[2];
-    curve_spliter*  parent;
+    vec2                fixedpt;
+    float               ratio;
+    curve_spliter*      child[2];
+    curve_spliter*      parent;
 
 public:
     curve_spliter();
@@ -212,8 +212,8 @@ public:
 struct curve_spliter_quad:
     public curve_spliter
 {
-    vec2            cp[3];
-    vec3            para[2];
+    vec2                cp[3];
+    vec3                para[2];
 
 public:
     curve_spliter_quad(const vec2 p[3]);
@@ -229,8 +229,8 @@ public:
 struct curve_spliter_cubic:
     public curve_spliter
 {
-    vec2            cp[4];
-    vec4            para[2];
+    vec2                cp[4];
+    vec4                para[2];
 
 public:
     curve_spliter_cubic(const vec2 p[4]);

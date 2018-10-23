@@ -180,7 +180,7 @@ public:
     {
         for(auto* p : *this) {
             assert(p);
-            gs_del(clipboard_data, p);
+            delete p;
         }
         clear();
     }

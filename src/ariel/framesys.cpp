@@ -173,7 +173,7 @@ framesys::framesys()
     _notify = &_dispatcher;
     _rendersys = new rendersys_d3d11;
     _rose = new rose;
-    _empty_frame_proc = 0;
+    _empty_frame_proc = nullptr;
     memset(&_configs, 0, sizeof(_configs));
     set_frame_strategy(fs_busy_loop);
     set_frame_listener(scene::get_singleton_ptr());
@@ -183,11 +183,11 @@ framesys::~framesys()
 {
     if(_rose) {
         delete _rose;
-        _rose = 0;
+        _rose = nullptr;
     }
     if(_rendersys) {
         delete _rendersys;
-        _rendersys = 0;
+        _rendersys = nullptr;
     }
 }
 

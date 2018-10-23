@@ -721,17 +721,17 @@ static lb_line* lb_create_span(lb_span_list& spans, lb_line* line)
     switch(span.size())
     {
     case 1:
-        spans.push_back(gs_new(lb_linear_span, span.at(0)));
+        spans.push_back(new lb_linear_span(span.at(0)));
         break;
     case 2:
-        spans.push_back(gs_new(lb_quad_span, span.at(0), span.at(1)));
+        spans.push_back(new lb_quad_span(span.at(0), span.at(1)));
         break;
     case 3:
-        spans.push_back(gs_new(lb_cubic_span, span.at(0), span.at(1), span.at(2)));
+        spans.push_back(new lb_cubic_span(span.at(0), span.at(1), span.at(2)));
         break;
     default:
         assert(!"unexpected size of span.");
-        return 0;
+        return nullptr;
     }
     return next;
 }
@@ -812,13 +812,13 @@ lb_line* lb_line::get_line_between(lb_joint* j1, lb_joint* j2)
         assert(j2->get_prev_joint() == j1);
         return j1->get_next_line();
     }
-    return 0;
+    return nullptr;
 }
 
 lb_shrink_line::lb_shrink_line()
 {
-    _prev = _next = 0;
-    _bin[0] = _bin[1] = 0;
+    _prev = _next = nullptr;
+    _bin[0] = _bin[1] = nullptr;
     _le.x = NAN;
 }
 
@@ -857,9 +857,9 @@ void lb_shrink_line::tracing() const
 
 lb_shrink::~lb_shrink()
 {
-    for(auto* p : _lines) { gs_del(lb_shrink_line, p); }
+    for(auto* p : _lines) { delete p; }
     _lines.clear();
-    _center = 0;
+    _center = nullptr;
 }
 
 void lb_shrink::setup(lb_line* start)
@@ -907,7 +907,7 @@ void lb_shrink::trace_loop() const
 
 lb_shrink_line* lb_shrink::create_line()
 {
-    auto* p = gs_new(lb_shrink_line);
+    auto* p = new lb_shrink_line;
     assert(p);
     _lines.push_back(p);
     return p;
@@ -1112,7 +1112,7 @@ lb_shrink_line* lb_shrink::query(const vec2& p) const
             return line2;
         if(d3 < 0)
             return line2;
-        return 0;
+        return nullptr;
     }
 }
 
@@ -1378,10 +1378,10 @@ void lb_polygon::trace_holes() const
 
 loop_blinn_processor::~loop_blinn_processor()
 {
-    for(auto* p : _line_holdings) { gs_del(lb_line, p); }
-    for(auto* p : _joint_holdings) { gs_del(lb_joint, p); }
-    for(auto* p : _polygons) { gs_del(lb_polygon, p); }
-    for(auto* p : _span_holdings) { gs_del(lb_span, p); }
+    for(auto* p : _line_holdings) { delete p; }
+    for(auto* p : _joint_holdings) { delete p; }
+    for(auto* p : _polygons) { delete p; }
+    for(auto* p : _span_holdings) { delete p; }
     _line_holdings.clear();
     _joint_holdings.clear();
     _polygons.clear();
@@ -1430,7 +1430,7 @@ void loop_blinn_processor::trace_rtree() const
 
 lb_polygon* loop_blinn_processor::create_polygon()
 {
-    auto* p = gs_new(lb_polygon);
+    auto* p = new lb_polygon;
     assert(p);
     _polygons.push_back(p);
     return p;
@@ -1438,7 +1438,7 @@ lb_polygon* loop_blinn_processor::create_polygon()
 
 lb_line* loop_blinn_processor::create_line()
 {
-    auto* p = gs_new(lb_line);
+    auto* p = new lb_line;
     assert(p);
     _line_holdings.push_back(p);
     return p;
@@ -1447,7 +1447,7 @@ lb_line* loop_blinn_processor::create_line()
 template<class _joint>
 lb_joint* loop_blinn_processor::create_joint(const vec2& p)
 {
-    auto* j = gs_new(_joint);
+    auto* j = new _joint;
     assert(j);
     j->set_point(p);
     _joint_holdings.push_back(j);
@@ -1458,7 +1458,7 @@ void loop_blinn_processor::flattening(const painter_path& path)
 {
     int size = path.size();
     assert(size > 0);
-    lb_line* line = 0;
+    lb_line* line = nullptr;
     int next = create_patch(line, path, 0);
     assert(line);
     assert(lb_is_clockwise(line));
@@ -1477,7 +1477,7 @@ int loop_blinn_processor::flattening(const painter_path& path, int start, lb_pol
     assert(parent);
     int size = path.size();
     assert(start < size);
-    lb_line* line = 0;
+    lb_line* line = nullptr;
     int next = create_patch(line, path, start);
     bool cw = lb_is_clockwise(line);
     if(cw) {
@@ -1598,7 +1598,7 @@ lb_joint* loop_blinn_processor::create_segment(lb_joint* prev, const painter_pat
         }
     }
     assert(!"unexpected.");
-    return 0;
+    return nullptr;
 }
 
 /*
@@ -1844,9 +1844,9 @@ int loop_blinn_processor::try_split_cubic(lb_line* line1, lb_line* line2, lb_lin
     auto* nextjoint = nextline->get_next_joint();
     assert(nextline && prevjoint && nextjoint);
     if(prevjoint->get_type() != lbt_end_joint)
-        prevjoint = 0;
+        prevjoint = nullptr;
     if(nextjoint->get_type() != lbt_end_joint)
-        nextjoint = 0;
+        nextjoint = nullptr;
     auto is_straight1 = [](const vec2& p1, const vec2& p2, const vec2& p3)->bool {
         float d = point_line_distance(p2, p1, p3);
         return abs(d) < 0.1f;
@@ -1966,7 +1966,7 @@ lb_span* loop_blinn_processor::split_rtree_span(lb_span* span)
         auto* p = static_cast<lb_quad_span*>(span);
         split_quadratic(p->get_line(0), p->get_line(1), sp);
         p->setup(sp[0]->get_next_line(), sp[1]->get_next_line());
-        auto* s = gs_new(lb_quad_span, sp[2]->get_next_line(), sp[3]->get_next_line());
+        auto* s = new lb_quad_span(sp[2]->get_next_line(), sp[3]->get_next_line());
         _span_holdings.push_back(s);
         return s;
     }
@@ -1975,12 +1975,12 @@ lb_span* loop_blinn_processor::split_rtree_span(lb_span* span)
         auto* p = static_cast<lb_cubic_span*>(span);
         split_cubic(p->get_line(0), p->get_line(1), p->get_line(2), sp, 0.5f);
         p->setup(sp[0]->get_next_line(), sp[1]->get_next_line(), sp[2]->get_next_line());
-        auto* s = gs_new(lb_cubic_span, sp[3]->get_next_line(), sp[4]->get_next_line(), sp[5]->get_next_line());
+        auto* s = new lb_cubic_span(sp[3]->get_next_line(), sp[4]->get_next_line(), sp[5]->get_next_line());
         _span_holdings.push_back(s);
         return s;
     }
     assert(!"unexpected.");
-    return 0;
+    return nullptr;
 }
 
 void loop_blinn_processor::split_span_recursively(lb_polygon* poly, lb_span* span)

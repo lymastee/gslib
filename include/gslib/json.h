@@ -46,7 +46,7 @@ public:
     virtual ~json_node() {}
     virtual json_tag get_tag() const = 0;
     virtual const string& get_name() const = 0;
-    virtual json_node* duplicate() const = 0;   /* gs_del */
+    virtual json_node* duplicate() const = 0;   /* delete */
 };
 
 struct json_node_hash
@@ -180,7 +180,7 @@ public:
 class json_parser
 {
 public:
-    json_parser() { _root = 0; }
+    json_parser() { _root = nullptr; }
     ~json_parser() { destroy(); }
     bool parse(const gchar* src, int len);
     bool parse(const gchar* filename);

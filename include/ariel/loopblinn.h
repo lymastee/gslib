@@ -71,8 +71,8 @@ protected:
 public:
     lb_joint()
     {
-        _prev = _next = 0;
-        _binding = 0;
+        _prev = _next = nullptr;
+        _binding = nullptr;
     }
     virtual ~lb_joint() {}
     virtual lb_joint_type get_type() const = 0;
@@ -130,7 +130,7 @@ protected:
 public:
     lb_line()
     {
-        _joint[0] = _joint[1] = 0;
+        _joint[0] = _joint[1] = nullptr;
         _opened = false;
     }
     void set_opened(bool b) { _opened = b; }
@@ -177,7 +177,7 @@ public:
 class lb_shrink
 {
 public:
-    lb_shrink() { _center = 0; }
+    lb_shrink() { _center = nullptr; }
     ~lb_shrink();
     lb_shrink_line* get_center() const { return _center; }
     void setup(lb_line* start);
@@ -251,12 +251,12 @@ protected:
     dt_input_joints     _dtjoints;
 
 public:
-    lb_polygon() { _boundary = 0; }
+    lb_polygon() { _boundary = nullptr; }
     void set_boundary(lb_line* p) { _boundary = p; }
     void add_hole(lb_line* p) { _holes.push_back(p); }
     lb_line* get_boundary() const { return _boundary; }
     const lb_line_list& get_holes() const { return _holes; }
-    bool is_shrink_available() const { return _shrink.get_center() != 0; }
+    bool is_shrink_available() const { return _shrink.get_center() != nullptr; }
     void create_shrink() { _shrink.setup(_boundary); }
     void ensure_create_shrink() { if(!is_shrink_available()) create_shrink(); }
     bool is_inside(const vec2& p) const { return _shrink.is_inside(p); }

@@ -28,30 +28,10 @@
 
 #include <assert.h>
 #include <memory.h>
+#include <stdlib.h>
 #include <gslib/type.h>
 
 __gslib_begin__
-
-class pool
-{
-private:
-    pool() {}
-
-public:
-    static pool* get_singleton_ptr()
-    {
-        static pool inst;
-        return &inst;
-    }
-    ~pool() {}
-    void* born(int size);
-    void* flex(void* ptr, int size);
-    void kill(void* ptr);
-    void kill(void* ptr, int size);
-    int query_size(void* ptr);
-};
-
-#define _pool pool::get_singleton_ptr()
 
 template<class _construct>
 class factory
@@ -60,61 +40,40 @@ public:
     typedef _construct mycon;
     typedef factory<mycon> myref;
 
-    mycon*  _generated;
-    factory(void* ptr = 0) { _generated = (mycon*)ptr; }
+public:
+    factory(void* ptr = nullptr) { _generated = (mycon*)ptr; }
     const mycon* get_ptr() const { return _generated; }
     mycon* get_ptr() { return _generated; }
     mycon* emerge()
     {
         if(!_generated)
-            _generated = (mycon*)_pool->born(sizeof(mycon));
+            _generated = new mycon;
         assert(_generated);
-        return new(_generated)mycon;
+        return _generated;
     }
     void destroy()
     {
         if(!_generated)
             return;
-        _generated->~mycon();
-        _pool->kill(_generated, sizeof(mycon));
-        _generated = 0;
+        delete _generated;
+        _generated = nullptr;
     }
+
+protected:
+    mycon*              _generated;
 };
-
-/* replacement for new & delete */
-#pragma warning(disable: 4345)
-
-#ifndef _GS_THREADSAFE
-
-#define gs_new(donew, ...)      \
-    ( new(_pool->born(sizeof(donew)))donew(__VA_ARGS__) )
-#define gs_del(dodel, ptr)      \
-    do \
-    { \
-        assert(ptr);        \
-        (ptr)->~dodel();    \
-        _pool->kill(ptr);   \
-    } \
-    while(0)
-
-#else
-
-#define gs_new(donew, ...)  new donew(__VA_ARGS__)
-#define gs_del(dodel, ptr)  delete ptr
-
-#endif
 
 class vessel
 {
 protected:
-    void*       _buf;
-    int         _cap;
-    int         _cur;
+    void*               _buf;
+    int                 _cap;
+    int                 _cur;
 
 public:
     vessel()
     {
-        _buf = 0;
+        _buf = nullptr;
         _cap = 0;
         _cur = 0;
     }
@@ -125,8 +84,8 @@ public:
     void destroy()
     {
         if(_buf) {
-            _pool->kill(_buf);
-            _buf = 0;
+            free(_buf);
+            _buf = nullptr;
         }
         _cap = _cur = 0;
     }
@@ -148,16 +107,16 @@ public:
     }
     void flex(int size)
     {
-        _buf = _pool->flex(_buf, size);
+        _buf = realloc(_buf, size);
         _cap = size;
     }
     void expand(int size)
     {
-        flex(get_cap()+size);
+        flex(get_cap() + size);
     }
     void fit()
     {
-        _buf = _pool->flex(_buf, _cur);
+        _buf = realloc(_buf, _cur);
         _cap = _cur;
     }
     void occupy(int size)
@@ -198,7 +157,7 @@ public:
     }
     void detach()
     {
-        _buf = 0;
+        _buf = nullptr;
         _cap = 0;
         _cur = 0;
     }

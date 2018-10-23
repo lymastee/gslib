@@ -44,8 +44,8 @@ smaa::~smaa()
 {
     destroy_miscs();
     /* destroy render targets */
-    gs_del(smaa_render_target, _edges_rt);
-    gs_del(smaa_render_target, _blend_rt);
+    delete _edges_rt;
+    delete _blend_rt;
     _edges_rt = _blend_rt = nullptr;
 }
 

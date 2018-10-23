@@ -60,7 +60,7 @@ protected:
     clip_line*          _next;
 
 public:
-    clip_joint() { _prev = _next = 0; }
+    clip_joint() { _prev = _next = nullptr; }
     virtual ~clip_joint() {}
     virtual clip_joint_type get_type() const = 0;
     virtual const vec2& get_point() const = 0;
@@ -152,7 +152,7 @@ protected:
     clip_joint*         _mirror;
 
 public:
-    clip_mirror_joint() { _mirror = 0; }
+    clip_mirror_joint() { _mirror = nullptr; }
     clip_joint_type get_type() const override { return ct_mirror_joint; }
     const vec2& get_point() const override { return _mirror->get_point(); }
     clip_joint* get_mirror() const { return _mirror; }
@@ -167,7 +167,7 @@ protected:
     clip_joint*         _mirror;
 
 public:
-    clip_final_joint() { _mirror = 0; }
+    clip_final_joint() { _mirror = nullptr; }
     clip_joint_type get_type() const override { return ct_final_joint; }
     const vec2& get_point() const override { return _point; }
     void set_point(const vec2& pt) { _point = pt; }
@@ -182,7 +182,7 @@ protected:
     clip_joint*         _joint[2];
 
 public:
-    clip_line() { _joint[0] = _joint[1] = 0; }
+    clip_line() { _joint[0] = _joint[1] = nullptr; }
     const vec2& get_point(int i) const { return _joint[i]->get_point(); }
     void set_joint(int i, clip_joint* joint) { _joint[i] = joint; }
     clip_joint* get_joint(int i) const { return _joint[i]; }
@@ -202,12 +202,12 @@ protected:
     clip_line*          _line_start;
 
 public:
-    clip_polygon() { _line_start = 0; }
+    clip_polygon() { _line_start = nullptr; }
     virtual ~clip_polygon();
     virtual bool is_patch() const { return false; }
 
 public:
-    bool is_valid() const { return _line_start != 0; }
+    bool is_valid() const { return _line_start != nullptr; }
     void set_line_start(clip_line* line) { _line_start = line; }
     clip_line* get_line_start() const { return _line_start; }
     clip_joints& get_joints() { return _joint_holdings; }
@@ -224,7 +224,7 @@ protected:
     clip_end_joint* create_end_joint(path_info* pnf1, path_info* pnf2);
     clip_interpolate_joint* create_interpolate_joint(path_info* pnf, const vec2& p, float t);
     clip_line* create_line(clip_joint* joint1, clip_joint* joint2);
-    clip_end_joint* create_segment(clip_joint* joint1, path_info* pnf1, path_info* pnf2, clip_joint* joint2 = 0);
+    clip_end_joint* create_segment(clip_joint* joint1, path_info* pnf1, path_info* pnf2, clip_joint* joint2 = nullptr);
     clip_mirror_joint* create_mirror_joint(clip_joint* joint);
     clip_final_joint* create_final_joint(clip_joint* joint);
     void adopt(clip_polygon& poly);
@@ -266,7 +266,7 @@ protected:
     vec2                _point;
 
 public:
-    clip_sweep_relay() { _line = 0; }
+    clip_sweep_relay() { _line = nullptr; }
     clip_sweep_relay(const vec2& p) { _point = p; }
     clip_sweep_tag get_tag() const override { return cst_relay; }
     const vec2& get_point() const override { return _point; }
@@ -282,7 +282,7 @@ protected:
     clip_joint*         _joint;
 
 public:
-    clip_sweep_endpoint() { _joint = 0; }
+    clip_sweep_endpoint() { _joint = nullptr; }
     clip_sweep_endpoint(clip_joint* j) { _joint = j; }
     clip_sweep_tag get_tag() const override { return cst_endpoint; }
     const vec2& get_point() const override { return _joint->get_point(); }
@@ -389,7 +389,7 @@ class clip_patch:
     public clip_polygon
 {
 public:
-    clip_patch() { _line_end = 0; }
+    clip_patch() { _line_end = nullptr; }
     bool is_patch() const override { return true; }
     void set_line_end(clip_line* line) { _line_end = line; }
     clip_line* get_line_end() const { return _line_end; }
@@ -438,7 +438,7 @@ enum clip_assembly_node_tag
 class clip_assembly_sweeper_node
 {
 public:
-    clip_assembly_sweeper_node() { _up = _down = 0; }
+    clip_assembly_sweeper_node() { _up = _down = nullptr; }
     clip_sweeper* get_up_sweeper() const { return _up; }
     clip_sweeper* get_down_sweeper() const { return _down; }
     void set_up_sweeper(clip_sweeper* p) { _up = p; }
@@ -452,7 +452,7 @@ protected:
 class clip_assembly_point_node
 {
 public:
-    clip_assembly_point_node() { _sweeper = 0; }
+    clip_assembly_point_node() { _sweeper = nullptr; }
     clip_result_iter get_patch_iter() const { return _iter; }
     void set_patch_iter(clip_result_iter i) { _iter = i; }
     clip_sweeper* get_sweeper() const { return _sweeper; }

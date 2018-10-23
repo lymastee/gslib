@@ -61,7 +61,7 @@ public:
             assert(tex);
         }
         painter_extra_data ext;
-        ext.reset(gs_new(painter_picture_data, tex), [](painter_picture_data* p) { gs_del(painter_picture_data, p); });
+        ext.reset(new painter_picture_data(tex), [](painter_picture_data* p) { delete p; });
         brush.set_tag(painter_brush::picture);
         brush.set_extra(ext);
 

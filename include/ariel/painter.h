@@ -102,8 +102,6 @@ typedef list<painter_linestrip> linestrips;
 typedef vector<painter_linestrip*> linestripvec;
 typedef std::shared_ptr<painter_data> painter_extra_data;
 
-struct gradient {};
-
 struct painter_brush
 {
 public:

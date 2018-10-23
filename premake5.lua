@@ -224,6 +224,7 @@ project "gslib"
 	files {
 		"include/gslib/avl.h",
 		"include/gslib/base64.h",
+		"include/gslib/basetype.h",
 		"include/gslib/bintree.h",
 		"include/gslib/config.h",
 		"include/gslib/dir.h",
@@ -258,7 +259,6 @@ project "gslib"
 		"src/gslib/math.cpp",
 		"src/gslib/md5.cpp",
 		"src/gslib/mtrand.cpp",
-		"src/gslib/pool.cpp",
 		"src/gslib/res.cpp",
 		"src/gslib/sha1.cpp",
 		"src/gslib/string.cpp",
@@ -323,7 +323,6 @@ project "ariel"
 		"include/ariel/imageio.h",
 		"include/ariel/loopblinn.h",
 		"include/ariel/mesh.h",
-		"include/ariel/mesh.hpp",
 		"include/ariel/painter.h",
 		"include/ariel/raster.h",
 		"include/ariel/rectpack.h",
@@ -489,7 +488,6 @@ project "rathen"
 		"code/gslib/type.h",
 		"code/gslib/tree.h",
 		"code/gslib/pool.h",
-		"code/gslib/pool.cpp",
 		"proj/rathen/main.cpp"
 	}
 	
@@ -513,7 +511,6 @@ project "avl"
 		"src/gslib/math.cpp",
 		"include/gslib/math.h",
 		"include/gslib/math.inl",
-		"src/gslib/pool.cpp",
 		"include/gslib/pool.h",
 		"include/gslib/std.h",
 		"src/gslib/string.cpp",
@@ -567,7 +564,6 @@ project "rtree"
 		"src/gslib/math.cpp",
 		"include/gslib/math.h",
 		"include/gslib/math.inl",
-		"src/gslib/pool.cpp",
 		"include/gslib/pool.h",
 		"include/gslib/rtree.h",
 		"include/gslib/std.h",
@@ -592,7 +588,6 @@ project "rectpack"
 		"include/gslib/config.h",
 		"src/gslib/error.cpp",
 		"include/gslib/error.h",
-		"src/gslib/pool.cpp",
 		"include/gslib/pool.h",
 		"include/gslib/std.h",
 		"src/gslib/string.cpp",
@@ -678,7 +673,6 @@ project "mres"
 		"include/gslib/error.h",
 		"src/gslib/md5.cpp",
 		"include/gslib/md5.h",
-		"src/gslib/pool.cpp",
 		"include/gslib/pool.h",
 		"src/gslib/res.cpp",
 		"include/gslib/res.h",
@@ -725,7 +719,9 @@ project "uieditor"
 		"framework/entrywin32.h",
 		"framework/entrywin32.cpp",
 		"proj/uieditor/main.cpp",
+		"proj/uieditor/uicore.cpp",
 		"proj/uieditor/uic.cpp",
+		"proj/uieditor/uicore.h",
 		"proj/uieditor/uic.h",
 		"proj/uieditor/uiio.cpp",
 		"proj/uieditor/uiio.h"

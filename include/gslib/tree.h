@@ -68,7 +68,7 @@ public:
     }
     void reset()
     {
-        _first = _last = 0;
+        _first = _last = nullptr;
         _size = 0;
     }
     void swap(mylist& that)
@@ -87,7 +87,7 @@ public:
             _first = next;
         if(node == _last)
             _last = prev;
-        node->_prev = node->_next = 0;
+        node->_prev = node->_next = nullptr;
         _size --;
     }
     void init(mynode* node)
@@ -100,7 +100,7 @@ public:
     void insert_before(mynode* pos, mynode* node)
     {
         assert(node);
-        if(pos == 0)
+        if(pos == nullptr)
             return init(node);
         join(pos->prev(), node);
         join(node, pos);
@@ -111,7 +111,7 @@ public:
     void insert_after(mynode* pos, mynode* node)
     {
         assert(node);
-        if(pos == 0)
+        if(pos == nullptr)
             return init(node);
         join(node, pos->next());
         join(pos, node);
@@ -148,9 +148,9 @@ public:
     }
     static void join(mynode* node1, mynode* node2)
     {
-        if(node1 != 0)
+        if(node1 != nullptr)
             node1->_next = node2;
-        if(node2 != 0)
+        if(node2 != nullptr)
             node2->_prev = node1;
     }
     template<class _lambda>
@@ -180,13 +180,13 @@ protected:
     children        _children;
 
 public:
-    default_wrapper() { _parent = _prev = _next = 0; }
+    default_wrapper() { _parent = _prev = _next = nullptr; }
     int childs() const { return _children.size(); }
     wrapper* parent() const { return _parent; }
     wrapper* prev() const { return _prev; }
     wrapper* next() const { return _next; }
-    wrapper* child() const { return _children.empty() ? 0 : _children.front(); }
-    wrapper* last_child() const { return _children.empty() ? 0 : _children.back(); }
+    wrapper* child() const { return _children.empty() ? nullptr : _children.front(); }
+    wrapper* last_child() const { return _children.empty() ? nullptr : _children.back(); }
     void birth_before(wrapper* pos, wrapper* node) { return _children.insert_before(pos, node); }
     void birth_after(wrapper* pos, wrapper* node) { return _children.insert_after(pos, node); }
     void erase(wrapper* node) { return _children.erase(node); }
@@ -247,26 +247,26 @@ protected:
     value*          _value;
 
 public:
-    wrapper() { _value = 0; }
+    wrapper() { _value = nullptr; }
     value* get_ptr() const { return _value; }
     value& get_ref() const { return *_value; }
     template<class _ctor>
-    void born() { _value = gs_new(_ctor); }
+    void born() { _value = new _ctor; }
     template<class _ctor, class _a1>
-    void born(_a1& a) { _value = gs_new(_ctor, a); }
+    void born(_a1& a) { _value = new _ctor(a); }
     template<class _ctor, class _a1, class _a2>
-    void born(_a1& a, _a2& b) { _value = gs_new(_ctor, a, b); }
+    void born(_a1& a, _a2& b) { _value = new _ctor(a, b); }
     template<class _ctor, class _a1, class _a2, class _a3>
-    void born(_a1& a, _a2& b, _a3& c) { _value = gs_new(_ctor, a, b, c); }
-    void born() { _value = gs_new(value); }
-    void kill() { gs_del(value, _value); }
+    void born(_a1& a, _a2& b, _a3& c) { _value = new _ctor(a, b, c); }
+    void born() { _value = new value; }
+    void kill() { delete _value; }
     void copy(const wrapper* a) { assert(!"prevent."); }
     void attach(wrapper* a)
     {
         assert(a && a->_value);
         kill();
         _value = a->_value;
-        a->_value = 0;
+        a->_value = nullptr;
     }
 };
 
@@ -274,8 +274,8 @@ template<class _wrapper>
 struct _tree_allocator
 {
     typedef _wrapper wrapper;
-    static wrapper* born() { return gs_new(wrapper); }
-    static void kill(wrapper* w) { gs_del(wrapper, w); }
+    static wrapper* born() { return new wrapper; }
+    static void kill(wrapper* w) { delete w; }
 };
 
 template<class _val>
@@ -290,14 +290,14 @@ struct _treenode_val
         const_value*    _cvptr;
     };
     value* get_wrapper() const { return _vptr; }
-    operator bool() const { return _vptr != 0; }
+    operator bool() const { return _vptr != nullptr; }
 
 protected:
-    value* vparent() const { return _vptr ? _vptr->_parent : 0; }
-    value* vchild() const { return _vptr ? _vptr->front() : 0; }
-    value* vchild_last() const { return _vptr ? _vptr->back() : 0; }
-    value* vsibling() const {  return _vptr ? _vptr->next() : 0; }
-    value* vsibling_last() const { return _vptr ? _vptr->prev() : 0; }
+    value* vparent() const { return _vptr ? _vptr->_parent : nullptr; }
+    value* vchild() const { return _vptr ? _vptr->front() : nullptr; }
+    value* vchild_last() const { return _vptr ? _vptr->back() : nullptr; }
+    value* vsibling() const {  return _vptr ? _vptr->next() : nullptr; }
+    value* vsibling_last() const { return _vptr ? _vptr->prev() : nullptr; }
 
 protected:
     template<class _lambda, class _value>
@@ -340,8 +340,8 @@ public:
     template<class, class, class> friend class tree;
     
 public:
-    iterator(const wrapper* w = 0) { _cvptr = w; }
-    bool is_valid() const { return _cvptr != 0; }
+    iterator(const wrapper* w = nullptr) { _cvptr = w; }
+    bool is_valid() const { return _cvptr != nullptr; }
     const value* get_ptr() const { return _cvptr->get_ptr(); }
     const value* operator->() const { return _cvptr->get_ptr(); }
     const value& operator*() const { return _cvptr->get_ref(); }
@@ -367,13 +367,13 @@ public:
     }
     iterator eldest() const
     {
-        if(const wrapper* w = _cvptr ? _cvptr->parent() : 0)
+        if(const wrapper* w = _cvptr ? _cvptr->parent() : nullptr)
             return iterator(w->child());
         return iterator();
     }
     iterator youngest() const
     {
-        if(const wrapper* w = _cvptr ? _cvptr->parent() : 0)
+        if(const wrapper* w = _cvptr ? _cvptr->parent() : nullptr)
             return iterator(w->last_child());
         return iterator();
     }
@@ -393,7 +393,7 @@ public:
     template<class, class, class> friend class tree;
 
 public:
-    iterator(wrapper* w = 0): superref(w) {}
+    iterator(wrapper* w = nullptr): superref(w) {}
     value* get_ptr() const { return _vptr->get_ptr(); }
     value* operator->() const { return _vptr->get_ptr(); }
     value& operator*() const { return _vptr->get_ref(); }
@@ -452,14 +452,14 @@ public:
     friend class iterator;
 
 public:
-    tree() { _vptr = 0; }
+    tree() { _vptr = nullptr; }
     ~tree() { destroy(); }
     void destroy() { erase(get_root()); }
     void clear() { destroy(); }
     void swap(myref& that) { gs_swap(_vptr, that._vptr); }
     iterator get_root() { return iterator(_vptr); }
     const_iterator get_root() const { return const_iterator(_cvptr); }
-    bool is_valid() const { return _cvptr != 0; }
+    bool is_valid() const { return _cvptr != nullptr; }
     iterator insert(iterator i) { return insert<value>(i); }
     iterator insert_after(iterator i) { return insert_after<value>(i); }
     iterator birth(iterator i) { return birth<value>(i); }
@@ -489,7 +489,7 @@ public:
             return;
         if(is_root(i)) {
             _erase(i);
-            _vptr = 0;
+            _vptr = nullptr;
         }
         else {
             wrapper* w = i._vptr;
@@ -553,12 +553,12 @@ public:
         if(!i.is_valid() || !is_mine(i))
             return subtree;
         if(is_root(i))
-            _vptr = 0;
+            _vptr = nullptr;
         else {
             wrapper* m = i._vptr;
             wrapper* p = m->_parent;
             p->erase(m);
-            m->_parent = 0;
+            m->_parent = nullptr;
         }
         subtree.~tree();
         new (&subtree) tree(i);
@@ -660,7 +660,7 @@ protected:
     {
         _vptr = alloc::born();
         _vptr->born<_ctor>();
-        _vptr->_parent = 0;
+        _vptr->_parent = nullptr;
         return iterator(_vptr);
     }
 

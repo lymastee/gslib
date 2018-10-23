@@ -47,7 +47,7 @@ struct _bintreenode_cpy_wrapper
     myref*              _right;
     myref*              _parent;
 
-    myref() { _left = _right = _parent = 0; }
+    myref() { _left = _right = _parent = nullptr; }
     value* get_ptr() { return &_value; }
     const value* const_ptr() const { return &_value; }
     value& get_ref() { return _value; }
@@ -76,8 +76,8 @@ struct _bintreenode_wrapper
 
     myref()
     {
-        _left = _right = _parent = 0;
-        _value = 0;
+        _left = _right = _parent = nullptr;
+        _value = nullptr;
     }
     value* get_ptr() { return _value; }
     const value* const_ptr() const { return _value; }
@@ -86,16 +86,16 @@ struct _bintreenode_wrapper
     void copy(const myref* a) { get_ref() = a->const_ref(); }
     void born() { !! }
     template<class _ctor>
-    void born() { _value = gs_new(_ctor); }
-    void kill() { if(_value) { gs_del(value, _value); _value = 0; } }
+    void born() { _value = new _ctor; }
+    void kill() { if(_value) { delete _value; _value = nullptr; } }
     template<class _ctor>
-    void kill() { if(_value) { gs_del(_ctor, _value); _value = 0; } }
+    void kill() { if(_value) { delete _value; _value = nullptr; } }
     void attach(myref* a)
     {
         assert(a && a->_value);
         kill();
         _value = a->_value;
-        a->_value = 0;
+        a->_value = nullptr;
     }
 };
 
@@ -103,8 +103,8 @@ template<class _wrapper>
 struct _bintree_allocator
 {
     typedef _wrapper wrapper;
-    static wrapper* born() { return gs_new(wrapper); }
-    static void kill(wrapper* w) { gs_del(wrapper, w); }
+    static wrapper* born() { return new wrapper; }
+    static void kill(wrapper* w) { delete w; }
 };
 
 template<class _val>
@@ -118,7 +118,7 @@ struct _bintreenode_val
         const_value*    _cvptr;
     };
     value* get_wrapper() const { return _vptr; }
-    operator bool() const { return _vptr != 0; }
+    operator bool() const { return _vptr != nullptr; }
     bool is_left() const { return (_cvptr && _cvptr->_parent) ? _cvptr->_parent->_left == _cvptr : false; }
     bool is_right() const { return (_cvptr && _cvptr->_parent) ? _cvptr->_parent->_right == _cvptr : false; }
     bool is_root() const { return _cvptr ? (!_cvptr->_parent) : false; }
@@ -150,18 +150,18 @@ public:
     {
         assert(p && c && (c->_parent == p));
         if(p->_left == c) {
-            p->_left = c->_parent = 0;
+            p->_left = c->_parent = nullptr;
             return true;
         }
         assert(p->_right == c);
-        p->_right = c->_parent = 0;
+        p->_right = c->_parent = nullptr;
         return false;
     }
 
 private:
     static int _down_depth(value* v, int ctr)
     {
-        if(v == 0)
+        if(v == nullptr)
             return ctr;
         ctr ++;
         return gs_max(_down_depth(v->_left, ctr), 
@@ -170,24 +170,24 @@ private:
     }
 
 protected:
-    value* vleft() const { return _vptr ? _vptr->_left : 0; }
-    value* vright() const { return _vptr ? _vptr->_right : 0; }
-    value* vparent() const { return _vptr ? _vptr->_parent : 0; }
+    value* vleft() const { return _vptr ? _vptr->_left : nullptr; }
+    value* vright() const { return _vptr ? _vptr->_right : nullptr; }
+    value* vparent() const { return _vptr ? _vptr->_parent : nullptr; }
     value* vsibling() const
     {
         if(!_vptr || !_vptr->_parent)
-            return 0;
+            return nullptr;
         if(is_left())
             return _vptr->_parent->_right;
         else if(is_right())
             return _vptr->_parent->_left;
         assert(!"unexpected.");
-        return 0;
+        return nullptr;
     }
     value* vroot() const
     {
         if(!_vptr)
-            return 0;
+            return nullptr;
         value* p = _vptr;
         for( ; p->_parent; p = p->_parent);
         return p;
@@ -251,8 +251,8 @@ public:
     typedef _bintree_const_iterator<_ty, _wrapper> iterator;
 
 public:
-    iterator(const wrapper* w = 0) { _cvptr = w; }
-    bool is_valid() const { return _cvptr != 0; }
+    iterator(const wrapper* w = nullptr) { _cvptr = w; }
+    bool is_valid() const { return _cvptr != nullptr; }
     const value* get_ptr() const { return _cvptr->const_ptr(); }
     const value* operator->() const { return _cvptr->const_ptr(); }
     const value& operator*() const { return _cvptr->const_ref(); }
@@ -314,7 +314,7 @@ public:
     typedef _bintree_iterator<_ty, _wrapper> iterator;
 
 public:
-    bintree() { _vptr = 0; }
+    bintree() { _vptr = nullptr; }
     ~bintree() { destroy(); }
     void destroy() { erase(get_root()); }
     void clear() { destroy(); }
@@ -323,11 +323,11 @@ public:
         if(!i.is_valid())
             return;
         if(i.is_left())
-            i.parent().get_wrapper()->_left = 0;
+            i.parent().get_wrapper()->_left = nullptr;
         else if(i.is_right())
-            i.parent().get_wrapper()->_right = 0;
+            i.parent().get_wrapper()->_right = nullptr;
         if(is_root(i))
-            _vptr = 0;
+            _vptr = nullptr;
         _erase(i);
     }
     void adopt(wrapper* w)
@@ -338,7 +338,7 @@ public:
     iterator get_root() { return iterator(_vptr); }
     const_iterator const_root() const { return const_iterator(_cvptr); }
     bool is_root(iterator i) const { return i.is_valid() ? (_cvptr == i.get_wrapper()) : false; }
-    bool is_valid() const { return _cvptr != 0; }
+    bool is_valid() const { return _cvptr != nullptr; }
     bool is_mine(iterator i) const
     {
         if(!i.is_valid())
@@ -358,7 +358,7 @@ public:
     iterator insert(iterator i, _bintree_pos ipos, _bintree_pos cpos)
     {
         if(!i.is_valid())
-            return !is_valid() ? _init<_ctor>() : iterator(0);
+            return !is_valid() ? _init<_ctor>() : iterator(nullptr);
         wrapper* n = alloc::born();
         n->born<_ctor>();
         n->_parent = i.get_wrapper();
@@ -409,7 +409,7 @@ public:
     void detach(_cont& cont)
     {
         cont.adopt(_vptr);
-        _vptr = 0;
+        _vptr = nullptr;
     }
     template<class _cont>
     void detach(_cont& cont, iterator i)
@@ -433,8 +433,8 @@ public:
         des->copy(src);
         des->_left = src->_left;
         des->_right = src->_right;
-        src->_left = 0;
-        src->_right = 0;
+        src->_left = nullptr;
+        src->_right = nullptr;
     }
     template<>
     void transform<_bintree_trait_detach>(wrapper* src, wrapper* des)
@@ -444,8 +444,8 @@ public:
         des->attach(src);
         des->_left = src->_left;
         des->_right = src->_right;
-        src->_left = 0;
-        src->_right = 0;
+        src->_left = nullptr;
+        src->_right = nullptr;
     }
     iterator attach(myref& subtree, iterator i)
     {

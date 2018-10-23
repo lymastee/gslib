@@ -67,30 +67,30 @@ xmltree::xmltree()
 const gchar* xmltree::skip(const gchar* str)
 {
     if(!str || !str[0])
-        return 0;
+        return nullptr;
     static const string blk = xmlblkstr;
     for(;; str ++) {
         if(!str[0])
-            return 0;
+            return nullptr;
         if(blk.find(str[0]) == string::npos)
             return str;
     }
-    return 0;
+    return nullptr;
 }
 
 const gchar* xmltree::skip(const gchar* str, const gchar* skp)
 {
     assert(skp);
     if(!str || !str[0])
-        return 0;
+        return nullptr;
     const string blk = skp;
     for(;; str ++) {
         if(!str[0])
-            return 0;
+            return nullptr;
         if(blk.find(str[0]) == string::npos)
             return str;
     }
-    return 0;
+    return nullptr;
 }
 
 void xmltree::replace(string& str, const gchar* s1, const gchar* s2)
@@ -176,18 +176,18 @@ void xmltree::end_write_item(string& str, const gchar* prefix, const xml_node* n
 const gchar* xmltree::check_header(const gchar* str, string& version, string& encoding)
 {
     if(!str || !str[0])
-        return 0;
+        return nullptr;
     if(!(str = skip(str)) || !_cstrcmprun(str, _t("<?")) ||
         !(str = skip(str)) || !_cstrcmprun(str, _t("xml"))) {
         set_error(_t("check header: bad format."));
-        return 0;
+        return nullptr;
     }
     string k;
     if(!(str = read_attribute(str, k, version)) || k != _t("version") ||
         !(str = read_attribute(str, k, encoding)) || k != _t("encoding")
         ) {
         set_error(_t("check header: access of key attribute failed."));
-        return 0;
+        return nullptr;
     }
     str = skip(str);
     if(_cstrcmprun(str, _t("?>")))
@@ -198,7 +198,7 @@ const gchar* xmltree::check_header(const gchar* str, string& version, string& en
         str = s;
     if(!(str = skip(str)) || !_cstrcmprun(str, _t("?>"))) {
         set_error(_t("check header: label close error."));
-        return 0;
+        return nullptr;
     }
     return str;
 }
@@ -207,22 +207,22 @@ const gchar* xmltree::read_attribute(const gchar* str, string& k, string& v)
 {
     if(!(str = skip(str))) {
         set_error(_t("attrpair: unexpected end of string."));
-        return 0;
+        return nullptr;
     }
     const gchar* endstr = strtool::_test(str, _t("=")xmlblkstr);
     if(!endstr) {
         set_error(_t("attrpair: unexpected end of string."));
-        return 0;
+        return nullptr;
     }
     k.assign(str, endstr-str);
     str = endstr;
     if(!(str = skip(str, _t("=")xmlblkstr)) || *str++ != _t('"')) {
         set_error(_t("attrpair: unexpected end of string."));
-        return 0;
+        return nullptr;
     }
     if(!(endstr = strtool::find(str, _t("\"")))) {
         set_error(_t("attrpair: unclose quote."));
-        return 0;
+        return nullptr;
     }
     v.assign(str, endstr-str);
     filter_entity_reference(v);
@@ -233,7 +233,7 @@ const gchar* xmltree::read_item(const gchar* str, iterator p)
 {
     if(!(str = skip(str))) {
         set_error(_t("itemproc: unexpected end of string."));
-        return 0;
+        return nullptr;
     }
     if(str[0] == _t('<')) {
         const gchar* s = ++ str;
@@ -241,7 +241,7 @@ const gchar* xmltree::read_item(const gchar* str, iterator p)
             return strtool::find(s, _t("-->"));
         if(!(s = strtool::_test(str, _t("/>")xmlblkstr))) {
             set_error(_t("itemproc: unexpected end of string."));
-            return 0;
+            return nullptr;
         }
         iterator n = birth_tail<xml_element>(p);
         assert(n.is_valid());
@@ -250,17 +250,17 @@ const gchar* xmltree::read_item(const gchar* str, iterator p)
         while(str[0] != _t('/') && str[0] != _t('>')) {
             xml_attr attr;
             if(!(str = read_attribute(str, attr.key, attr.value)))
-                return 0;
+                return nullptr;
             n->add_attribute(attr);
             if(!(str = skip(str))) {
                 set_error(_t("itemproc: unexpected end of string."));
-                return 0;
+                return nullptr;
             }
         }
         if(str[0] == _t('/')) {
             if(str[1] != _t('>')) {
                 set_error(_t("itemproc: unclosed item."));
-                return 0;
+                return nullptr;
             }
             return str + 2;
         }
@@ -268,7 +268,7 @@ const gchar* xmltree::read_item(const gchar* str, iterator p)
             for(++ str;;) {
                 if(!(str = skip(str))) {
                     set_error(_t("itemproc: unexpected end of string."));
-                    return 0;
+                    return nullptr;
                 }
                 if(str[0] == _t('<')) {
                     if(str[1] == _t('/')) {
@@ -276,35 +276,35 @@ const gchar* xmltree::read_item(const gchar* str, iterator p)
                         int dis = cpsetpos(str, _t(">"));
                         if(!str[dis]) {
                             set_error(_t("itemproc: unexpected end of string."));
-                            return 0;
+                            return nullptr;
                         }
                         if(n->get_name().compare(str, dis) != 0) {
                             set_error(_t("itemproc: incorrect pair of item."));
-                            return 0;
+                            return nullptr;
                         }
                         return str += ++ dis;
                     }
                     else {
                         if(!(str = read_item(str, n))) {
                             set_error(_t("itemproc: unexpected end of string."));
-                            return 0;
+                            return nullptr;
                         }
                     }
                 }
                 else {
                     if(!(str = read_item(str, n)))
-                        return 0;
+                        return nullptr;
                 }
             }
         }
         set_error(_t("itemproc: unknown error."));
-        return 0;
+        return nullptr;
     }
     else {
         const gchar* endstr = strtool::_test(str, _t("<"));
         if(!endstr) {
             set_error(_t("itemproc: unexpected end of string."));
-            return 0;
+            return nullptr;
         }
         assert(p);
         iterator n = birth_tail<xml_value>(p);
@@ -394,7 +394,7 @@ bool xmltree::parse(const gchar* src)
         return false;
     }
     setup_encoding_info(encoding);
-    return read_item(src, get_root()) != 0;
+    return read_item(src, get_root()) != nullptr;
 }
 
 void xmltree::output(string& str) const
@@ -422,7 +422,7 @@ struct upl_trap
     gchar           _trapc;
     int             _trapp;
 
-    upl_trap() { _src = 0, _trapc = 0, _trapp = 0; }
+    upl_trap() { _src = nullptr, _trapc = 0, _trapp = 0; }
     upl_trap(const gchar* str, int p) { capture(str, p); }
     ~upl_trap() { release(); }
     void capture(const gchar* str, int p)
@@ -436,7 +436,7 @@ struct upl_trap
     {
         if(_src) {
             _src[_trapp] = _trapc;
-            _src = 0;
+            _src = nullptr;
         }
     }
 };
@@ -463,7 +463,7 @@ struct upl_condition_both:
     upl_condition*  _condition[2];
 
 public:
-    upl_condition_both() { _condition[0] = _condition[1] = 0; }
+    upl_condition_both() { _condition[0] = _condition[1] = nullptr; }
     upl_condition_both(upl_condition* c1, upl_condition* c2) { _condition[0] = c1, _condition[1] = c2; }
     void set_condition(int i, upl_condition* c) { _condition[i] = c; }
     upl_condition* get_condition(int i) const { return _condition[i]; }
@@ -481,7 +481,7 @@ struct upl_condition_either:
     upl_condition*  _condition[2];
 
 public:
-    upl_condition_either() { _condition[0] = _condition[1] = 0; }
+    upl_condition_either() { _condition[0] = _condition[1] = nullptr; }
     upl_condition_either(upl_condition* c1, upl_condition* c2) { _condition[0] = c1, _condition[1] = c2; }
     void set_condition(int i, upl_condition* c) { _condition[i] = c; }
     upl_condition* get_condition(int i) const { return _condition[i]; }
@@ -499,7 +499,7 @@ struct upl_condition_negate:
     upl_condition*  _condition;
 
 public:
-    upl_condition_negate() { _condition = 0; }
+    upl_condition_negate() { _condition = nullptr; }
     upl_condition_negate(upl_condition* c) { _condition = c; }
     virtual uint get_tag() const override { return uc_negate; }
     virtual bool fulfill(const xml_node* node) const override { return !_condition->fulfill(node); }
@@ -517,7 +517,7 @@ public:
     virtual bool fulfill(const xml_node* node) const override
     {
         const string* v = node->get_attribute(_key);
-        return v != 0;
+        return v != nullptr;
     }
 };
 
@@ -539,7 +539,7 @@ public:
     virtual bool fulfill(const xml_node* node) const override
     {
         const string* v = node->get_attribute(_key);
-        if(v == 0)
+        if(v == nullptr)
             return false;
         return *v == _value;
     }
@@ -563,7 +563,7 @@ public:
     virtual bool fulfill(const xml_node* node) const override
     {
         const string* v = node->get_attribute(_key);
-        if(v == 0)
+        if(v == nullptr)
             return false;
         return strtool::compare_cl(v->c_str(), _value.c_str()) == 0;
     }
@@ -584,24 +584,24 @@ public:
     upl_condition*  condition;
     
 public:
-    upl_pattern() { breakpoint = 1, counter = 0, condition = 0; }
+    upl_pattern() { breakpoint = 1, counter = 0, condition = nullptr; }
     ~upl_pattern()
     {
-        std::for_each(conditions.begin(), conditions.end(), [](upl_condition* c) { gs_del(upl_condition, c); });
+        std::for_each(conditions.begin(), conditions.end(), [](upl_condition* c) { delete c; });
         conditions.clear();
     }
     void build(const gchar* ctlstr)
     {
         const gchar* cs = build_name(ctlstr);
-        if(cs == 0) {
+        if(cs == nullptr) {
             breakpoint = 1;
             counter = 0;
-            condition = 0;
+            condition = nullptr;
             return;
         }
         if(cs[0] == _t('#')) {
             cs = build_condition(cs);
-            if(cs == 0) {
+            if(cs == nullptr) {
                 breakpoint = 1;
                 counter = 0;
                 return;
@@ -634,7 +634,7 @@ public:
             if(fulfill(c.get_ptr()))
                 return c;
         }
-        return iterator(0);
+        return iterator(nullptr);
     }
 
 protected:
@@ -643,7 +643,7 @@ protected:
         assert(ctlstr && ctlstr[0]);
         if(ctlstr[0] != _t('$')) {
             name.assign(ctlstr);
-            return 0;
+            return nullptr;
         }
         assert(ctlstr[0] == _t('$'));
         ctlstr ++;
@@ -651,10 +651,10 @@ protected:
         assert(p >= 0);
         if(p == 0) {
             name.clear();
-            return 0;
+            return nullptr;
         }
         name.assign(ctlstr, p);
-        return !ctlstr[p] ? 0 : ctlstr + p;
+        return !ctlstr[p] ? nullptr : ctlstr + p;
     }
     const gchar* build_condition(const gchar* ctlstr)
     {
@@ -666,7 +666,7 @@ protected:
             upl_condition* c = create_first_condition(ctlstr);
             assert(c);
             condition = c;
-            return 0;
+            return nullptr;
         }
         upl_trap trap(ctlstr, p);
         upl_condition* c = create_first_condition(ctlstr);
@@ -679,7 +679,7 @@ protected:
         assert(ctlstr && ctlstr[0] == _t('@'));
         breakpoint = strtool::to_int(++ ctlstr);
         assert(breakpoint > 0);
-        return 0;
+        return nullptr;
     }
 
 private:
@@ -703,7 +703,7 @@ private:
         upl_condition* c1 = create_condition(ctlstr);
         assert(c1);
         if(ctl == _t(',')) {
-            upl_condition_both* c2 = gs_new(upl_condition_both, lastc, c1);
+            upl_condition_both* c2 = new upl_condition_both(lastc, c1);
             conditions.push_back(c2);
             trap.release();
             return (!ctlstr[p]) ? c2 : create_next_condition(c2, ctlstr + p);
@@ -711,21 +711,21 @@ private:
         else if(ctl == _t('|')) {
             if(lastc->get_tag() == upl_condition::uc_both) {
                 upl_condition_both* ucb = static_cast<upl_condition_both*>(lastc);
-                upl_condition_either* c2 = gs_new(upl_condition_either, ucb->get_condition(1), c1);
+                upl_condition_either* c2 = new upl_condition_either(ucb->get_condition(1), c1);
                 conditions.push_back(c2);
                 ucb->set_condition(1, c2);
                 trap.release();
                 return (!ctlstr[p]) ? lastc : create_next_condition(lastc, ctlstr + p);
             }
             else {
-                upl_condition_either* c2 = gs_new(upl_condition_either, lastc, c1);
+                upl_condition_either* c2 = new upl_condition_either(lastc, c1);
                 conditions.push_back(c2);
                 trap.release();
                 return (!ctlstr[p]) ? c2 : create_next_condition(c2, ctlstr + p);
             }
         }
         assert(!"unexpected.");
-        return 0;
+        return nullptr;
     }
     upl_condition* create_condition(const gchar* ctlstr)
     {
@@ -733,7 +733,7 @@ private:
         if(ctlstr[0] == _t('!')) {
             upl_condition* c1 = create_condition(ctlstr + 1);
             assert(c1);
-            upl_condition_negate* c2 = gs_new(upl_condition_negate, c1);
+            upl_condition_negate* c2 = new upl_condition_negate(c1);
             conditions.push_back(c2);
             return c2;
         }
@@ -741,7 +741,7 @@ private:
         if(pclequal) {
             assert(_cstrcmp(pclequal, _t("~=")));
             upl_trap trap(ctlstr, pclequal - ctlstr);
-            upl_condition_clequal* c = gs_new(upl_condition_clequal, ctlstr, pclequal + 2);
+            upl_condition_clequal* c = new upl_condition_clequal(ctlstr, pclequal + 2);
             conditions.push_back(c);
             return c;
         }
@@ -749,11 +749,11 @@ private:
         if(pequal) {
             assert(pequal[0] == _t('='));
             upl_trap trap(ctlstr, pequal - ctlstr);
-            upl_condition_equal* c = gs_new(upl_condition_equal, ctlstr, pequal + 1);
+            upl_condition_equal* c = new upl_condition_equal(ctlstr, pequal + 1);
             conditions.push_back(c);
             return c;
         }
-        upl_condition_hit* c = gs_new(upl_condition_hit, ctlstr);
+        upl_condition_hit* c = new upl_condition_hit(ctlstr);
         conditions.push_back(c);
         return c;
     }
@@ -774,7 +774,7 @@ const gchar* xmltree::upl_run_once(iterator& i, const gchar* ctlstr)
             i = j;
             return ctlstr + p + 1;
         }
-        return 0;
+        return nullptr;
     }
     upl_pattern pattern;
     pattern.build(ctlstr);
@@ -783,7 +783,7 @@ const gchar* xmltree::upl_run_once(iterator& i, const gchar* ctlstr)
         i = j;
         return ctlstr + p;
     }
-    return 0;
+    return nullptr;
 }
 
 __gslib_end__

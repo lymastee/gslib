@@ -164,7 +164,7 @@ void painter::draw_image(texture2d* img, float x, float y)
     save();
     painter_brush brush;
     painter_extra_data ext;
-    ext.reset(gs_new(painter_picture_data, img), [](painter_picture_data* p) { gs_del(painter_picture_data, p); });
+    ext.reset(new painter_picture_data(img), [](painter_picture_data* p) { delete p; });
     brush.set_tag(painter_brush::picture);
     brush.set_extra(ext);
     set_brush(brush);

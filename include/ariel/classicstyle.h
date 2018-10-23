@@ -174,6 +174,28 @@ protected:
     string              _caption;
 };
 
+class menubar_style_sheet:
+    public button_style_sheet
+{
+public:
+    menubar_style_sheet();
+};
+
+class menubar_button_style_sheet:
+    public ariel::style_sheet
+{
+public:
+    menubar_button_style_sheet();
+    virtual bool get_value(const string& name, string& value) override;
+    virtual void set_value(const string& name, const string& value) override;
+    virtual int get_content_size() const override;
+    virtual style_sheet_type get_content_type(int index) const override;
+    virtual const string& get_content_name(int index) const override;
+
+protected:
+    string              _caption;
+};
+
 class widget:
     public ariel::widget,
     public widget_style_sheet
@@ -312,7 +334,6 @@ public:
 
 protected:
     menu_group*         _sub_menu;
-    string              _caption;
     painter_brush*      _brush_ptr;
     painter_pen*        _pen_ptr;
 
@@ -343,8 +364,6 @@ public:
 
 protected:
     menu_cmd_notify*    _menu_notify;
-    string              _caption;
-    accel_key           _accel_key;
     painter_brush*      _brush_ptr;
     painter_pen*        _pen_ptr;
 
@@ -366,7 +385,7 @@ class menu_group:
     friend class menu_sub_item;
 
 public:
-    menu_group(wsys_manager* m): ariel::widget(m), _menu(nullptr) {}
+    menu_group(wsys_manager* m): ariel::widget(m), _menu(nullptr), _upside_gap(-1) {}
     virtual void draw(painter* paint) override;
     virtual void refresh_menu_group_size();
     virtual menu_separator* add_separator() { return add_item<menu_separator>(sm_visible); }
@@ -385,10 +404,12 @@ protected:
     int                 _icon_width;
     int                 _caption_text_width;
     int                 _accel_text_width;
+    int                 _upside_gap;
 
 public:
     void set_menu(menu* p) { _menu = p; }
     menu_item* hit_item(const point& pt);
+    void set_upside_gap(int gap) { _upside_gap = gap; }
 
 protected:
     template<class _ctor>
@@ -440,10 +461,64 @@ protected:
 public:
     menu_item* hit_item(const point& pt);
     menu_group* hit_group(const point& pt);
+    menu_group* get_entry_group() const;
 
 protected:
     void on_current_hover(ariel::widget* ptr, uint um, const point& pt);
     void on_select_menu_item(menu_item* item);
+};
+
+class menubar;
+
+class menubar_button:
+    public ariel::widget,
+    public menubar_button_style_sheet
+{
+public:
+    menubar_button(wsys_manager* m): ariel::widget(m), _menubar(nullptr), _menu(nullptr), _brush_ptr(nullptr), _pen_ptr(nullptr) {}
+    virtual void draw(painter* paint) override;
+    virtual void on_press(uint um, unikey uk, const point& pt) override;
+    virtual void on_click(uint um, unikey uk, const point& pt) override;
+    virtual void on_hover(uint um, const point& pt) override;
+    virtual void on_leave(uint um, const point& pt) override;
+    virtual void flush_style() override;
+    virtual void refresh_menubar_button_size();
+
+protected:
+    menubar*            _menubar;
+    menu*               _menu;
+    painter_brush*      _brush_ptr;
+    painter_pen*        _pen_ptr;
+
+public:
+    void set_menubar(menubar* ptr) { _menubar = ptr; }
+    void set_menu(menu* ptr) { _menu = ptr; }
+    void set_caption(const string& str) { _caption = str; }
+    const string& get_caption() const { return _caption; }
+};
+
+class menubar:
+    public ariel::widget,
+    public menubar_style_sheet
+{
+public:
+    friend class menubar_button;
+
+public:
+    menubar(wsys_manager* m): ariel::widget(m) {}
+    virtual void flush_style() override;
+    virtual void refresh_menubar_size();
+    virtual menubar_button* register_menubar_button();
+    virtual bool unregister_menubar_button(menubar_button* p);
+
+protected:
+    painter_brush       _menubar_normal_brush;
+    painter_pen         _menubar_normal_pen;
+    painter_brush       _menubar_hover_brush;
+    painter_pen         _menubar_hover_pen;
+    painter_brush       _menubar_press_brush;
+    painter_pen         _menubar_press_pen;
+    font                _menubar_font;
 };
 
 extern const uuid uuid_menu_item;

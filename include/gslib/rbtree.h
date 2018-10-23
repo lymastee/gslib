@@ -57,7 +57,7 @@ struct _rbtreenode_cpy_wrapper
 
     myref()
     {
-        _left = _right = _parent = 0;
+        _left = _right = _parent = nullptr;
         _color = rb_black;
     }
     value* get_ptr() { return &_value; }
@@ -94,8 +94,8 @@ struct _rbtreenode_wrapper
 
     myref()
     {
-        _left = _right = _parent = 0;
-        _value = 0;
+        _left = _right = _parent = nullptr;
+        _value = nullptr;
         _color = rb_black;
     }
     value* get_ptr() { return _value; }
@@ -105,16 +105,16 @@ struct _rbtreenode_wrapper
     void copy(const myref* a) { get_ref() = a->const_ref(); }
     void born() { !! }
     template<class _ctor>
-    void born() { _value = gs_new(_ctor); }
-    void kill() { if(_value) { gs_del(value, _value); _value = 0; } }
+    void born() { _value = new _ctor; }
+    void kill() { if(_value) { delete _value; _value = nullptr; } }
     template<class _ctor>
-    void kill() { if(_value) { gs_del(_ctor, _value); _value = 0; } }
+    void kill() { if(_value) { delete _value; _value = nullptr; } }
     void attach(myref* a)
     {
         assert(a && a->_value);
         kill();
         _value = a->_value;
-        a->_value = 0;
+        a->_value = nullptr;
     }
     void swap_data(myref* a) { gs_swap(_value, a->_value); }
     void set_color(color c) { _color = c; }
@@ -126,8 +126,8 @@ template<class _wrapper>
 struct _rbtree_allocator
 {
     typedef _wrapper wrapper;
-    static wrapper* born() { return gs_new(wrapper); }
-    static void kill(wrapper* w) { gs_del(wrapper, w); }
+    static wrapper* born() { return new wrapper; }
+    static void kill(wrapper* w) { delete w; }
 };
 
 template<class _val>
@@ -144,9 +144,9 @@ struct _rbtreenode_val
         const_value*    _cvptr;
     };
 
-    myref() { _vptr = 0; }
+    myref() { _vptr = nullptr; }
     value* get_wrapper() const { return _vptr; }
-    operator bool() const { return _vptr != 0; }
+    operator bool() const { return _vptr != nullptr; }
     bool is_left() const { return (_cvptr && _cvptr->_parent) ? _cvptr->_parent->_left == _cvptr : false; }
     bool is_right() const { return (_cvptr && _cvptr->_parent) ? _cvptr->_parent->_right == _cvptr : false; }
     bool is_root() const { return _cvptr ? (!_cvptr->_parent) : false; }
@@ -183,18 +183,18 @@ public:
     {
         assert(p && c && (c->_parent == p));
         if(p->_left == c) {
-            p->_left = c->_parent = 0;
+            p->_left = c->_parent = nullptr;
             return true;
         }
         assert(p->_right == c);
-        p->_right = c->_parent = 0;
+        p->_right = c->_parent = nullptr;
         return false;
     }
 
 private:
     static int _down_depth(value* v, int ctr)
     {
-        if(v == 0)
+        if(v == nullptr)
             return ctr;
         ctr ++;
         return gs_max(_down_depth(v->_left, ctr), 
@@ -203,24 +203,24 @@ private:
     }
 
 protected:
-    value* vleft() const { return _vptr ? _vptr->_left : 0; }
-    value* vright() const { return _vptr ? _vptr->_right : 0; }
-    value* vparent() const { return _vptr ? _vptr->_parent : 0; }
+    value* vleft() const { return _vptr ? _vptr->_left : nullptr; }
+    value* vright() const { return _vptr ? _vptr->_right : nullptr; }
+    value* vparent() const { return _vptr ? _vptr->_parent : nullptr; }
     value* vsibling() const
     {
         if(!_vptr || !_vptr->_parent)
-            return 0;
+            return nullptr;
         if(is_left())
             return _vptr->_right;
         else if(is_right())
             return _vptr->_left;
         assert(!"unexpected.");
-        return 0;
+        return nullptr;
     }
     value* vroot() const
     {
         if(!_vptr)
-            return 0;
+            return nullptr;
         value* p = _vptr;
         for( ; p->_parent; p = p->_parent);
         return p;
@@ -284,8 +284,8 @@ public:
     typedef _rbtree_const_iterator<_ty, _wrapper> iterator;
 
 public:
-    iterator(const wrapper* w = 0) { _cvptr = w; }
-    bool is_valid() const { return _cvptr != 0; }
+    iterator(const wrapper* w = nullptr) { _cvptr = w; }
+    bool is_valid() const { return _cvptr != nullptr; }
     const value* get_ptr() const { return _cvptr->const_ptr(); }
     const value* operator->() const { return _cvptr->const_ptr(); }
     const value& operator*() const { return _cvptr->const_ref(); }
@@ -348,7 +348,7 @@ public:
     typedef rbtree_color color;
 
 public:
-    rbtree() { _vptr = 0; }
+    rbtree() { _vptr = nullptr; }
     ~rbtree() { clear(); }
     void clear() { destroy(get_root()); }
     void destroy(iterator i)
@@ -359,7 +359,7 @@ public:
             disconnect_parent_child(p.get_wrapper(), i.get_wrapper());
         else {
             assert(is_root(i));
-            _vptr = 0;
+            _vptr = nullptr;
         }
         _destroy(i);
     }
@@ -371,7 +371,7 @@ public:
     iterator get_root() const { return iterator(_vptr); }
     const_iterator const_root() const { return const_iterator(_cvptr); }
     bool is_root(iterator i) const { return i ? (_vptr == i.get_wrapper()) : false; }
-    bool is_valid() const { return _cvptr != 0; }
+    bool is_valid() const { return _cvptr != nullptr; }
     bool is_mine(iterator i) const
     {
         if(!i.is_valid())
@@ -393,13 +393,13 @@ public:
         wrapper* f = _find(i.get_wrapper(), v);
         assert(f);
         if(!(f->const_ref() == v))
-            f = 0;
+            f = nullptr;
         return iterator(f);
     }
     template<class _ctor = value>
     iterator insert(const value& v)
     {
-        wrapper* f = 0;
+        wrapper* f = nullptr;
         if(_vptr) {
             f = _find(_vptr, v);
             assert(f);
@@ -489,7 +489,7 @@ public:
     void detach(_cont& cont)
     {
         cont.adopt(_vptr);
-        _vptr = 0;
+        _vptr = nullptr;
     }
     template<class _cont>
     void detach(_cont& cont, iterator i)
@@ -549,7 +549,7 @@ protected:
         assert(w);
         wrapper* n = w;
         for(;;) {
-            wrapper* m = 0;
+            wrapper* m = nullptr;
             const value& r = n->const_ref();
             if(v < r)
                 m = n->_left;
@@ -559,7 +559,7 @@ protected:
                 return n;
             n = m;
         }
-        return 0;
+        return nullptr;
     }
     void _left_rotate(wrapper* n)
     {

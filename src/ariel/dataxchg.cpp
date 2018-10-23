@@ -117,7 +117,7 @@ int CALLBACK enh_metafile_proc(HDC hdc, HANDLETABLE* lptable, const ENHMETARECOR
         if(c == 0)
             return 1;
         /* convert from wchar to char */
-//         clipboard_text* p = gs_new(clipboard_text);
+//         clipboard_text* p = new clipboard_text;
 //         int sc = c << 1;
 //         char* sstr = new char[sc];
 //         BOOL brpl = FALSE;
@@ -129,7 +129,7 @@ int CALLBACK enh_metafile_proc(HDC hdc, HANDLETABLE* lptable, const ENHMETARECOR
 //         mfp->count ++;
     }
     else if(lpemfr->iType == EMR_STRETCHDIBITS) {
-        clipboard_bitmap* p = gs_new(clipboard_bitmap);
+        clipboard_bitmap* p = new clipboard_bitmap;
         BITMAPINFO* pinfo = (BITMAPINFO*)(lpemfr->dParm+0x12);
         verify(_get_image_by_bmpinfo(p, pinfo));
         mfp->clist->push_back(p);
@@ -169,7 +169,7 @@ int _get_clipdata_by_hwnd(clipboard_list& cl, int c, HWND hwnd)
     while(ufmt && i < c) {
         if(ufmt == CF_TEXT) {
             h = GetClipboardData(CF_TEXT);
-            clipboard_text* p = gs_new(clipboard_text);
+            clipboard_text* p = new clipboard_text;
             const void* ptr = GlobalLock(h);
             p->assign((const gchar*)ptr);
             GlobalUnlock(h);
@@ -178,7 +178,7 @@ int _get_clipdata_by_hwnd(clipboard_list& cl, int c, HWND hwnd)
         }
         else if(ufmt == CF_DIB) {
             h = GetClipboardData(CF_DIB);
-            clipboard_bitmap* p = gs_new(clipboard_bitmap);
+            clipboard_bitmap* p = new clipboard_bitmap;
             BITMAPINFO* ptr = (BITMAPINFO*)GlobalLock(h);
             verify(_get_image_by_bmpinfo(p, ptr));
             GlobalUnlock(h);

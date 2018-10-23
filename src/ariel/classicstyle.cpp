@@ -107,6 +107,11 @@ static const style_sheet_pair __menu_sub_style_sheet_pairs[] =
     std::make_pair(sst_string, _t("caption")),
 };
 
+static const style_sheet_pair __menubar_button_style_sheet_pairs[] =
+{
+    std::make_pair(sst_string, _t("caption")),
+};
+
 widget_style_sheet::widget_style_sheet()
 {
     _fill_color = color(245, 246, 247);
@@ -713,6 +718,61 @@ const string& menu_sub_style_sheet::get_content_name(int index) const
     return __menu_sub_style_sheet_pairs[0].second;
 }
 
+menubar_style_sheet::menubar_style_sheet()
+{
+    /* todo */
+}
+
+menubar_button_style_sheet::menubar_button_style_sheet()
+{
+}
+
+bool menubar_button_style_sheet::get_value(const string& name, string& value)
+{
+    if(name == __menubar_button_style_sheet_pairs[0].second) {
+        value = _caption;
+        return true;
+    }
+    else {
+        assert(!"unexpected style sheet name.");
+        return false;
+    }
+}
+
+void menubar_button_style_sheet::set_value(const string& name, const string& value)
+{
+    if(name == __menubar_button_style_sheet_pairs[0].second)
+        _caption = value;
+    else {
+        assert(!"unexpected style sheet name.");
+        return;
+    }
+}
+
+int menubar_button_style_sheet::get_content_size() const
+{
+    return _countof(__menubar_button_style_sheet_pairs);
+}
+
+style_sheet_type menubar_button_style_sheet::get_content_type(int index) const
+{
+    if(index < 0 || index >= get_content_size()) {
+        assert(!"bad index for style sheet.");
+        return sst_unknown;
+    }
+    return __menubar_button_style_sheet_pairs[0].first;
+}
+
+const string& menubar_button_style_sheet::get_content_name(int index) const
+{
+    static const string err(_t("unknown name."));
+    if(index < 0 || index >= get_content_size()) {
+        assert(!"bad index for style sheet.");
+        return err;
+    }
+    return __menubar_button_style_sheet_pairs[0].second;
+}
+
 void widget::draw(painter* paint)
 {
     assert(paint);
@@ -956,13 +1016,12 @@ void menu_sub_item::on_leave(uint um, const point& pt)
 
 void menu_sub_item::flush_style()
 {
-    set_caption(menu_sub_style_sheet::_caption);
     assert(_menu);
     _brush_ptr = &_menu->_menu_normal_brush;
     _pen_ptr = &_menu->_menu_normal_pen;
 }
 
-static void retrieve_text_dimensions(const string& str, int& w, int& h)
+static void retrieve_text_dimensions(const font& ft, const string& str, int& w, int& h)
 {
     if(str.empty()) {
         w = h = 0;
@@ -970,13 +1029,14 @@ static void retrieve_text_dimensions(const string& str, int& w, int& h)
     }
     auto* fsys = scene::get_singleton_ptr()->get_fontsys();
     assert(fsys);
+    fsys->set_font(ft);
     fsys->get_size(str.c_str(), w, h, str.length());
 }
 
 void menu_sub_item::get_caption_dimensions(int& w, int& h) const
 {
     int tw, th;
-    retrieve_text_dimensions(_caption, tw, th);
+    retrieve_text_dimensions(_menu->_menu_font, _caption, tw, th);
     assert(_menu);
     w = tw + _menu->_text_horizontal_margin + _menu->_caption_reserved_space;
     h = th + _menu->_text_vertical_margin + _menu->_text_vertical_margin;
@@ -1054,8 +1114,6 @@ void menu_cmd_item::on_leave(uint um, const point& pt)
 
 void menu_cmd_item::flush_style()
 {
-    set_caption(menu_cmd_style_sheet::_caption);
-    set_accel_key(menu_cmd_style_sheet::_accel_key);
     assert(_menu);
     _brush_ptr = &_menu->_menu_normal_brush;
     _pen_ptr = &_menu->_menu_normal_pen;
@@ -1064,7 +1122,7 @@ void menu_cmd_item::flush_style()
 void menu_cmd_item::get_caption_dimensions(int& w, int& h) const
 {
     int tw, th;
-    retrieve_text_dimensions(_caption, tw, th);
+    retrieve_text_dimensions(_menu->_menu_font, _caption, tw, th);
     assert(_menu);
     w = tw + _menu->_text_horizontal_margin + _menu->_caption_reserved_space;
     h = th + _menu->_text_vertical_margin + _menu->_text_vertical_margin;
@@ -1080,7 +1138,7 @@ void menu_cmd_item::get_accel_key_dimensions(int& w, int& h) const
     _accel_key.to_string(str);
     assert(!str.empty());
     int tw, th;
-    retrieve_text_dimensions(str, tw, th);
+    retrieve_text_dimensions(_menu->_menu_font, str, tw, th);
     assert(_menu);
     w = tw + _menu->_text_horizontal_margin + _menu->_accel_reserved_space;
     h = th + _menu->_text_vertical_margin + _menu->_text_vertical_margin;
@@ -1092,9 +1150,23 @@ void menu_group::draw(painter* paint)
     paint->save();
     paint->set_brush(painter_brush());
     paint->set_pen(_menu->_menu_border_pen);
-    rectf rc = get_rectf();
-    rc.move_to(0.f, 0.f);
-    paint->draw_rect(rc);
+    if(_upside_gap <= 0) {
+        rectf rc = get_rectf();
+        rc.move_to(0.f, 0.f);
+        paint->draw_rect(rc);
+    }
+    else {
+        float w = (float)get_width(), h = (float)get_height();
+        float gap = (float)_upside_gap;
+        painter_path path;
+        path.move_to(0.f, 0.f);
+        path.line_to(0.f, h);
+        path.line_to(w, h);
+        path.line_to(w, 0.f);
+        if(w > gap)
+            path.line_to(gap, 0.f);
+        paint->draw_path(path);
+    }
     paint->restore();
 }
 
@@ -1401,6 +1473,12 @@ menu_group* menu::hit_group(const point& pt)
     return nullptr;
 }
 
+menu_group* menu::get_entry_group() const
+{
+    assert(!_menu_stack.empty());
+    return _menu_stack.front();
+}
+
 void menu::on_current_hover(ariel::widget* ptr, uint um, const point& pt)
 {
     if(_last_hover == ptr)
@@ -1429,6 +1507,112 @@ void menu::on_select_menu_item(menu_item* item)
         on_sub_menu(static_cast<menu_sub_item*>(item));
         break;
     }
+}
+
+void menubar_button::draw(painter* paint)
+{
+    paint->save();
+    paint->set_brush(*_brush_ptr);
+    paint->set_pen(*_pen_ptr);
+    float w = (float)get_width(), h = (float)get_height();
+    painter_path path;
+    path.move_to(w, h);
+    path.line_to(w, 0.f);
+    path.line_to(0.f, 0.f);
+    path.line_to(0.f, h);
+    paint->draw_path(path);
+    paint->set_pen(painter_pen());
+    paint->draw_text(_caption.c_str(), 0, 0, _menubar->_caption_font_color, _caption.length());
+    paint->restore();
+}
+
+void menubar_button::on_press(uint um, unikey uk, const point& pt)
+{
+    assert(_menubar);
+    _brush_ptr = &_menubar->_menubar_press_brush;
+    _pen_ptr = &_menubar->_menubar_press_pen;
+}
+
+void menubar_button::on_click(uint um, unikey uk, const point& pt)
+{
+    assert(_menubar);
+    _brush_ptr = &_menubar->_menubar_hover_brush;
+    _pen_ptr = &_menubar->_menubar_hover_pen;
+}
+
+void menubar_button::on_hover(uint um, const point& pt)
+{
+    assert(_menubar);
+    _brush_ptr = &_menubar->_menubar_hover_brush;
+    _pen_ptr = &_menubar->_menubar_hover_pen;
+}
+
+void menubar_button::on_leave(uint um, const point& pt)
+{
+    assert(_menubar);
+    _brush_ptr = &_menubar->_menubar_normal_brush;
+    _pen_ptr = &_menubar->_menubar_normal_pen;
+}
+
+void menubar_button::flush_style()
+{
+    assert(_menubar);
+    set_caption(menubar_button::_caption);
+    _brush_ptr = &_menubar->_menubar_normal_brush;
+    _pen_ptr = &_menubar->_menubar_normal_pen;
+}
+
+void menubar_button::refresh_menubar_button_size()
+{
+    assert(_menubar && _menu);
+    /* setup size */
+    int w, h;
+    retrieve_text_dimensions(_menubar->_menubar_font, _caption, w, h);
+    resize(w, h);
+    /* setup menu gap */
+    auto* entry = _menu->get_entry_group();
+    assert(entry);
+    entry->set_upside_gap(w);
+}
+
+void menubar::refresh_menubar_size()
+{
+    int width = 0, height = 0;
+    auto travch = [&width, &height](ariel::widget* w)-> int {
+        assert(w);
+        width += w->get_width();
+        height = gs_max(height, w->get_height());
+        return 0;
+    };
+    traverse_child_widget(travch);
+    resize(width, height);
+}
+
+void menubar::flush_style()
+{
+    setup_brush_by_color(_menubar_normal_brush, _normal_fill_color);
+    setup_pen_by_color(_menubar_normal_pen, _normal_stroke_color);
+    setup_brush_by_color(_menubar_hover_brush, _hover_fill_color);
+    setup_pen_by_color(_menubar_hover_pen, _hover_stroke_color);
+    setup_brush_by_color(_menubar_press_brush, _press_fill_color);
+    setup_pen_by_color(_menubar_press_pen, _press_stroke_color);
+    setup_font(_menubar_font, _caption_font_name, _caption_font_size);
+}
+
+menubar_button* menubar::register_menubar_button()
+{
+    assert(_manager);
+    auto* p = _manager->add_widget<menubar_button>(this, nullptr, rect(), sm_hitable|sm_visible);
+    assert(p);
+    p->set_menubar(this);
+    return p;
+}
+
+bool menubar::unregister_menubar_button(menubar_button* p)
+{
+    assert(_manager);
+    assert(p && (p->get_parent() == this));
+    return _manager->remove_widget(p);
 }
 
 #define menu_script_blanks  _t(" \t\v\r\n\f")

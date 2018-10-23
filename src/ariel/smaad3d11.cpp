@@ -207,9 +207,9 @@ void smaa::prepare_render_targets(rendersys* rsys, int w, int h)
     const auto& info = rsys->get_device_info();
     bool is_nvidia_card = (info.vendor_id == 0x10de);
     DXGI_FORMAT fmt = is_nvidia_card ? DXGI_FORMAT_R8G8B8A8_UNORM : DXGI_FORMAT_R8G8_UNORM;
-    _edges_rt = gs_new(smaa_render_target, rsys, w, h, fmt);
+    _edges_rt = new smaa_render_target(rsys, w, h, fmt);
     assert(_edges_rt);
-    _blend_rt = gs_new(smaa_render_target, rsys, w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
+    _blend_rt = new smaa_render_target(rsys, w, h, DXGI_FORMAT_R8G8B8A8_UNORM);
     assert(_blend_rt);
 }
 

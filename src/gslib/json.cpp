@@ -151,7 +151,7 @@ static int json_parse_name(string& name, const gchar* str, int len)
 
 json_node_array::~json_node_array()
 {
-    for(auto* p : _array) { gs_del(json_node, p); }
+    for(auto* p : _array) { delete p; }
     _array.clear();
 }
 
@@ -172,7 +172,7 @@ int json_node_array::parse(const gchar* src, int len)
         return len - --rest;
     while(rest > 0) {
         if(reader[0] == _t('{')) {
-            auto* ch = gs_new(json_node_table);
+            auto* ch = new json_node_table;
             _array.push_back(ch);
             rs = ch->parse(reader, rest);
             if(rs == -1) {
@@ -181,7 +181,7 @@ int json_node_array::parse(const gchar* src, int len)
             }
         }
         else {
-            auto* ch = gs_new(json_node_value);
+            auto* ch = new json_node_value;
             _array.push_back(ch);
             rs = ch->parse(reader, rest);
             if(rs == -1) {
@@ -227,14 +227,14 @@ int json_node_array::parse(const gchar* src, int len)
 
 json_node_table::~json_node_table()
 {
-    for(auto* p : _table) { gs_del(json_node, p); }
+    for(auto* p : _table) { delete p; }
     _table.clear();
 }
 
 json_node* json_node_table::find(const string& name) const
 {
     auto f = _table.find(&json_key(name));
-    return (f != _table.end()) ? *f : 0;
+    return (f != _table.end()) ? *f : nullptr;
 }
 
 int json_node_table::parse(const gchar* src, int len)
@@ -277,7 +277,7 @@ int json_node_table::parse(const gchar* src, int len)
         reader += rs;
         rest -= rs;
         if(reader[0] == _t('{')) {
-            auto* p = gs_new(json_node_table);
+            auto* p = new json_node_table;
             p->set_name(ch_name);
             _table.insert(p);
             rs = p->parse(reader, rest);
@@ -289,7 +289,7 @@ int json_node_table::parse(const gchar* src, int len)
             }
         }
         else if(reader[0] == _t('[')) {
-            auto* p = gs_new(json_node_array);
+            auto* p = new json_node_array;
             p->set_name(ch_name);
             _table.insert(p);
             rs = p->parse(reader, rest);
@@ -301,7 +301,7 @@ int json_node_table::parse(const gchar* src, int len)
             }
         }
         else {
-            auto* p = gs_new(json_node_pair);
+            auto* p = new json_node_pair;
             p->set_name(ch_name);
             _table.insert(p);
             rs = p->parse(reader, rest);
@@ -433,7 +433,7 @@ int json_node_pair::parse(const gchar* src, int len)
 
 json_node* json_node_table::duplicate() const
 {
-    auto* p = gs_new(json_node_table);
+    auto* p = new json_node_table;
     assert(p);
     p->set_name(_name);
     for(auto* ch : _table)
@@ -443,7 +443,7 @@ json_node* json_node_table::duplicate() const
 
 json_node* json_node_array::duplicate() const
 {
-    auto* p = gs_new(json_node_array);
+    auto* p = new json_node_array;
     assert(p);
     p->set_name(_name);
     for(auto* ch : _array)
@@ -453,7 +453,7 @@ json_node* json_node_array::duplicate() const
 
 json_node* json_node_pair::duplicate() const
 {
-    auto* p = gs_new(json_node_pair);
+    auto* p = new json_node_pair;
     assert(p);
     p->set_name(_name);
     p->_value.set_value_string(_value.get_name());
@@ -462,7 +462,7 @@ json_node* json_node_pair::duplicate() const
 
 json_node* json_node_value::duplicate() const
 {
-    auto* p = gs_new(json_node_value);
+    auto* p = new json_node_value;
     assert(p);
     p->set_value_string(_strval);
     return p;
@@ -479,14 +479,14 @@ bool json_parser::parse(const gchar* src, int len)
     int rest = len - rs;
     assert(rest > 0);
     if(reader[0] == _t('{')) {
-        auto* p = gs_new(json_node_table);
+        auto* p = new json_node_table;
         _root = p;
         rs = p->parse(reader, rest);
         if(rs == -1)
             return false;
     }
     else if(reader[0] == _t('[')) {
-        auto* p = gs_new(json_node_array);
+        auto* p = new json_node_array;
         _root = p;
         rs = p->parse(reader, rest);
         if(rs == -1)
@@ -521,8 +521,8 @@ bool json_parser::parse(const gchar* filename)
 void json_parser::destroy()
 {
     if(_root) {
-        gs_del(json_node, _root);
-        _root = 0;
+        delete _root;
+        _root = nullptr;
     }
 }
 

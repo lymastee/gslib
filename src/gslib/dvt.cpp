@@ -34,8 +34,7 @@ static const byte __notify_code_0[] =
     0xff, 0xd0,                             /* call eax */
     0x8d, 0x0d, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea ecx, 0xcccccccc:host */
     0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:action */
-    0xff, 0xd0,                             /* call eax */
-    0xc3                                    /* ret */
+    0xff, 0xe0,                             /* jmp eax */
 };
 
 static const byte __notify_code_1[] =
@@ -43,11 +42,9 @@ static const byte __notify_code_1[] =
     0xff, 0x74, 0x24, 0x04,                 /* push dword ptr[esp+4] */
     0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:old_func */
     0xff, 0xd0,                             /* call eax */
-    0xff, 0x74, 0x24, 0x04,                 /* push dword ptr[esp+4] */
     0x8d, 0x0d, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea ecx, 0xcccccccc:host */
     0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:action */
-    0xff, 0xd0,                             /* call eax */
-    0xc2, 0x04, 0x00                        /* ret 4 */
+    0xff, 0xe0,                             /* jmp eax */
 };
 
 static const byte __notify_code_2[] =
@@ -56,12 +53,9 @@ static const byte __notify_code_2[] =
     0xff, 0x74, 0x24, 0x08,                 /* push dword ptr[esp+8] */
     0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:old_func */
     0xff, 0xd0,                             /* call eax */
-    0xff, 0x74, 0x24, 0x08,                 /* push dword ptr[esp+8] */
-    0xff, 0x74, 0x24, 0x08,                 /* push dword ptr[esp+8] */
     0x8d, 0x0d, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea ecx, 0xcccccccc:host */
     0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:action */
-    0xff, 0xd0,                             /* call eax */
-    0xc2, 0x08, 0x00                        /* ret 8 */
+    0xff, 0xe0,                             /* jmp eax */
 };
 
 static const byte __notify_code_3[] =
@@ -71,13 +65,25 @@ static const byte __notify_code_3[] =
     0xff, 0x74, 0x24, 0x0c,                 /* push dword ptr[esp+12] */
     0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:old_func */
     0xff, 0xd0,                             /* call eax */
-    0xff, 0x74, 0x24, 0x0c,                 /* push dword ptr[esp+12] */
-    0xff, 0x74, 0x24, 0x0c,                 /* push dword ptr[esp+12] */
-    0xff, 0x74, 0x24, 0x0c,                 /* push dword ptr[esp+12] */
     0x8d, 0x0d, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea ecx, 0xcccccccc:host */
     0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:action */
+    0xff, 0xe0,                             /* jmp eax */
+};
+
+static const byte __notify_code_n[] =
+{
+    0x8d, 0x74, 0x24, 0x04,                 /* lea esi, [esp + 4] */
+    0x81, 0xec, 0xcc, 0xcc, 0xcc, 0xcc,     /* sub esp, 0xcccccccc:sizeof_arg_bytes */
+    0x8b, 0xfc,                             /* mov edi, esp */
+    0x8b, 0xd1,                             /* mov edx, ecx */
+    0xb9, 0xcc, 0xcc, 0xcc, 0xcc,           /* mov ecx, 0xcccccccc:sizeof_arg_dwords */
+    0xf3, 0xa5,                             /* rep movsd */
+    0x8b, 0xca,                             /* mov ecx, edx */
+    0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:old_func */
     0xff, 0xd0,                             /* call eax */
-    0xc2, 0x0c, 0x00                        /* ret 12 */
+    0x8d, 0x0d, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea ecx, 0xcccccccc:host */
+    0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:action */
+    0xff, 0xe0,                             /* jmp eax */
 };
 
 #if defined(WIN32) || defined(_WINDOWS)
@@ -87,40 +93,43 @@ static const byte __notify_code_3[] =
 #define dealloc_exec_codebytes(ptr, len)            VirtualFree(ptr, len, MEM_DECOMMIT)
 #endif
 
-notify_code::notify_code(int n)
+notify_code::notify_code(int argsize)
 {
-    _type = n;
-    switch(n)
-    {
-    case 0:
+    _argsize = argsize;
+    if(argsize <= 0) {
         _len = sizeof(__notify_code_0);
         _ptr = (byte*)alloc_writable_exec_codebytes(_len);
         assert(_ptr);
         memcpy(_ptr, __notify_code_0, _len);
-        break;
-    case 1:
+    }
+    else if(argsize <= 4) {
         _len = sizeof(__notify_code_1);
         _ptr = (byte*)alloc_writable_exec_codebytes(_len);
         assert(_ptr);
         memcpy(_ptr, __notify_code_1, _len);
-        break;
-    case 2:
+    }
+    else if(argsize <= 8) {
         _len = sizeof(__notify_code_2);
         _ptr = (byte*)alloc_writable_exec_codebytes(_len);
         assert(_ptr);
         memcpy(_ptr, __notify_code_2, _len);
-        break;
-    case 3:
+    }
+    else if(argsize <= 12) {
         _len = sizeof(__notify_code_3);
         _ptr = (byte*)alloc_writable_exec_codebytes(_len);
         assert(_ptr);
         memcpy(_ptr, __notify_code_3, _len);
-        break;
-    default:
-        assert(!"unexpected notify code type.");
-        _ptr = nullptr;
-        _len = 0;
-        break;
+    }
+    else {
+        _len = sizeof(__notify_code_n);
+        _ptr = (byte*)alloc_writable_exec_codebytes(_len);
+        assert(_ptr);
+        memcpy(_ptr, __notify_code_n, _len);
+        /* for x86 case */
+        int size_in_dwords = (argsize <= 0) ? 0 : (int)(((uint)(argsize - 1)) >> 2) + 1;
+        int size_in_bytes = (int)((uint)size_in_dwords << 2);
+        *(uint*)(_ptr + 6) = size_in_bytes;
+        *(uint*)(_ptr + 15) = size_in_dwords;
     }
 }
 
@@ -136,31 +145,30 @@ notify_code::~notify_code()
 
 void notify_code::finalize(uint old_func, uint host, uint action)
 {
-    switch(_type)
-    {
-    case 0:
+    if(_argsize <= 0) {
         *(uint*)(_ptr + 2) = old_func;
         *(uint*)(_ptr + 10) = host;
         *(uint*)(_ptr + 16) = action;
-        break;
-    case 1:
+    }
+    else if(_argsize <= 4) {
         *(uint*)(_ptr + 6) = old_func;
+        *(uint*)(_ptr + 14) = host;
+        *(uint*)(_ptr + 20) = action;
+    }
+    else if(_argsize <= 8) {
+        *(uint*)(_ptr + 10) = old_func;
         *(uint*)(_ptr + 18) = host;
         *(uint*)(_ptr + 24) = action;
-        break;
-    case 2:
-        *(uint*)(_ptr + 10) = old_func;
-        *(uint*)(_ptr + 26) = host;
-        *(uint*)(_ptr + 32) = action;
-        break;
-    case 3:
+    }
+    else if(_argsize <= 12) {
         *(uint*)(_ptr + 14) = old_func;
-        *(uint*)(_ptr + 34) = host;
-        *(uint*)(_ptr + 40) = action;
-        break;
-    default:
-        assert(!"widget notify code finalize failed.");
-        return;
+        *(uint*)(_ptr + 22) = host;
+        *(uint*)(_ptr + 28) = action;
+    }
+    else {
+        *(uint*)(_ptr + 25) = old_func;
+        *(uint*)(_ptr + 33) = host;
+        *(uint*)(_ptr + 39) = action;
     }
     lock_exec_codebytes(_ptr, _len, _oldpro);
 }
@@ -186,9 +194,9 @@ notify_holder::~notify_holder()
     _notifiers.clear();
 }
 
-notify_code* notify_holder::add_notifier(int n)
+notify_code* notify_holder::add_notifier(int argsize)
 {
-    auto* notify = new notify_code(n);
+    auto* notify = new notify_code(argsize);
     assert(notify);
     _notifiers.push_back(notify);
     return notify;

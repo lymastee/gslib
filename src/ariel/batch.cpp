@@ -446,7 +446,7 @@ void bat_line::tracing() const
 bat_line* bat_line::create_line(lb_joint* i, lb_joint* j, float w, float z, uint t, bool half)
 {
     assert(i && j);
-    auto* p = gs_new(bat_line);
+    auto* p = new bat_line;
     assert(p);
     p->set_source_joint(0, i);
     p->set_source_joint(1, j);
@@ -463,7 +463,7 @@ bat_line* bat_line::create_line(lb_joint* i, lb_joint* j, float w, float z, uint
 bat_line* bat_line::create_half_line(lb_joint* i, lb_joint* j, const vec2& p1, const vec2& p2, float w, float z, uint t)
 {
     assert(i && j);
-    auto* p = gs_new(bat_line);
+    auto* p = new bat_line;
     assert(p);
     p->set_source_joint(0, i);
     p->set_source_joint(1, j);
@@ -564,9 +564,9 @@ void batch_processor::finish_batching()
 
 void batch_processor::clear_batches()
 {
-    for(auto* p : _batches) { gs_del(bat_batch, p); }
-    for(auto* p : _triangles) { gs_del(bat_triangle, p); }
-    for(auto* p : _lines) { gs_del(bat_line, p); }
+    for(auto* p : _batches) { delete p; }
+    for(auto* p : _triangles) { delete p; }
+    for(auto* p : _lines) { delete p; }
     _batches.clear();
     _triangles.clear();
     _lines.clear();
@@ -575,7 +575,7 @@ void batch_processor::clear_batches()
 template<class _batch>
 _batch* batch_processor::create_batch(bat_type t)
 {
-    auto* p = gs_new(_batch, t);
+    auto* p = new _batch(t);
     assert(p);
     _batches.push_back(p);
     return p;
@@ -584,7 +584,7 @@ _batch* batch_processor::create_batch(bat_type t)
 bat_triangle* batch_processor::create_triangle(lb_joint* j1, lb_joint* j2, lb_joint* j3, float z)
 {
     assert(j1 && j2 && j3);
-    auto* p = gs_new(bat_triangle, j1, j2, j3);
+    auto* p = new bat_triangle(j1, j2, j3);
     p->set_zorder(z);
     _triangles.push_back(p);
     return p;
@@ -678,7 +678,7 @@ static void bat_clip_triangles(bat_lines& out_lines, bat_lines& line_holdings, c
         if(line == orgline)
             out_lines.push_back(line);
         else {
-            auto* p = gs_new(bat_line, *line);
+            auto* p = new bat_line(*line);
             out_lines.push_back(p);
             line_holdings.push_back(p);
         }
@@ -751,12 +751,12 @@ void batch_processor::proceed_line_batch()
         auto t = line->decide();
         if(t == bs_coef_cr) {
             if(!crbat)
-                crbat = gs_new(bat_stroke_batch, bs_coef_cr);
+                crbat = new bat_stroke_batch(bs_coef_cr);
             crbat->get_lines().push_back(line);
         }
         else if(t == bs_coef_tex) {
             if(!texbat)
-                texbat = gs_new(bat_stroke_batch, bs_coef_tex);
+                texbat = new bat_stroke_batch(bs_coef_tex);
             texbat->get_lines().push_back(line);
         }
         else {

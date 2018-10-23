@@ -47,7 +47,7 @@ protected:
     void*           _binding;
 
 public:
-    dt_joint() { _binding = 0; }
+    dt_joint() { _binding = nullptr; }
     dt_joint(const vec2& p, void* b) { _point = p, _binding = b; }
     void set_point(const vec2& p) { _point = p; }
     const vec2& get_point() const { return _point; }
@@ -102,7 +102,7 @@ struct dt_edge_range
     dt_edge*        left;
     dt_edge*        right;
 
-    dt_edge_range()  { left = right = 0; }
+    dt_edge_range()  { left = right = nullptr; }
 };
 
 typedef list<dt_joint> dt_input_joints;

@@ -75,9 +75,9 @@ public:
     }
     void erase(errinfo* e)
     {
-        if(gchar* c = e->desc) { delete [] c; e->desc = 0; }
-        if(gchar* c = e->file) { delete [] c; e->file = 0; }
-        if(dword* d = (dword*)e->user) { gs_del(dword, d); e->user = 0; }
+        if(gchar* c = e->desc) { delete [] c; e->desc = nullptr; }
+        if(gchar* c = e->file) { delete [] c; e->file = nullptr; }
+        if(dword* d = (dword*)e->user) { delete d; e->user = nullptr; }
     }
     errinfo* get_back()
     {
@@ -212,7 +212,6 @@ void trace(const gchar* fmt, ...)
     va_list ptr;
     va_start(ptr, fmt);
     static string str;
-    //str.formatv(4196, fmt, ptr);
     str.formatv(fmt, ptr);
     OutputDebugString(str.c_str());
 }

@@ -105,7 +105,7 @@ static dt_edge* dt_locate_point(const vec2& p, dt_edge* start)
             }
             e = e->get_org_next();
             if(e == start)
-                return 0;
+                return nullptr;
         }
         else if(!dt_right_of(p, e->get_dest_prev())) {
             if(s != 2) {
@@ -114,12 +114,12 @@ static dt_edge* dt_locate_point(const vec2& p, dt_edge* start)
             }
             e = e->get_dest_prev();
             if(e == start)
-                return 0;
+                return nullptr;
         }
         else
             return e;
     }
-    return 0;
+    return nullptr;
 }
 
 static dt_edge* dt_locate_joint(dt_joint* j, dt_edge* start)
@@ -141,7 +141,7 @@ static dt_edge* dt_locate_joint(dt_joint* j, dt_edge* start)
             }
             e = e->get_org_next();
             if(e == start)
-                return 0;
+                return nullptr;
         }
         else if(!dt_right_of(p, e->get_dest_prev())) {
             if(s != 2) {
@@ -150,12 +150,12 @@ static dt_edge* dt_locate_joint(dt_joint* j, dt_edge* start)
             }
             e = e->get_dest_prev();
             if(e == start)
-                return 0;
+                return nullptr;
         }
         else
             return e;
     }
-    return 0;
+    return nullptr;
 }
 
 static bool dt_line_intersect(const vec2& p1, const vec2& p2, const vec2& p3, const vec2& p4)
@@ -204,7 +204,7 @@ static void dt_collect_intersect_edges_w(const vec2& p1, const vec2& p2, dt_edge
      */
     if(dt_on_edge(init->get_dest_point(), p1, p2))
         return dt_collect_intersect_edges_w(p1, p2, edges, init->get_left_next());
-    dt_edge* ints = 0;
+    dt_edge* ints = nullptr;
     auto* e = init->get_left_next();
     if(dt_line_intersect(p1, p2, e->get_org_point(), e->get_dest_point()))
         ints = e;
@@ -361,8 +361,8 @@ static void dt_trace_edge_loop(dt_edge* e)
 
 dt_edge::dt_edge()
 {
-    _org = 0;
-    _prev = _next = _symmetric = 0;
+    _org = nullptr;
+    _prev = _next = _symmetric = nullptr;
     _constraint = false;
     _checked = false;
 }
@@ -446,10 +446,10 @@ void delaunay_triangulation::run()
 void delaunay_triangulation::clear()
 {
     _sorted_joints.clear();
-    _edge_range.left = _edge_range.right = 0;
+    _edge_range.left = _edge_range.right = nullptr;
     for(auto* p : _edge_holdings) {
-        gs_del(dt_edge, p->get_symmetric());
-        gs_del(dt_edge, p);
+        delete p->get_symmetric();
+        delete p;
     }
     _edge_holdings.clear();
 }
@@ -458,12 +458,12 @@ dt_edge* delaunay_triangulation::add_constraint(const vec2& p1, const vec2& p2)
 {
     auto* init = dt_locate_point(p1, _edge_range.left);
     if(!init)
-        return 0;
+        return nullptr;
     if(init->get_org_point() != p1)
         init = init->get_symmetric();
     assert(init->get_org_point() == p1);
     /* test if the edge exists. */
-    dt_edge* exist_edge = 0;
+    dt_edge* exist_edge = nullptr;
     if(init->get_dest_point() == p2)
         exist_edge = init;
     else {
@@ -484,7 +484,7 @@ dt_edge* delaunay_triangulation::add_constraint(const vec2& p1, const vec2& p2)
     dt_edge_list edges;
     dt_collect_intersect_edges_w(p1, p2, edges, init);
     if(edges.empty())
-        return 0;
+        return nullptr;
     /* find the head tail of the loop */
     auto* firstcut = edges.front();
     auto* cand1 = firstcut->get_left_prev();
@@ -678,8 +678,8 @@ dt_edge_range delaunay_triangulation::delaunay(int begin, int end)
 
 dt_edge* delaunay_triangulation::create_edge_pair()
 {
-    auto* e1 = gs_new(dt_edge);
-    auto* e2 = gs_new(dt_edge);
+    auto* e1 = new dt_edge;
+    auto* e2 = new dt_edge;
     e1->set_symmetric(e2);
     e2->set_symmetric(e1);
     e1->set_prev_edge(e2);
@@ -713,8 +713,8 @@ void delaunay_triangulation::destroy_edge_pair(dt_edge* e)
         _edge_holdings.erase(f);
     else
         _edge_holdings.erase(esymm);
-    gs_del(dt_edge, esymm);
-    gs_del(dt_edge, e);
+    delete esymm;
+    delete e;
 }
 
 void delaunay_triangulation::shrink_triangulate(dt_edge* cut)

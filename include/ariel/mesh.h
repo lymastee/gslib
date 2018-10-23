@@ -32,155 +32,85 @@
 
 __ariel_begin__
 
-template<class pt_type>
-struct mesh_joint;
-template<class pt_type>
-struct mesh_edge;
-template<class pt_type>
-struct mesh_face;
+#define mesh_invalid_index  -1
+#define mesh_make_edge(start_point_index, end_point_index) ((((uint64)start_point_index) << 32) | end_point_index)
+#define mesh_start_query_index(index) mesh_make_edge(index, mesh_invalid_index)
+#define mesh_end_query_index(index) mesh_make_edge(mesh_invalid_index, index)
 
-template<class pt_type>
-using mesh_joint_list = vector<mesh_joint<pt_type> >;
-template<class pt_type>
-using mesh_edge_list = vector<mesh_edge<pt_type> >;
-template<class pt_type>
-using mesh_face_list = vector<mesh_face<pt_type> >;
+class mesh_point_data;
+typedef uint32 mesh_point_index;
+typedef uint64 mesh_edge;
+typedef vector<mesh_point_data*> mesh_point_table;
+typedef vector<mesh_point_index> mesh_triangles;
+typedef unordered_multimap<mesh_point_index, mesh_point_index> mesh_sp_table;
+typedef unordered_multimap<mesh_edge, mesh_point_index> mesh_digraph;
+typedef unordered_map<mesh_edge, mesh_point_index> mesh_ef_table;
 
-enum mesh_joint_type
-{
-    jt_turn,
-    jt_fork,
-};
-
-template<class pt_type>
-struct mesh_common_namespace
+class mesh_point_data
 {
 public:
-    typedef pt_type point_type;
-    typedef mesh_joint<pt_type> joint_type;
-    typedef mesh_edge<pt_type> edge_type;
-    typedef mesh_face<pt_type> face_type;
-    typedef mesh_joint_list<pt_type> joint_list;
-    typedef mesh_edge_list<pt_type> edge_list;
-    typedef mesh_face_list<pt_type> face_list;
-};
-
-template<class pt_type>
-struct mesh_joint:
-    public mesh_common_namespace<pt_type>
-{
-public:
-    mesh_joint(const pt_type& p) { set_point(p); }
-    virtual ~mesh_joint() {}
-    virtual mesh_joint_type get_type() const = 0;
-    virtual int get_edge_count() const = 0;
-    virtual edge_type* get_edge(int i) const = 0;
-
-public:
-    const pt_type& get_point() const { return _point; }
-    void set_point(const pt_type& p) { _point = p; }
+    mesh_point_data();
+    virtual ~mesh_point_data();
+    void set_index(mesh_point_index i) { _index = i; }
+    mesh_point_index get_index() const { return _index; }
+    void set_point(const vec3& p) { _point = p; }
+    const vec3& get_point() const { return _point; }
+    void set_normal(const vec3& n) { _normal = n; }
+    const vec3& get_normal() const { return _normal; }
+    void set_user_data(void* p) { _userdata = p; }
+    void* get_user_data() const { return _userdata; }
+    void acc_normal(const vec3& n) { _normal += n; }
+    void normalize_normal() { _normal.normalize(); }
 
 protected:
-    pt_type             _point;
+    mesh_point_index    _index;
+    vec3                _point;
+    vec3                _normal;
+    void*               _userdata;
 };
 
-template<class pt_type>
-struct mesh_turn_joint:
-    public mesh_joint<pt_type>
-{
-public:
-    mesh_turn_joint(const pt_type& p): mesh_joint(p) { _edges[0] = _edges[1] = 0; }
-    virtual mesh_joint_type get_type() const override { return jt_turn; }
-    virtual int get_edge_count() const override { return 2; }
-    virtual edge_type* get_edge(int i) const override
-    {
-        assert(i < 2);
-        return _edges[i];
-    }
-
-protected:
-    edge_type*          _edges[2];
-
-public:
-    edge_type* get_prev_edge() const;
-    edge_type* get_next_edge() const;
-};
-
-template<class pt_type>
-struct mesh_fork_joint:
-    public mesh_joint<pt_type>
-{
-public:
-    mesh_fork_joint(const pt_type& p): mesh_joint(p) {}
-    virtual mesh_joint_type get_type() const override { return jt_fork; }
-    virtual int get_edge_count() const override { return jt_fork; }
-    virtual edge_type* get_edge(int i) const override { return _edges.at(i); }
-
-protected:
-    edge_list           _edges;
-};
-
-template<class pt_type>
-struct mesh_edge:
-    public mesh_common_namespace<pt_type>
-{
-public:
-    mesh_edge() { _joints[0] = _joints[1] = 0; }
-    mesh_edge(joint_type* j1, joint_type* j2)
-    {
-        _joints[0] = j1;
-        _joints[1] = j2;
-    }
-    joint_type* get_joint(int i) const
-    {
-        assert(i >= 0 && i < 2);
-        return _joints[i];
-    }
-    void set_joint(int i, joint_type* p)
-    {
-        assert(i >= 0 && i < 2);
-        _joints[i] = p;
-    }
-    joint_type* get_prev_joint() const { return _joints[0]; }
-    joint_type* get_next_joint() const { return _joints[1]; }
-    const pt_type& get_prev_point() const;
-    const pt_type& get_next_point() const;
-
-protected:
-    joint_type*         _joints[2];
-
-private:
-    static const pt_type nonsense_point;
-};
-
-template<class pt_type>
-struct mesh_face:
-    public mesh_common_namespace<pt_type>
-{
-public:
-    void add_joint(joint_type* p) { _joints.push_back(p); }
-
-
-protected:
-    joint_list          _joints;
-};
-
-template<class pt_type>
-class mesh:
-    public mesh_common_namespace<pt_type>
+class mesh
 {
 public:
     mesh();
     virtual ~mesh();
+    int load_from_text(const string& src, int start);
+    const mesh_point_table& get_point_table() const { return _point_table; }
+    int get_point_count() const { return (int)_point_table.size(); }
+    mesh_point_data* get_point_data(mesh_point_index i) const { return _point_table.at(i); }
 
 protected:
-    joint_list          _joint_holdings;
-    edge_list           _edge_holdings;
-    face_list           _faces;
+    mesh_point_table    _point_table;
+    mesh_triangles      _triangles;
+    matrix              _localmat;      /* todo: to be removed. */
+
+protected:
+    int load_local_section_from_text(const string& src, int start);
+    int load_point_section_from_text(const string& src, int start);
+    int load_face_section_from_text(const string& src, int start);
+    void arrange_point_indices();
+    void destroy_point_table();
+    void calculate_normals();
+};
+
+class editable_mesh:
+    public mesh
+{
+protected:
+    mesh_sp_table       _sp_table;
+    mesh_digraph        _digraph;
+    mesh_ef_table       _ef_table;
+};
+
+/* todo: to be removed */
+class __gs_novtable mesh_loader_for_test abstract
+{
+public:
+    virtual ~mesh_loader_for_test() {}
+    virtual bool load_from_text(const string& src);
+    virtual void on_add_mesh(mesh* ptr) { delete ptr; }
 };
 
 __ariel_end__
-
-#include <ariel/mesh.hpp>
 
 #endif

@@ -1324,7 +1324,7 @@ void wsys_manager::initialize(const rect& rc)
     assert(!_caret && _driver);
     _caret = new timer(this);
     assert(_caret);
-    connect_notify(_caret, timer::on_timer, this, on_caret, 1);
+    connect_notify(_caret, timer::on_timer, this, on_caret, 4);
     _caret->start(600);
     /* IME support */
     set_ime(0, point(0, 0), font(_t("simsun"), 14));

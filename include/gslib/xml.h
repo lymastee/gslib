@@ -65,12 +65,12 @@ struct xml_kvp_search
     static string* find(_kvpvsl& v, const string& k)
     {
         auto i = v.find(xml_key(k));
-        return i != v.end() ? &(const_cast<string&>(i->value)) : 0;
+        return i != v.end() ? &(const_cast<string&>(i->value)) : nullptr;
     }
     static const string* find(const _kvpvsl& v, const string& k)
     {
         auto i = v.find(xml_key(k));
-        return i != v.end() ? &(i->value) : 0;
+        return i != v.end() ? &(i->value) : nullptr;
     }
 };
 
@@ -145,8 +145,8 @@ struct xml_value:
 public:
     bool is_value() const override { return true; }
     void add_attribute(const xml_attr& attr) override { assert(!"error!"); }
-    string* get_attribute(const string& k) override { return 0; }
-    const string* get_attribute(const string& k) const override { return 0; }
+    string* get_attribute(const string& k) override { return nullptr; }
+    const string* get_attribute(const string& k) const override { return nullptr; }
     void set_attribute(const gchar* k, int len1, const gchar* v, int len2) override { assert(!"error!"); }
     int get_attribute_count() const override { return 0; }
     const string& get_name() const override { return value; }
@@ -326,7 +326,7 @@ public:
         ctlstr = upl_run_over(i, ctlstr);
         if(ctlstr && !ctlstr[0])
             return i;
-        return iterator(0);
+        return iterator(nullptr);
     }
 
 public:

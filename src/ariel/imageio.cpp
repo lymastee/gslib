@@ -23,8 +23,6 @@
  * SOFTWARE.
  */
 
-//#include <intrin.h>
-//#include <stdio.h>
 #include <ariel/imageio.h>
 #include <ariel/image.h>
 #include <gslib/file.h>

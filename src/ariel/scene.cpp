@@ -265,12 +265,12 @@ scene::~scene()
 void scene::setup()
 {
     assert(_rendersys && _rose);
-    ui_stage* ui = gs_new(ui_stage, _rose);
+    ui_stage* ui = new ui_stage(_rose);
     add_stage(ui);
     ui->setup();
     _notify = _present = ui;
     _uisys = ui->get_wsys_manager();
-    _fontsys = gs_new(fsys_win32);      /* using win32 fontsys */
+    _fontsys = new fsys_win32;      /* using win32 fontsys */
     _fontsys->initialize();
 }
 
@@ -281,7 +281,7 @@ void scene::destroy()
     _rose = nullptr;
     _uisys = nullptr;
     if(_fontsys) {
-        gs_del(fontsys, _fontsys);
+        delete _fontsys;
         _fontsys = nullptr;
     }
 }
@@ -290,7 +290,7 @@ void scene::destroy_all_stages()
 {
     std::for_each(_stages.begin(), _stages.end(), [](stage* stg) {
         assert(stg);
-        gs_del(stage, stg);
+        delete stg;
     });
     _stages.clear();
 }

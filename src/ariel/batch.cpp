@@ -328,7 +328,12 @@ int bat_line::clip_triangle(bat_line output[2], const bat_triangle* triangle) co
         line.set_coef(get_coef());
     };
     auto test_intersection = [](vec2& p, const vec2& p1, const vec2& p2, const vec2& p3, const vec2& p4)-> bool {
-        intersectp_linear_linear(p, p1, p3, vec2().sub(p2, p1), vec2().sub(p4, p3));
+        vec2 d1, d2;
+        d1.sub(p2, p1);
+        d2.sub(p4, p3);
+        if(is_parallel(d1, d2))
+            return false;
+        intersectp_linear_linear(p, p1, p3, d1, d2);
         float t1 = linear_reparameterize(p1, p2, p);
         float t2 = linear_reparameterize(p3, p4, p);
         return (t1 > 0.f) && (t1 < 1.f) && (t2 > 0.f) && (t2 < 1.f);

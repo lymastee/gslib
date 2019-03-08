@@ -482,6 +482,13 @@ bat_line* bat_line::create_half_line(lb_joint* i, lb_joint* j, const vec2& p1, c
     return p;
 }
 
+bat_stroke_host_batch::~bat_stroke_host_batch()
+{
+    for(auto* p : _lines)
+        delete p;
+    _lines.clear();
+}
+
 batch_processor::batch_processor()
 {
     _antialias = false;
@@ -534,7 +541,7 @@ bat_batch* batch_processor::add_tex_polygons(lb_polygon_list& polys, float z)
         f = create_batch<bat_fill_batch>(bf_klm_tex);
         if(is_aa_enabled()) {
             /* for every bf_klm_tex batch, will have a bs_coef_tex batch for boundary anti-aliasing. */
-            create_batch<bat_stroke_batch>(bs_coef_tex);
+            create_batch<bat_stroke_host_batch>(bs_coef_tex);
         }
     }
     assert(f && (f->get_type() == bf_klm_tex));

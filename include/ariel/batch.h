@@ -166,6 +166,14 @@ public:
     const bat_lines& const_lines() const { return _lines; }
 };
 
+struct bat_stroke_host_batch:
+    public bat_stroke_batch
+{
+public:
+    bat_stroke_host_batch(bat_type t): bat_stroke_batch(t) {}
+    virtual ~bat_stroke_host_batch();
+};
+
 class batch_processor
 {
 public:

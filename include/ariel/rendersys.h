@@ -68,7 +68,6 @@ public:
     typedef render_texture2d texture2d;
     typedef render_texture3d texture3d;
     typedef render_sampler_state sampler_state;
-    config_select_type(select_render_platform, create_shader_context);
     config_select_type(select_render_platform, vertex_format_desc);
 
 public:
@@ -76,17 +75,16 @@ public:
     virtual ~rendersys() {}
     virtual bool setup(uint hwnd, const configs& cfg) = 0;
     virtual void destroy() = 0;
-    virtual void begin_create_shader(create_shader_context& context, const void* buf, int size) = 0;
-    virtual void begin_create_shader_from_file(create_shader_context& context, const gchar* file, const gchar* entry, const gchar* sm, render_include* inc) = 0;
-    virtual void begin_create_shader_from_memory(create_shader_context& context, const char* src, int len, const gchar* name, const gchar* entry, const gchar* sm, render_include* inc) = 0;
-    virtual void end_create_shader(create_shader_context& context) = 0;
-    virtual vertex_shader* create_vertex_shader(create_shader_context& context) = 0;
-    virtual pixel_shader* create_pixel_shader(create_shader_context& context) = 0;
-    virtual compute_shader* create_compute_shader(create_shader_context& context) = 0;
-    virtual geometry_shader* create_geometry_shader(create_shader_context& context) = 0;
-    virtual hull_shader* create_hull_shader(create_shader_context& context) = 0;
-    virtual domain_shader* create_domain_shader(create_shader_context& context) = 0;
-    virtual vertex_format* create_vertex_format(create_shader_context& context, vertex_format_desc desc[], uint n) = 0;
+    virtual void setup_pipeline_state() = 0;
+    virtual render_blob* compile_shader_from_file(const gchar* file, const gchar* entry, const gchar* sm, render_include* inc) = 0;
+    virtual render_blob* compile_shader_from_memory(const char* src, int len, const gchar* name, const gchar* entry, const gchar* sm, render_include* inc) = 0;
+    virtual vertex_shader* create_vertex_shader(const void* ptr, size_t len) = 0;
+    virtual pixel_shader* create_pixel_shader(const void* ptr, size_t len) = 0;
+    virtual compute_shader* create_compute_shader(const void* ptr, size_t len) = 0;
+    virtual geometry_shader* create_geometry_shader(const void* ptr, size_t len) = 0;
+    virtual hull_shader* create_hull_shader(const void* ptr, size_t len) = 0;
+    virtual domain_shader* create_domain_shader(const void* ptr, size_t len) = 0;
+    virtual vertex_format* create_vertex_format(const void* ptr, size_t len, vertex_format_desc desc[], uint n) = 0;
     virtual vertex_buffer* create_vertex_buffer(uint stride, uint count, bool read, bool write, uint usage, const void* ptr = 0) = 0;
     virtual index_buffer* create_index_buffer(uint count, bool read, bool write, uint usage, const void* ptr = 0) = 0;
     virtual constant_buffer* create_constant_buffer(uint stride, bool read, bool write, const void* ptr = 0) = 0;
@@ -111,6 +109,7 @@ public:
     virtual void set_shader_resource(uint slot, shader_resource_view* srv, shader_type st) = 0;
     virtual void draw(uint count, uint start) = 0;
     virtual void draw_indexed(uint count, uint start, int base = 0) = 0;
+    virtual void capture_screen(image& img, const rectf& rc, int buff_id) = 0;      /* before present, buff_id = 0; after present, buff_id = 1 */
 
 public:
     static bool is_vsync_enabled(const configs& cfg);

@@ -230,6 +230,7 @@ protected:
 
 protected:
     void create_vertices(bat_batch* bat);
+    void create_vertices(bat_lines& lines, const tex_batcher& bat);
 };
 
 class rose_stroke_batch_assoc_with_klm_tex:

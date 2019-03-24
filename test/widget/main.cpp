@@ -85,8 +85,8 @@ public:
         pfs->create_text_texture(&_text, str, 0, 0, color(200,20,20));
         rendersys* rsys = scene::get_singleton_ptr()->get_rendersys();
         assert(rsys);
-        _cpytext.attach(rsys->create_texture2d(w, h, DXGI_FORMAT_R8G8B8A8_UNORM, 1, D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS, 0));
-        textureop(rsys).copy_rect(_cpytext.get(), _text.get(), rectf(0, 0, (float)w, (float)h));
+        _cpytext.attach(rsys->create_texture2d(tw, th, DXGI_FORMAT_R8G8B8A8_UNORM, 1, D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS, 0));
+        textureop(rsys).copy_rect(_cpytext.get(), _text.get(), 0, 0, 0, 0, tw, th);
         _alpha = 1.0f;
         _fadeby = 0.02f;
         rect rc = get_rect();
@@ -241,41 +241,41 @@ int gs_main()
 
 // int gs_main()
 // {
-//     wsys_manager* wsys = scene::get_singleton_ptr()->get_ui_system();
-//     painter* ptex = wsys->get_painter();
-//     ptex->set_hints(painter::hint_anti_alias, true);
+//    wsys_manager* wsys = scene::get_singleton_ptr()->get_ui_system();
+//    painter* ptex = wsys->get_painter();
+//    ptex->set_hints(painter::hint_anti_alias, true);
 // 
-//     auto* bk = wsys->add_widget<classic_style::background>(
-//         nullptr, _t("background"), rect(0, 0, wsys->get_width(), wsys->get_height()),
-//         sm_hitable|sm_visible
-//         );
-//     bk->flush_style();
+//    auto* bk = wsys->add_widget<classic_style::background>(
+//        nullptr, _t("background"), rect(0, 0, wsys->get_width(), wsys->get_height()),
+//        sm_hitable|sm_visible
+//        );
+//    bk->flush_style();
 // 
-//     auto* btn1 = wsys->add_widget<classic_style::button>(
-//         bk, _t("button1"), rect(10, 10, 100, 20), sm_hitable|sm_visible
-//         );
-//     btn1->set_value(_t("caption"), _t("button1"));
-//     btn1->flush_style();
+//    auto* btn1 = wsys->add_widget<classic_style::button>(
+//        bk, _t("button1"), rect(10, 10, 100, 20), sm_hitable|sm_visible
+//        );
+//    btn1->set_value(_t("caption"), _t("button1"));
+//    btn1->flush_style();
 // 
-//     auto* edit1 = wsys->add_widget<classic_style::edit>(
-//         bk, _t("edit1"), rect(10, 40, 100, 20), sm_hitable|sm_visible
-//         );
-//     edit1->flush_style();
-//     
-//     auto* menu1 = wsys->add_widget<classic_style::menu>(
-//         bk, _t("menu1"), rect(10, 70, 1, 1), sm_hitable|sm_visible
-//         );
-//     assert(menu1);
-//     menu1->flush_style();
-//     classic_style::create_menu_from_script(menu1,
-//         _t("Menu Test 1,Ctrl+A:@MenuTestCmd1;")
-//         _t("[separator];")
-//         _t("Menu Test 2, Ctrl+B:{")
-//         _t("Menu Test 2-1,:@MenuTestCmd2;")
-//         _t("}")
-//         );
-//     menu1->startup();
+//    auto* edit1 = wsys->add_widget<classic_style::edit>(
+//        bk, _t("edit1"), rect(10, 40, 100, 20), sm_hitable|sm_visible
+//        );
+//    edit1->flush_style();
+//    
+//    auto* menu1 = wsys->add_widget<classic_style::menu>(
+//        bk, _t("menu1"), rect(10, 70, 1, 1), sm_hitable|sm_visible
+//        );
+//    assert(menu1);
+//    menu1->flush_style();
+//    classic_style::create_menu_from_script(menu1,
+//        _t("Menu Test 1,Ctrl+A:@MenuTestCmd1;")
+//        _t("[separator];")
+//        _t("Menu Test 2, Ctrl+B:{")
+//        _t("Menu Test 2-1,:@MenuTestCmd2;")
+//        _t("}")
+//        );
+//    menu1->startup();
 // 
-//     framesys::get_framesys()->refresh();
-//     return framesys::get_framesys()->run();
+//    framesys::get_framesys()->refresh();
+//    return framesys::get_framesys()->run();
 // }

@@ -44,17 +44,20 @@ render_texture2d* textureop::load(const string& path)
     return _rsys->create_texture2d(img, 1, D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0);
 }
 
-void textureop::copy_rect(render_texture2d* dest, render_texture2d* src, const rectf& rc)
+void textureop::copy_rect(render_texture2d* dest, render_texture2d* src, int x, int y)
 {
     assert(dest && src);
     if(!check_valid_device(dest) || !check_valid_device(src))
         return;
     auto* dc = get_immediate_context();
     assert(dc);
-    int w, h;
+    int w, h, dstw, dsth;
     get_texture_dimension(src, w, h);
-    w = gs_min(w, (int)ceil(rc.width()));
-    h = gs_min(h, (int)ceil(rc.height()));
+    get_texture_dimension(dest, dstw, dsth);
+    dstw = gs_max(0, dstw - x);
+    dsth = gs_max(0, dsth - y);
+    w = gs_min(w, dstw);
+    h = gs_min(h, dsth);
     D3D11_BOX box;
     box.left = 0;
     box.top = 0;
@@ -62,7 +65,33 @@ void textureop::copy_rect(render_texture2d* dest, render_texture2d* src, const r
     box.bottom = h;
     box.front = 0;
     box.back = 1;
-    dc->CopySubresourceRegion(dest, 0, (uint)floor(rc.left), (uint)floor(rc.top), 0, src, 0, &box);
+    dc->CopySubresourceRegion(dest, 0, x, y, 0, src, 0, &box);
+}
+
+void textureop::copy_rect(render_texture2d* dest, render_texture2d* src, int x, int y, int sx, int sy, int w, int h)
+{
+    assert(dest && src);
+    if(!check_valid_device(dest) || !check_valid_device(src))
+        return;
+    auto* dc = get_immediate_context();
+    assert(dc);
+    int srcw, srch, dstw, dsth;
+    get_texture_dimension(src, srcw, srch);
+    get_texture_dimension(dest, dstw, dsth);
+    srcw = gs_max(0, srcw - sx);
+    srch = gs_max(0, srch - sy);
+    dstw = gs_max(0, dstw - x);
+    dsth = gs_max(0, dsth - y);
+    w = gs_min(w, gs_min(srcw, dstw));
+    h = gs_min(h, gs_min(srch, dsth));
+    D3D11_BOX box;
+    box.left = sx;
+    box.top = sy;
+    box.right = sx + w;
+    box.bottom = sy + h;
+    box.front = 0;
+    box.back = 1;
+    dc->CopySubresourceRegion(dest, 0, x, y, 0, src, 0, &box);
 }
 
 void textureop::initialize_rect(unordered_access_view* dest, const color& cr, const rectf& rc)
@@ -73,11 +102,8 @@ void textureop::initialize_rect(unordered_access_view* dest, const color& cr, co
     /* shader instance */
     static com_ptr<compute_shader> spcs;
     if(!spcs) {
-        rendersys::create_shader_context ctx;
-        _rsys->begin_create_shader(ctx, g_ariel_initialize_image_cs, sizeof(g_ariel_initialize_image_cs));
-        auto* cs = _rsys->create_compute_shader(ctx);
+        auto* cs = _rsys->create_compute_shader(g_ariel_initialize_image_cs, sizeof(g_ariel_initialize_image_cs));
         assert(cs);
-        _rsys->end_create_shader(ctx);
         spcs.attach(cs);
     }
     if(!check_valid_device(spcs.get()))
@@ -122,11 +148,8 @@ void textureop::transpose_rect(unordered_access_view* dest, render_texture2d* sr
     /* shader instance */
     static com_ptr<compute_shader> spcs;
     if(!spcs) {
-        rendersys::create_shader_context ctx;
-        _rsys->begin_create_shader(ctx, g_ariel_transpose_image_cs, sizeof(g_ariel_transpose_image_cs));
-        auto* cs = _rsys->create_compute_shader(ctx);
+        auto* cs = _rsys->create_compute_shader(g_ariel_transpose_image_cs, sizeof(g_ariel_transpose_image_cs));
         assert(cs);
-        _rsys->end_create_shader(ctx);
         spcs.attach(cs);
     }
     if(!check_valid_device(spcs.get()))
@@ -174,11 +197,8 @@ void textureop::set_brightness(unordered_access_view* dest, render_texture2d* sr
     /* shader instance */
     static com_ptr<compute_shader> spcs;
     if(!spcs) {
-        rendersys::create_shader_context ctx;
-        _rsys->begin_create_shader(ctx, g_ariel_set_brightness_cs, sizeof(g_ariel_set_brightness_cs));
-        auto* cs = _rsys->create_compute_shader(ctx);
+        auto* cs = _rsys->create_compute_shader(g_ariel_set_brightness_cs, sizeof(g_ariel_set_brightness_cs));
         assert(cs);
-        _rsys->end_create_shader(ctx);
         spcs.attach(cs);
     }
     if(!check_valid_device(spcs.get()))
@@ -223,11 +243,8 @@ void textureop::set_fade(unordered_access_view* dest, render_texture2d* src, flo
     /* shader instance */
     static com_ptr<compute_shader> spcs;
     if(!spcs) {
-        rendersys::create_shader_context ctx;
-        _rsys->begin_create_shader(ctx, g_ariel_set_fade_cs, sizeof(g_ariel_set_fade_cs));
-        auto* cs = _rsys->create_compute_shader(ctx);
+        auto* cs = _rsys->create_compute_shader(g_ariel_set_fade_cs, sizeof(g_ariel_set_fade_cs));
         assert(cs);
-        _rsys->end_create_shader(ctx);
         spcs.attach(cs);
     }
     if(!check_valid_device(spcs.get()))
@@ -272,11 +289,8 @@ void textureop::set_gray(unordered_access_view* dest, render_texture2d* src)
     /* shader instance */
     static com_ptr<compute_shader> spcs;
     if(!spcs) {
-        rendersys::create_shader_context ctx;
-        _rsys->begin_create_shader(ctx, g_ariel_set_gray_cs, sizeof(g_ariel_set_gray_cs));
-        auto* cs = _rsys->create_compute_shader(ctx);
+        auto* cs = _rsys->create_compute_shader(g_ariel_set_gray_cs, sizeof(g_ariel_set_gray_cs));
         assert(cs);
-        _rsys->end_create_shader(ctx);
         spcs.attach(cs);
     }
     if(!check_valid_device(spcs.get()))
@@ -311,11 +325,8 @@ void textureop::set_inverse(unordered_access_view* dest, render_texture2d* src)
     /* shader instance */
     static com_ptr<compute_shader> spcs;
     if(!spcs) {
-        rendersys::create_shader_context ctx;
-        _rsys->begin_create_shader(ctx, g_ariel_set_inverse_cs, sizeof(g_ariel_set_inverse_cs));
-        auto* cs = _rsys->create_compute_shader(ctx);
+        auto* cs = _rsys->create_compute_shader(g_ariel_set_inverse_cs, sizeof(g_ariel_set_inverse_cs));
         assert(cs);
-        _rsys->end_create_shader(ctx);
         spcs.attach(cs);
     }
     if(!check_valid_device(spcs.get()))

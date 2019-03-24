@@ -52,6 +52,15 @@ vec2* painter_linestrip::expand(int size)
     return &_pts.at(oss);
 }
 
+void painter_linestrip::reverse()
+{
+    points pts;
+    pts.assign(_pts.rbegin(), _pts.rend());
+    _pts.swap(pts);
+    if(is_clockwise_inited())
+        _is_clock_wise = !_is_clock_wise;
+}
+
 void painter_linestrip::finish()
 {
     if(_pts.front() == _pts.back()) {
@@ -60,13 +69,19 @@ void painter_linestrip::finish()
     }
 }
 
-bool painter_linestrip::is_clock_wise() const
+void painter_linestrip::transform(const mat3& m)
+{
+    for(vec2& v : _pts)
+        v.transformcoord(v, m);
+}
+
+bool painter_linestrip::is_clockwise() const
 {
     if(!_closed || _pts.size() <= 2)
         return false;
-    if(is_clockwise_init())
+    if(is_clockwise_inited())
         return _is_clock_wise;
-    set_clockwise_init();
+    set_clockwise_inited();
     float mx = -FLT_MAX;
     int mi = 0, cap = (int)_pts.size();
     for(int i = 0; i < cap; i ++) {
@@ -84,10 +99,10 @@ bool painter_linestrip::is_clock_wise() const
 bool painter_linestrip::is_convex() const
 {
     assert(get_size() >= 3);
-    if(is_convex_init())
+    if(is_convex_inited())
         return _is_convex;
-    set_convex_init();
-    bool cw = is_clock_wise();
+    set_convex_inited();
+    bool cw = is_clockwise();
     int cap = (int)_pts.size();
     for(int i = 2; i < cap; i ++) {
         if(is_concave_angle(_pts.at(i-2), _pts.at(i-1), _pts.at(i), cw))
@@ -101,7 +116,7 @@ bool painter_linestrip::is_convex() const
 
 bool painter_linestrip::is_convex(int i) const
 {
-    bool cw = is_clock_wise();
+    bool cw = is_clockwise();
     int cap = (int)_pts.size();
     int prev = i == 0 ? cap - 1 : i - 1,
         post = i == cap - 1 ? 0 : i + 1;
@@ -123,6 +138,53 @@ void painter_linestrip::tracing() const
     trace(_t("@lineTo %f, %f;\n"), i->x, i->y);
     trace(_t("@@\n"));
 #endif
+}
+
+void painter_linestrip::tracing_segments() const
+{
+#ifdef _DEBUG
+    if(_pts.empty())
+        return;
+    trace(_t("@!\n"));
+    auto i = _pts.begin();
+    trace(_t("@moveTo %f, %f;\n"), i->x, i->y);
+    for(++ i; i != _pts.end(); ++ i) {
+        trace(_t("@lineTo %f, %f;\n"), i->x, i->y);
+        trace(_t("@moveTo %f, %f;\n"), i->x, i->y);
+    }
+    i = _pts.begin();
+    trace(_t("@lineTo %f, %f;\n"), i->x, i->y);
+    trace(_t("@@\n"));
+#endif
+}
+
+void append_linestrips_rav(linestripvec& rav, linestrips& src)
+{
+    rav.reserve(rav.size() + src.size());
+    for(painter_linestrip& ls : src)
+        rav.push_back(&ls);
+}
+
+void create_linestrips_rav(linestripvec& rav, linestrips& src)
+{
+    rav.clear();
+    append_linestrips_rav(rav, src);
+}
+
+painter_picture_data::painter_picture_data(texture2d* p)
+{
+    assert(p);
+    _image = p;
+    int w = 0, h = 0;
+    textureop::get_texture_dimension(p, w, h);
+    _src_rect.set_rect(0.f, 0.f, (float)w, (float)h);
+}
+
+painter_picture_data::painter_picture_data(texture2d* p, const rectf& rc)
+{
+    assert(p);
+    _image = p;
+    _src_rect = rc;
 }
 
 painter::~painter()

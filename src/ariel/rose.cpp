@@ -607,6 +607,11 @@ void rose_stroke_batch_coef_tex::create_vertices(bat_batch* bat)
     /* arrange texture batch */
     _texbatch.arrange();
     /* create vertices */
+    create_vertices(lines, _texbatch);
+}
+
+void rose_stroke_batch_coef_tex::create_vertices(bat_lines& lines, const tex_batcher& bat)
+{
     for(auto* line : lines) {
         assert(line);
         /* point */
@@ -632,8 +637,8 @@ void rose_stroke_batch_coef_tex::create_vertices(bat_batch* bat)
         vec2 tex1, tex2;
         tex1.lerp(os1->tex, os2->tex, t1);
         tex2.lerp(os1->tex, os2->tex, t2);
-        tex1 = rose_calc_tex_coords(os1->img, tex1, _texbatch);
-        tex2 = rose_calc_tex_coords(os2->img, tex2, _texbatch);
+        tex1 = rose_calc_tex_coords(os1->img, tex1, bat);
+        tex2 = rose_calc_tex_coords(os2->img, tex2, bat);
         vertex_info_coef_tex pt[] =
         {
             { p[0], coef, tex1 },
@@ -674,6 +679,15 @@ void rose_stroke_batch_assoc_with_klm_tex::create(bat_batch* bat)
 {
     assert(bat);
     create_vertices(bat);
+}
+
+void rose_stroke_batch_assoc_with_klm_tex::create_vertices(bat_batch* bat)
+{
+    assert(bat && _assoc);
+    __super::create_vertices(
+        static_cast<bat_stroke_batch*>(bat)->get_lines(),
+        _assoc->_texbatch
+        );
 }
 
 void rose_bindings::clear_binding_cache()
@@ -867,7 +881,8 @@ void rose::draw_path(const painter_path& path)
     auto& pen = ctx.get_pen();
     mat3 m;
     get_transform_recursively(m);
-    painter_path p = path;
+    painter_path p;
+    p.duplicate(path);
     p.transform(m);
     prepare_fill(p, brush);
     prepare_stroke(p, pen);

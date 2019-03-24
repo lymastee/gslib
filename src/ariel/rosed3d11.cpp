@@ -210,62 +210,41 @@ void rose::setup(rendersys* rsys)
         { "TEXCOORD", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
         { "TEXCOORD", 1, DXGI_FORMAT_R32G32_FLOAT, 0, D3D11_APPEND_ALIGNED_ELEMENT, D3D11_INPUT_PER_VERTEX_DATA, 0 },
     };
-    rendersys::create_shader_context ctx;
     /* create shader cr */
-    _rsys->begin_create_shader(ctx, g_rose_vsf_cr, sizeof(g_rose_vsf_cr));
-    _vsf_cr = _rsys->create_vertex_shader(ctx);
+    _vsf_cr = _rsys->create_vertex_shader(g_rose_vsf_cr, sizeof(g_rose_vsf_cr));
     assert(_vsf_cr);
-    _vf_cr = _rsys->create_vertex_format(ctx, descf_cr, _countof(descf_cr));
+    _vf_cr = _rsys->create_vertex_format(g_rose_vsf_cr, sizeof(g_rose_vsf_cr), descf_cr, _countof(descf_cr));
     assert(_vf_cr);
-    _rsys->end_create_shader(ctx);
-    _rsys->begin_create_shader(ctx, g_rose_psf_cr, sizeof(g_rose_psf_cr));
-    _psf_cr = _rsys->create_pixel_shader(ctx);
+    _psf_cr = _rsys->create_pixel_shader(g_rose_psf_cr, sizeof(g_rose_psf_cr));
     assert(_psf_cr);
-    _rsys->end_create_shader(ctx);
     /* create shader klm cr */
-    _rsys->begin_create_shader(ctx, g_rose_vsf_klm_cr, sizeof(g_rose_vsf_klm_cr));
-    _vsf_klm_cr = _rsys->create_vertex_shader(ctx);
+    _vsf_klm_cr = _rsys->create_vertex_shader(g_rose_vsf_klm_cr, sizeof(g_rose_vsf_klm_cr));
     assert(_vsf_klm_cr);
-    _vf_klm_cr = _rsys->create_vertex_format(ctx, descf_klm_cr, _countof(descf_klm_cr));
+    _vf_klm_cr = _rsys->create_vertex_format(g_rose_vsf_klm_cr, sizeof(g_rose_vsf_klm_cr), descf_klm_cr, _countof(descf_klm_cr));
     assert(_vf_klm_cr);
-    _rsys->end_create_shader(ctx);
-    _rsys->begin_create_shader(ctx, g_rose_psf_klm_cr, sizeof(g_rose_psf_klm_cr));
-    _psf_klm_cr = _rsys->create_pixel_shader(ctx);
+    _psf_klm_cr = _rsys->create_pixel_shader(g_rose_psf_klm_cr, sizeof(g_rose_psf_klm_cr));
     assert(_psf_klm_cr);
-    _rsys->end_create_shader(ctx);
     /* create shader coef cr */
-    _rsys->begin_create_shader(ctx, g_rose_vss_coef_cr, sizeof(g_rose_vss_coef_cr));
-    _vss_coef_cr = _rsys->create_vertex_shader(ctx);
+    _vss_coef_cr = _rsys->create_vertex_shader(g_rose_vss_coef_cr, sizeof(g_rose_vss_coef_cr));
     assert(_vss_coef_cr);
-    _vf_coef_cr = _rsys->create_vertex_format(ctx, descs_coef_cr, _countof(descs_coef_cr));
+    _vf_coef_cr = _rsys->create_vertex_format(g_rose_vss_coef_cr, sizeof(g_rose_vss_coef_cr), descs_coef_cr, _countof(descs_coef_cr));
     assert(_vf_coef_cr);
-    _rsys->end_create_shader(ctx);
-    _rsys->begin_create_shader(ctx, g_rose_pss_coef_cr, sizeof(g_rose_pss_coef_cr));
-    _pss_coef_cr = _rsys->create_pixel_shader(ctx);
+    _pss_coef_cr = _rsys->create_pixel_shader(g_rose_pss_coef_cr, sizeof(g_rose_pss_coef_cr));
     assert(_pss_coef_cr);
-    _rsys->end_create_shader(ctx);
     /* create shader klm tex */
-    _rsys->begin_create_shader(ctx, g_rose_vsf_klm_tex, sizeof(g_rose_vsf_klm_tex));
-    _vsf_klm_tex = _rsys->create_vertex_shader(ctx);
+    _vsf_klm_tex = _rsys->create_vertex_shader(g_rose_vsf_klm_tex, sizeof(g_rose_vsf_klm_tex));
     assert(_vsf_klm_tex);
-    _vf_klm_tex = _rsys->create_vertex_format(ctx, descf_klm_tex, _countof(descf_klm_tex));
+    _vf_klm_tex = _rsys->create_vertex_format(g_rose_vsf_klm_tex, sizeof(g_rose_vsf_klm_tex), descf_klm_tex, _countof(descf_klm_tex));
     assert(_vf_klm_tex);
-    _rsys->end_create_shader(ctx);
-    _rsys->begin_create_shader(ctx, g_rose_psf_klm_tex, sizeof(g_rose_psf_klm_tex));
-    _psf_klm_tex = _rsys->create_pixel_shader(ctx);
+    _psf_klm_tex = _rsys->create_pixel_shader(g_rose_psf_klm_tex, sizeof(g_rose_psf_klm_tex));
     assert(_psf_klm_tex);
-    _rsys->end_create_shader(ctx);
     /* create shader coef tex */
-    _rsys->begin_create_shader(ctx, g_rose_vss_coef_tex, sizeof(g_rose_vss_coef_tex));
-    _vss_coef_tex = _rsys->create_vertex_shader(ctx);
+    _vss_coef_tex = _rsys->create_vertex_shader(g_rose_vss_coef_tex, sizeof(g_rose_vss_coef_tex));
     assert(_vss_coef_tex);
-    _vf_coef_tex = _rsys->create_vertex_format(ctx, descs_coef_tex, _countof(descs_coef_tex));
+    _vf_coef_tex = _rsys->create_vertex_format(g_rose_vss_coef_tex, sizeof(g_rose_vss_coef_tex), descs_coef_tex, _countof(descs_coef_tex));
     assert(_vf_coef_tex);
-    _rsys->end_create_shader(ctx);
-    _rsys->begin_create_shader(ctx, g_rose_pss_coef_tex, sizeof(g_rose_pss_coef_tex));
-    _pss_coef_tex = _rsys->create_pixel_shader(ctx);
+    _pss_coef_tex = _rsys->create_pixel_shader(g_rose_pss_coef_tex, sizeof(g_rose_pss_coef_tex));
     assert(_pss_coef_tex);
-    _rsys->end_create_shader(ctx);
     /* create sampler state */
     _sampler_state = _rsys->create_sampler_state(ssf_linear);
     assert(_sampler_state);

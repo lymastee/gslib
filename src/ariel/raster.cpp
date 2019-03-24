@@ -70,6 +70,15 @@ void painter_path::cubic_to_node::interpolate(painter_linestrip& c, const node* 
         cubic_interpolate(c.expand(ecs) - 1, lastp, c1, c2, _pt, ecs + 1);
 }
 
+painter_path::painter_path(const painter_path& path)
+{
+    if(empty()) {
+        attach(const_cast<painter_path&>(path));
+        return;
+    }
+    duplicate(path);
+}
+
 void painter_path::resize(int len)
 {
     int total = size();
@@ -460,14 +469,14 @@ int painter_path::get_sub_path(painter_path& sp, int start) const
     return i;
 }
 
-bool painter_path::is_clock_wise() const
+bool painter_path::is_clockwise() const
 {
     painter_linestrip ls;
     int next = get_control_contour(ls, 0);
     assert(next == size() &&
         "only path without sub paths could call this function."
         );
-    return ls.is_clock_wise();
+    return ls.is_clockwise();
 }
 
 bool painter_path::is_convex() const

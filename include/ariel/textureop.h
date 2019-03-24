@@ -43,7 +43,8 @@ public:
 public:
     textureop(rendersys* rsys);
     render_texture2d* load(const string& path);
-    void copy_rect(render_texture2d* dest, render_texture2d* src, const rectf& rc);
+    void copy_rect(render_texture2d* dest, render_texture2d* src, int x, int y);
+    void copy_rect(render_texture2d* dest, render_texture2d* src, int x, int y, int sx, int sy, int w, int h);
     void initialize_rect(unordered_access_view* dest, const color& cr, const rectf& rc);
     void transpose_rect(unordered_access_view* dest, render_texture2d* src, const rectf& rc);
     void set_brightness(unordered_access_view* dest, render_texture2d* src, float s);

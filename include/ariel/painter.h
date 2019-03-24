@@ -53,14 +53,17 @@ public:
     void clear() { _pts.clear(); }
     void swap(painter_linestrip& another);
     void finish();
+    void transform(const mat3& m);
     vec2* expand(int size);
     void expand_to(int size) { _pts.resize(size); }
+    void reverse();
     bool is_closed() const { return _closed; }
     void set_closed(bool c) { _closed = c; }
-    bool is_clock_wise() const;
+    bool is_clockwise() const;
     bool is_convex() const;
     bool is_convex(int i) const;
     void tracing() const;
+    void tracing_segments() const;
 
 protected:
     enum
@@ -73,11 +76,18 @@ protected:
     mutable bool        _is_convex;
 
 protected:
-    bool is_clockwise_init() const { return (_tst_table & st_clockwise_mask) != 0; }
-    void set_clockwise_init() const { _tst_table |= st_clockwise_mask; }
-    bool is_convex_init() const { return (_tst_table & st_convex_mask) != 0; }
-    void set_convex_init() const { _tst_table |= st_convex_mask; }
+    bool is_clockwise_inited() const { return (_tst_table & st_clockwise_mask) != 0; }
+    void set_clockwise_inited() const { _tst_table |= st_clockwise_mask; }
+    bool is_convex_inited() const { return (_tst_table & st_convex_mask) != 0; }
+    void set_convex_inited() const { _tst_table |= st_convex_mask; }
 };
+
+typedef list<painter_linestrip> linestrips;
+typedef vector<painter_linestrip*> linestripvec;
+
+/* create a random access view for linestrips */
+extern void append_linestrips_rav(linestripvec& rav, linestrips& src);
+extern void create_linestrips_rav(linestripvec& rav, linestrips& src);
 
 struct painter_data
 {
@@ -98,8 +108,6 @@ public:
     texture2d* get_image() const { return _image; }
 };
 
-typedef list<painter_linestrip> linestrips;
-typedef vector<painter_linestrip*> linestripvec;
 typedef std::shared_ptr<painter_data> painter_extra_data;
 
 struct painter_brush

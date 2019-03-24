@@ -318,6 +318,7 @@ project "ariel"
 		"include/ariel/dirty.h",
 		"include/ariel/framesys.h",
 		"include/ariel/fsyswin32.h",
+		--"include/ariel/fsysdwrite.h",
 		"include/ariel/image.h",
 		"include/ariel/imageop.h",
 		"include/ariel/imageio.h",
@@ -348,6 +349,7 @@ project "ariel"
 		"src/ariel/framesys.cpp",
 		"src/ariel/framesyswin32.cpp",
 		"src/ariel/fsyswin32.cpp",
+		--"src/ariel/fsysdwrite.cpp",
 		"src/ariel/image.cpp",
 		"src/ariel/imageop.cpp",
 		"src/ariel/imageio.cpp",
@@ -719,11 +721,11 @@ project "uieditor"
 		"framework/entrywin32.h",
 		"framework/entrywin32.cpp",
 		"proj/uieditor/main.cpp",
-		"proj/uieditor/uicore.cpp",
+		"proj/uieditor/basis.cpp",
 		"proj/uieditor/uic.cpp",
-		"proj/uieditor/uicore.h",
+		"proj/uieditor/basis.h",
 		"proj/uieditor/uic.h",
-		"proj/uieditor/uiio.cpp",
-		"proj/uieditor/uiio.h"
+		"proj/uieditor/io.cpp",
+		"proj/uieditor/io.h"
 	}
 	

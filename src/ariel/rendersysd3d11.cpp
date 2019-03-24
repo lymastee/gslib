@@ -23,29 +23,12 @@
  * SOFTWARE.
  */
 
+#include <d3dcommon.h>
 #include <d3dcompiler.h>
 #include <ariel/config.h>
 #include <ariel/type.h>
 #include <ariel/rendersysd3d11.h>
-
-class FakeD3DBlob:
-    public ID3DBlob
-{
-public:
-    static FakeD3DBlob* create(void* p, SIZE_T s) { return new FakeD3DBlob(p, s); }
-    virtual HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, void **ppvObject) override { return E_FAIL; }
-    virtual ULONG STDMETHODCALLTYPE AddRef() override { return 1; }
-    virtual ULONG STDMETHODCALLTYPE Release() override { delete this; return 0; }
-    virtual LPVOID STDMETHODCALLTYPE GetBufferPointer() override { return m_ptr; }
-    virtual SIZE_T STDMETHODCALLTYPE GetBufferSize() override { return m_size; }
-
-private:
-    void*           m_ptr;
-    SIZE_T          m_size;
-
-private:
-    FakeD3DBlob(void* p, SIZE_T s): m_ptr(p), m_size(s) {}
-};
+#include <ariel/textureop.h>
 
 template<class Interface>
 inline void SafeRelease(Interface*& pInterface)
@@ -75,6 +58,7 @@ rendersys_d3d11::rendersys_d3d11()
     _context = nullptr;
     _swapchain = nullptr;
     _rtview = nullptr;
+    _blendstate = nullptr;
     _vsync = false;
     _fullscreen = false;
 }
@@ -93,7 +77,7 @@ bool rendersys_d3d11::setup(uint hwnd, const configs& cfg)
     GetClientRect((HWND)hwnd, &rc);
     uint width = rc.right - rc.left;
     uint height = rc.bottom - rc.top;
-    uint flags = 0;
+    uint flags = D3D11_CREATE_DEVICE_BGRA_SUPPORT;      /* for d2d interop */
 #if defined (DEBUG) || defined (_DEBUG)
     flags |= D3D11_CREATE_DEVICE_DEBUG;
 #endif
@@ -145,7 +129,7 @@ bool rendersys_d3d11::setup(uint hwnd, const configs& cfg)
     /* create swap chain */
     DXGI_SWAP_CHAIN_DESC sd;
     memset(&sd, 0, sizeof(sd));
-    sd.BufferCount          = 1;
+    sd.BufferCount          = 2;
     sd.BufferDesc.Width     = width;
     sd.BufferDesc.Height    = height;
     sd.BufferDesc.Format    = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -162,6 +146,7 @@ bool rendersys_d3d11::setup(uint hwnd, const configs& cfg)
     sd.SampleDesc.Count     = 1;
     sd.SampleDesc.Quality   = 0;
     sd.Windowed             = TRUE;
+    sd.SwapEffect           = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
     if(_fullscreen)
         sd.Windowed = FALSE;
     for(uint i = 0; i < cdrvtypes; i ++) {
@@ -179,16 +164,7 @@ bool rendersys_d3d11::setup(uint hwnd, const configs& cfg)
     bool fail = FAILED(_device->CreateRenderTargetView(buffer.get(), 0, &_rtview));
     if(fail)
         return false;
-    _context->OMSetRenderTargets(1, &_rtview, 0);
-    D3D11_VIEWPORT vp;
-    vp.Width    = (FLOAT)width;
-    vp.Height   = (FLOAT)height;
-    vp.MinDepth = 0.0f;
-    vp.MaxDepth = 1.0f;
-    vp.TopLeftX = 0;
-    vp.TopLeftY = 0;
-    _context->RSSetViewports(1, &vp);
-    /* enable alpha blending */
+    /* create blend state */
     com_ptr<ID3D11BlendState> blendstate;
     D3D11_BLEND_DESC bd;
     memset(&bd, 0, sizeof(bd));
@@ -203,7 +179,7 @@ bool rendersys_d3d11::setup(uint hwnd, const configs& cfg)
     fail = FAILED(_device->CreateBlendState(&bd, &blendstate));
     if(fail)
         return false;
-    _context->OMSetBlendState(blendstate.get(), 0, 0xffffffff);
+    _blendstate = blendstate.detach();
     return true;
 }
 
@@ -211,6 +187,7 @@ void rendersys_d3d11::destroy()
 {
     if(_context)
         _context->ClearState();
+    SafeRelease(_blendstate);
     SafeRelease(_rtview);
     SafeRelease(_swapchain);
     SafeRelease(_context);
@@ -224,19 +201,34 @@ void rendersys_d3d11::destroy()
     SafeRelease(_device);
 }
 
-void rendersys_d3d11::begin_create_shader(create_shader_context& context, const void* buf, int size)
+void rendersys_d3d11::setup_pipeline_state()
 {
-    context = FakeD3DBlob::create(const_cast<void*>(buf), size);
+    assert(_context && _rtview);
+    _context->OMSetRenderTargets(1, &_rtview, 0);
+    assert(_swapchain);
+    DXGI_SWAP_CHAIN_DESC sd;
+    memset(&sd, 0, sizeof(sd));
+    _swapchain->GetDesc(&sd);
+    D3D11_VIEWPORT vp;
+    vp.Width = (FLOAT)sd.BufferDesc.Width;
+    vp.Height = (FLOAT)sd.BufferDesc.Height;
+    vp.MinDepth = 0.0f;
+    vp.MaxDepth = 1.0f;
+    vp.TopLeftX = 0;
+    vp.TopLeftY = 0;
+    _context->RSSetViewports(1, &vp);
+    _context->OMSetBlendState(_blendstate, 0, 0xffffffff);
 }
 
-void rendersys_d3d11::begin_create_shader_from_file(create_shader_context& context, const gchar* file, const gchar* entry, const gchar* sm, render_include* inc)
+render_blob* rendersys_d3d11::compile_shader_from_file(const gchar* file, const gchar* entry, const gchar* sm, render_include* inc)
 {
     HRESULT hr = S_OK;
     DWORD flags = D3DCOMPILE_ENABLE_STRICTNESS;
 #if defined (DEBUG) || defined (_DEBUG)
     flags |= D3DCOMPILE_DEBUG;
 #endif
-    render_blob* err_blob = nullptr;
+    com_ptr<render_blob> err_blob;
+    com_ptr<render_blob> shader_blob;
     _string<char> sbentry, sbsmodel;
     sbentry.from(entry);
     sbsmodel.from(sm);
@@ -245,7 +237,7 @@ void rendersys_d3d11::begin_create_shader_from_file(create_shader_context& conte
     HMODULE hmod = LoadLibraryA("d3dcompiler_47.dll");
     if(!hmod) {
         assert(!"LoadLibrary(\"d3dcompiler_47.dll\") failed.");
-        return;
+        return nullptr;
     }
     /* use dynamic link to avoid d3dcompiler.dll missing failure. */
     typedef HRESULT(__stdcall* fnD3DCompileFromFile)(LPCWSTR pFileName,
@@ -262,28 +254,28 @@ void rendersys_d3d11::begin_create_shader_from_file(create_shader_context& conte
     if(!fn) {
         assert(!"GetProcAddress(\"D3DCompileFromFile\") failed.");
         FreeLibrary(hmod);
-        return;
+        return nullptr;
     }
-    hr = fn(mbfile.c_str(), 0, inc, sbentry.c_str(), sbsmodel.c_str(), flags, 0, &context, &err_blob);
+    hr = fn(mbfile.c_str(), 0, inc, sbentry.c_str(), sbsmodel.c_str(), flags, 0, &shader_blob, &err_blob);
     if(FAILED(hr)) {
-        if(err_blob)
+        if(err_blob.get())
             OutputDebugStringA((char*)err_blob->GetBufferPointer());
-        SafeRelease(err_blob);
         FreeLibrary(hmod);
-        return;
+        return nullptr;
     }
-    SafeRelease(err_blob);
     FreeLibrary(hmod);
+    return shader_blob.detach();
 }
 
-void rendersys_d3d11::begin_create_shader_from_memory(create_shader_context& context, const char* src, int len, const gchar* name, const gchar* entry, const gchar* sm, render_include* inc)
+render_blob* rendersys_d3d11::compile_shader_from_memory(const char* src, int len, const gchar* name, const gchar* entry, const gchar* sm, render_include* inc)
 {
     HRESULT hr = S_OK;
     DWORD flags = D3DCOMPILE_ENABLE_STRICTNESS;
 #if defined (DEBUG) || defined (_DEBUG)
     flags |= D3DCOMPILE_DEBUG;
 #endif
-    render_blob* err_blob = nullptr;
+    com_ptr<render_blob> err_blob;
+    com_ptr<render_blob> shader_blob;
     _string<char> sbname, sbentry, sbsmodel;
     sbentry.from(entry);
     sbsmodel.from(sm);
@@ -291,91 +283,73 @@ void rendersys_d3d11::begin_create_shader_from_memory(create_shader_context& con
     HMODULE hmod = LoadLibraryA("d3dcompiler_47.dll");
     if(!hmod) {
         assert(!"LoadLibrary(\"d3dcompiler_47.dll\") failed.");
-        return;
+        return nullptr;
     }
     /* use dynamic link to avoid d3dcompiler.dll missing failure. */
     pD3DCompile fn = (pD3DCompile)GetProcAddress(hmod, "D3DCompile");
     if(!fn) {
         assert(!"GetProcAddress(\"D3DCompile\") failed.");
         FreeLibrary(hmod);
-        return;
+        return nullptr;
     }
-    hr = fn(src, len, sbname.c_str(), 0, inc, sbentry.c_str(), sbsmodel.c_str(), flags, 0, &context, &err_blob);
+    hr = fn(src, len, sbname.c_str(), 0, inc, sbentry.c_str(), sbsmodel.c_str(), flags, 0, &shader_blob, &err_blob);
     if(FAILED(hr)) {
-        if(err_blob)
+        if(err_blob.get())
             OutputDebugStringA((char*)err_blob->GetBufferPointer());
-        SafeRelease(err_blob);
         FreeLibrary(hmod);
-        return;
+        return nullptr;
     }
-    SafeRelease(err_blob);
     FreeLibrary(hmod);
+    return shader_blob.detach();
 }
 
-void rendersys_d3d11::end_create_shader(create_shader_context& context)
+vertex_shader* rendersys_d3d11::create_vertex_shader(const void* ptr, size_t len)
 {
-    SafeRelease(context);
-}
-
-vertex_shader* rendersys_d3d11::create_vertex_shader(create_shader_context& context)
-{
-    if(!context)
-        return 0;
     assert(_device);
     vertex_shader* shader = nullptr;
-    return FAILED(_device->CreateVertexShader(context->GetBufferPointer(), context->GetBufferSize(), 0, &shader)) ? 0 : shader;
+    return FAILED(_device->CreateVertexShader(ptr, len, 0, &shader)) ? nullptr : shader;
 }
 
-pixel_shader* rendersys_d3d11::create_pixel_shader(create_shader_context& context)
+pixel_shader* rendersys_d3d11::create_pixel_shader(const void* ptr, size_t len)
 {
-    if(!context)
-        return 0;
     pixel_shader* shader = nullptr;
     assert(_device);
-    return FAILED(_device->CreatePixelShader(context->GetBufferPointer(), context->GetBufferSize(), 0, &shader)) ? 0 : shader;
+    return FAILED(_device->CreatePixelShader(ptr, len, 0, &shader)) ? nullptr : shader;
 }
 
-compute_shader* rendersys_d3d11::create_compute_shader(create_shader_context& context)
+compute_shader* rendersys_d3d11::create_compute_shader(const void* ptr, size_t len)
 {
-    if(!context)
-        return 0;
     compute_shader* shader = nullptr;
     assert(_device);
-    return FAILED(_device->CreateComputeShader(context->GetBufferPointer(), context->GetBufferSize(), 0, &shader)) ? 0 : shader;
+    return FAILED(_device->CreateComputeShader(ptr, len, 0, &shader)) ? nullptr : shader;
 }
 
-geometry_shader* rendersys_d3d11::create_geometry_shader(create_shader_context& context)
+geometry_shader* rendersys_d3d11::create_geometry_shader(const void* ptr, size_t len)
 {
-    if(!context)
-        return 0;
     geometry_shader* shader = nullptr;
     assert(_device);
-    return FAILED(_device->CreateGeometryShader(context->GetBufferPointer(), context->GetBufferSize(), 0, &shader)) ? 0 : shader;
+    return FAILED(_device->CreateGeometryShader(ptr, len, 0, &shader)) ? nullptr : shader;
 }
 
-hull_shader* rendersys_d3d11::create_hull_shader(create_shader_context& context)
+hull_shader* rendersys_d3d11::create_hull_shader(const void* ptr, size_t len)
 {
-    if(!context)
-        return 0;
     hull_shader* shader = nullptr;
     assert(_device);
-    return FAILED(_device->CreateHullShader(context->GetBufferPointer(), context->GetBufferSize(), 0, &shader)) ? 0 : shader;
+    return FAILED(_device->CreateHullShader(ptr, len, 0, &shader)) ? nullptr : shader;
 }
 
-domain_shader* rendersys_d3d11::create_domain_shader(create_shader_context& context)
+domain_shader* rendersys_d3d11::create_domain_shader(const void* ptr, size_t len)
 {
-    if(!context)
-        return 0;
     domain_shader* shader = nullptr;
     assert(_device);
-    return FAILED(_device->CreateDomainShader(context->GetBufferPointer(), context->GetBufferSize(), 0, &shader)) ? 0 : shader;
+    return FAILED(_device->CreateDomainShader(ptr, len, 0, &shader)) ? 0 : shader;
 }
 
-vertex_format* rendersys_d3d11::create_vertex_format(create_shader_context& context, vertex_format_desc desc[], uint n)
+vertex_format* rendersys_d3d11::create_vertex_format(const void* ptr, size_t len, vertex_format_desc desc[], uint n)
 {
     vertex_format* format = nullptr;
     assert(_device);
-    return FAILED(_device->CreateInputLayout(desc, n, context->GetBufferPointer(), context->GetBufferSize(), &format)) ? 0 : format;
+    return FAILED(_device->CreateInputLayout(desc, n, ptr, len, &format)) ? nullptr : format;
 }
 
 render_vertex_buffer* rendersys_d3d11::create_vertex_buffer(uint stride, uint count, bool read, bool write, uint usage, const void* ptr)
@@ -713,6 +687,19 @@ void rendersys_d3d11::draw_indexed(uint count, uint start, int base)
 {
     assert(_context);
     _context->DrawIndexed(count, start, base);
+}
+
+void rendersys_d3d11::capture_screen(image& img, const rectf& rc, int buff_id)
+{
+    texture2d* tex = create_texture2d((int)ceil(rc.width()), (int)ceil(rc.height()), DXGI_FORMAT_R8G8B8A8_UNORM, 1, D3D11_USAGE_DEFAULT, D3D11_BIND_UNORDERED_ACCESS, 0);
+    assert(tex);
+    com_ptr<ID3D11Texture2D> buffer;
+    assert(_swapchain);
+    _swapchain->GetBuffer(buff_id, __uuidof(ID3D11Texture2D), (void**)&buffer);
+    textureop texop(this);
+    texop.copy_rect(tex, buffer.get(), 0, 0, (int)floorf(rc.left), (int)floorf(rc.top), (int)ceilf(rc.width()), (int)ceilf(rc.height()));
+    texop.convert_to_image(img, tex);
+    tex->Release();
 }
 
 void rendersys_d3d11::install_configs(const configs& cfg)

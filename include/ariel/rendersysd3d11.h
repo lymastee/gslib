@@ -39,17 +39,16 @@ public:
     virtual ~rendersys_d3d11();
     virtual bool setup(uint hwnd, const configs& cfg) override;
     virtual void destroy() override;
-    virtual void begin_create_shader(create_shader_context& context, const void* buf, int size) override;
-    virtual void begin_create_shader_from_file(create_shader_context& context, const gchar* file, const gchar* entry, const gchar* sm, render_include* inc) override;
-    virtual void begin_create_shader_from_memory(create_shader_context& context, const char* src, int len, const gchar* name, const gchar* entry, const gchar* sm, render_include* inc) override;
-    virtual void end_create_shader(create_shader_context& context) override;
-    virtual vertex_shader* create_vertex_shader(create_shader_context& context) override;
-    virtual pixel_shader* create_pixel_shader(create_shader_context& context) override;
-    virtual compute_shader* create_compute_shader(create_shader_context& context) override;
-    virtual geometry_shader* create_geometry_shader(create_shader_context& context) override;
-    virtual hull_shader* create_hull_shader(create_shader_context& context) override;
-    virtual domain_shader* create_domain_shader(create_shader_context& context) override;
-    virtual vertex_format* create_vertex_format(create_shader_context& context, vertex_format_desc vfdesc[], uint n) override;
+    virtual void setup_pipeline_state() override;
+    virtual render_blob* compile_shader_from_file(const gchar* file, const gchar* entry, const gchar* sm, render_include* inc) override;
+    virtual render_blob* compile_shader_from_memory(const char* src, int len, const gchar* name, const gchar* entry, const gchar* sm, render_include* inc) override;
+    virtual vertex_shader* create_vertex_shader(const void* ptr, size_t len) override;
+    virtual pixel_shader* create_pixel_shader(const void* ptr, size_t len) override;
+    virtual compute_shader* create_compute_shader(const void* ptr, size_t len) override;
+    virtual geometry_shader* create_geometry_shader(const void* ptr, size_t len) override;
+    virtual hull_shader* create_hull_shader(const void* ptr, size_t len) override;
+    virtual domain_shader* create_domain_shader(const void* ptr, size_t len) override;
+    virtual vertex_format* create_vertex_format(const void* ptr, size_t len, vertex_format_desc vfdesc[], uint n) override;
     virtual vertex_buffer* create_vertex_buffer(uint stride, uint count, bool read, bool write, uint usage, const void* ptr) override;
     virtual index_buffer* create_index_buffer(uint count, bool read, bool write, uint usage, const void* ptr) override;
     virtual constant_buffer* create_constant_buffer(uint stride, bool read, bool write, const void* ptr) override;
@@ -74,6 +73,7 @@ public:
     virtual void set_shader_resource(uint slot, shader_resource_view* srv, shader_type st) override;
     virtual void draw(uint count, uint start) override;
     virtual void draw_indexed(uint count, uint start, int base) override;
+    virtual void capture_screen(image& img, const rectf& rc, int buff_id) override;
 
 protected:
     D3D_DRIVER_TYPE         _drvtype;
@@ -82,6 +82,7 @@ protected:
     render_context*         _context;
     render_swap_chain*      _swapchain;
     render_target_view*     _rtview;
+    render_blend_state*     _blendstate;
     bool                    _vsync;
     bool                    _fullscreen;
 

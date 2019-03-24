@@ -341,7 +341,7 @@ void button::set_press()
     auto* rsys = scene::get_singleton_ptr()->get_rendersys();
     assert(rsys);
     _4states ?
-        textureop(rsys).copy_rect(_bkground, _source, rectf((float)(get_width() * 2), 0.f, (float)get_width(), (float)get_height())) :
+        textureop(rsys).copy_rect(_bkground, _source, 0, 0, get_width() * 2, 0, get_width(), get_height()) :
         textureop(rsys).set_brightness(_bkground, _source, 0.7f);
     refresh(refresh_immediately);
 }
@@ -352,7 +352,7 @@ void button::set_normal()
         return;
     auto* rsys = scene::get_singleton_ptr()->get_rendersys();
     assert(rsys);
-    textureop(rsys).copy_rect(_bkground, _source, rectf(0.f, 0.f, (float)get_width(), (float)get_height()));
+    textureop(rsys).copy_rect(_bkground, _source, 0, 0);
     refresh(refresh_immediately);
 }
 
@@ -363,7 +363,7 @@ void button::set_hover()
     auto* rsys = scene::get_singleton_ptr()->get_rendersys();
     assert(rsys);
     _4states ?
-        textureop(rsys).copy_rect(_bkground, _source, rectf((float)get_width(), 0.f, (float)get_width(), (float)get_height())) :
+        textureop(rsys).copy_rect(_bkground, _source, 0, 0, get_width(), 0, get_width(), get_height()) :
         textureop(rsys).set_brightness(_bkground, _source, 1.3f);
     refresh(refresh_immediately);
 }
@@ -375,7 +375,7 @@ void button::set_gray()
     auto* rsys = scene::get_singleton_ptr()->get_rendersys();
     assert(rsys);
     _4states ?
-        textureop(rsys).copy_rect(_bkground, _source, rectf((float)(get_width() * 3), 0.f, (float)get_width(), (float)get_height())) :
+        textureop(rsys).copy_rect(_bkground, _source, 0, 0, get_width() * 3, 0, get_width(), get_height()) :
         textureop(rsys).set_gray(_bkground, _source);
     refresh(refresh_immediately);
 }

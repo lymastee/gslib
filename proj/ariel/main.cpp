@@ -52,16 +52,16 @@ public:
 
         painter_brush brush;
 
-        static render_texture2d* tex = nullptr;
+        static com_ptr<render_texture2d> tex;
         if(!tex) {
             img.load(_t("666.jpg"));
             auto* rsys = scene::get_singleton_ptr()->get_rendersys();
             assert(rsys);
-            tex = rsys->create_texture2d(img, 1, D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0); // todo: release
-            assert(tex);
+            tex.attach(rsys->create_texture2d(img, 1, D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0));
+            assert(tex.get());
         }
         painter_extra_data ext;
-        ext.reset(new painter_picture_data(tex), [](painter_picture_data* p) { delete p; });
+        ext.reset(new painter_picture_data(tex.get()), [](painter_picture_data* p) { delete p; });
         brush.set_tag(painter_brush::picture);
         brush.set_extra(ext);
 

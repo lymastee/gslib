@@ -70,7 +70,6 @@ define_select_type(compute_shader);
 define_select_type(hull_shader);
 define_select_type(domain_shader);
 define_select_type(render_include);
-define_select_type(create_shader_context);
 define_select_type(vertex_format);
 define_select_type(vertex_format_desc);
 define_select_type(render_vertex_buffer);
@@ -80,6 +79,7 @@ define_select_type(render_texture1d);
 define_select_type(render_texture2d);
 define_select_type(render_texture3d);
 define_select_type(render_sampler_state);
+define_select_type(render_blend_state);
 
 install_select_type(render_platform_d3d_11, render_device, ID3D11Device);
 install_select_type(render_platform_d3d_11, render_context, ID3D11DeviceContext);
@@ -98,7 +98,6 @@ install_select_type(render_platform_d3d_11, hull_shader, ID3D11HullShader);
 install_select_type(render_platform_d3d_11, domain_shader, ID3D11DomainShader);
 
 install_select_type(render_platform_d3d_11, render_include, ID3DInclude);
-install_select_type(render_platform_d3d_11, create_shader_context, ID3DBlob*);
 install_select_type(render_platform_d3d_11, vertex_format, ID3D11InputLayout);
 install_select_type(render_platform_d3d_11, vertex_format_desc, D3D11_INPUT_ELEMENT_DESC);
 install_select_type(render_platform_d3d_11, render_vertex_buffer, ID3D11Buffer);
@@ -109,6 +108,7 @@ install_select_type(render_platform_d3d_11, render_texture1d, ID3D11Texture1D);
 install_select_type(render_platform_d3d_11, render_texture2d, ID3D11Texture2D);
 install_select_type(render_platform_d3d_11, render_texture3d, ID3D11Texture3D);
 install_select_type(render_platform_d3d_11, render_sampler_state, ID3D11SamplerState);
+install_select_type(render_platform_d3d_11, render_blend_state, ID3D11BlendState);
 
 config_select_type(select_render_platform, render_device);
 config_select_type(select_render_platform, render_context);
@@ -134,6 +134,7 @@ config_select_type(select_render_platform, render_texture1d);
 config_select_type(select_render_platform, render_texture2d);
 config_select_type(select_render_platform, render_texture3d);
 config_select_type(select_render_platform, render_sampler_state);
+config_select_type(select_render_platform, render_blend_state);
 
 enum render_option
 {

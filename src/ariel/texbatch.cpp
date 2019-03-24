@@ -84,7 +84,7 @@ static void write_texture_source(rendersys* rsys, unordered_access_view* uav, te
     textureop texop(rsys);
     is_texture_transposed(src, rc) ?
         texop.transpose_rect(uav, src, rc) :
-        texop.copy_rect(tex, src, rc);
+        texop.copy_rect(tex, src, (int)rc.left, (int)rc.top);
 }
 
 tex_batcher::tex_batcher()

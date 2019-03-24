@@ -33,7 +33,7 @@ static MAT2 _stand_mat = { {0, 1}, {0, 0}, {0, 0}, {0, 1} };
 
 /* used for glyph buffers */
 using gs::byte;
-static byte* _glyph_buf = 0;
+static byte* _glyph_buf = nullptr;
 static int _gbsize = 0;
 
 static byte* alloc_glyph_buf(int size = 1024, int predict = 0)

@@ -120,6 +120,7 @@ public:
     rendersys* get_rendersys() const { return _rendersys; }
     void set_rendersys(rendersys* rsys) { _rendersys = rsys; }
     void set_rose(rose* ptr) { _rose = ptr; }
+    void set_fontsys(fontsys* fsys);
     void setup();
     void destroy();
     void destroy_all_stages();

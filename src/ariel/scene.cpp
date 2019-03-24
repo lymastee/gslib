@@ -274,6 +274,15 @@ void scene::setup()
     _fontsys->initialize();
 }
 
+void scene::set_fontsys(fontsys* fsys)
+{
+    if(_fontsys)
+        delete _fontsys;
+    _fontsys = fsys;
+    if(_fontsys)
+        _fontsys->initialize();
+}
+
 void scene::destroy()
 {
     destroy_all_stages();
@@ -405,6 +414,7 @@ void scene::draw()
 {
     assert(_rendersys);
     _rendersys->begin_render();
+    _rendersys->setup_pipeline_state();
     assert(_present);
     _present->draw();
     _rendersys->end_render();

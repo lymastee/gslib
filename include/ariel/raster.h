@@ -127,7 +127,7 @@ protected:
 
 public:
     painter_path() {}
-    painter_path(const painter_path& path) { attach(const_cast<painter_path&>(path)); }
+    painter_path(const painter_path& path);
     ~painter_path() { destroy(); }
     bool empty() const { return _nodelist.empty(); }
     int size() const { return (int)_nodelist.size(); }
@@ -161,7 +161,7 @@ public:
     void get_linestrips(linestrips& c) const;
     int get_control_contour(painter_linestrip& ls, int start) const;
     int get_sub_path(painter_path& sp, int start) const;
-    bool is_clock_wise() const;
+    bool is_clockwise() const;
     bool is_convex() const;
     void simplify(painter_path& path) const;
     void reverse();

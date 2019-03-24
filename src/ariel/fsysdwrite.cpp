@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2019 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -23,45 +23,33 @@
  * SOFTWARE.
  */
 
-#ifndef wsysdrvd3d11_201c78b1_b2a1_4c13_9151_81f6cc09ffac_h
-#define wsysdrvd3d11_201c78b1_b2a1_4c13_9151_81f6cc09ffac_h
+#include <d3d10_1.h>
+#include <d3d11.h>
+#include <d2d1.h>
+#include <dxgi.h>
+#include <dwrite.h>
+#include <ariel/fsysdwrite.h>
 
-#include <windows.h>
-#include <pink/widget.h>
-#include <ariel/rendersysd3d11.h>
+__ariel_begin__
 
-__pink_begin__
-
-class wsysdrvd3d11:
-    public wsys_driver
+class fsys_dwrite_private
 {
 public:
-    wsysdrvd3d11();
-    ~wsysdrvd3d11();
-    void initialize(wsys_notify* ptr, const rect& rc) override;
-    void close() override;
-
-public:
-    virtual int run();
+    fsys_dwrite_private() {}
 
 protected:
-    bool setup();
-    void cleanup();
-    static LRESULT __stdcall wndproc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-
-protected:
-    HWND                    _hwnd;
-    HINSTANCE               _hinstance;
-    wsys_notify*            _notify;
-    gchar                   _clsname[128];
-    D3D_DRIVER_TYPE         _drvtype;
-    IDXGISwapChain*         _swapchain;
-    ID3D11Device*           _d11dev;
-    D3D_FEATURE_LEVEL       _level;
-    ID3D11DeviceContext*    _context;
-    ID3D11RenderTargetView* _rtview;
+    com_ptr<ID3D10Device>           _dev10;
+    com_ptr<IDXGIKeyedMutex>        _kmutex11;
+    com_ptr<IDXGIKeyedMutex>        _kmutex10;
+    com_ptr<ID2D1RenderTarget>      _d2drt;
+    com_ptr<ID2D1SolidColorBrush>   _d2dbrush;
+    com_ptr<ID3D11Texture2D>        _backbuffer11;
+    com_ptr<ID3D11Texture2D>        _sharedtex11;
+    com_ptr<ID3D11Buffer>           _d2dvertbuff;
+    com_ptr<ID3D11Buffer>           _d2dindexbuff;
+    com_ptr<ID3D11ShaderResourceView>   _d2dtex;
+    com_ptr<IDWriteFactory>         _dwfactory;
+    com_ptr<IDWriteTextFormat>      _textformat;
 };
 
-__pink_end__
-
-#endif
+__ariel_end__

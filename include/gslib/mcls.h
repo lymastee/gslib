@@ -175,6 +175,27 @@ public:
         assert(_tag == 2);
         return *reinterpret_cast<const class3*>(_holder);
     }
+    class1& reconstruct_to_class1()
+    {
+        if(_tag == 0)
+            return to_class1();
+        destroy();
+        return *new (_holder) class1();
+    }
+    class2& reconstruct_to_class2()
+    {
+        if(_tag == 1)
+            return to_class2();
+        destroy();
+        return *new (_holder) class2();
+    }
+    class3& reconstruct_to_class3()
+    {
+        if(_tag == 2)
+            return to_class3();
+        destroy();
+        return *new (_holder) class3();
+    }
 
 protected:
     tag             _tag;

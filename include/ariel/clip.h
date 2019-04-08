@@ -231,8 +231,8 @@ protected:
 
 public:
     friend class clip_sweep_line_algorithm;
-    friend class clip_assembler;
-    friend class clip_assembler_exclude;
+    friend class clip_path_router;
+    friend class clip_path_router_exclude;
 };
 
 class clip_sweep_joint;
@@ -428,17 +428,17 @@ enum clip_polygon_tag
     cp_exclude,
 };
 
-enum clip_assembly_node_tag
+enum clip_route_node_tag
 {
-    ant_sweeper,
-    ant_point,
-    ant_patch,
+    rnt_sweeper,
+    rnt_point,
+    rnt_patch,
 };
 
-class clip_assembly_sweeper_node
+class clip_route_sweeper_node
 {
 public:
-    clip_assembly_sweeper_node() { _up = _down = nullptr; }
+    clip_route_sweeper_node() { _up = _down = nullptr; }
     clip_sweeper* get_up_sweeper() const { return _up; }
     clip_sweeper* get_down_sweeper() const { return _down; }
     void set_up_sweeper(clip_sweeper* p) { _up = p; }
@@ -449,10 +449,10 @@ protected:
     clip_sweeper*       _down;
 };
 
-class clip_assembly_point_node
+class clip_route_point_node
 {
 public:
-    clip_assembly_point_node() { _sweeper = nullptr; }
+    clip_route_point_node() { _sweeper = nullptr; }
     clip_result_iter get_patch_iter() const { return _iter; }
     void set_patch_iter(clip_result_iter i) { _iter = i; }
     clip_sweeper* get_sweeper() const { return _sweeper; }
@@ -463,10 +463,10 @@ protected:
     clip_sweeper*       _sweeper;
 };
 
-class clip_assembly_patch_node
+class clip_route_patch_node
 {
 public:
-    clip_assembly_patch_node() {}
+    clip_route_patch_node() {}
     clip_result_iter get_patch_iter() const { return _iter; }
     void set_patch_iter(clip_result_iter i) { _iter = i; }
     const vec2& get_point() const { return _point; }
@@ -477,10 +477,10 @@ protected:
     vec2                _point;
 };
 
-typedef multi_class_3<clip_assembly_node_tag, clip_assembly_sweeper_node, clip_assembly_point_node, clip_assembly_patch_node> clip_assembly_node;
-typedef list<clip_assembly_node> clip_assembly_nodes;
+typedef multi_class_3<clip_route_node_tag, clip_route_sweeper_node, clip_route_point_node, clip_route_patch_node> clip_route_node;
+typedef list<clip_route_node> clip_route_nodes;
 
-class clip_assembler
+class clip_path_router
 {
 public:
     typedef clip_result::iterator iterator;
@@ -488,38 +488,45 @@ public:
     typedef clip_sweepers::iterator swpiter;
     typedef clip_sweepers::const_iterator const_swpiter;
     typedef stack<iterator> iterator_stack;
+    typedef clip_route_nodes::iterator route_iterator;
 
 protected:
     clip_result&        _result;
     clip_sweepers       _upside;
     clip_sweepers       _downside;
-    clip_assembly_nodes _nodes;
+    clip_route_nodes    _nodes;
     iterator_stack      _iter_st;
     iterator            _last_sib;
 
 public:
-    clip_assembler(clip_result& result): _result(result) {}
+    clip_path_router(clip_result& result): _result(result) {}
+    void trace_route_nodes() const;
 
 protected:
     void install_sweepers(clip_sweep_line* line1, clip_sweep_line* line2);
-    void prepare_assembly_nodes();
-    iterator close_patch(iterator i, const clip_assembly_sweeper_node& node1, const clip_assembly_sweeper_node& node2);
+    void prepare_route_nodes();
+    iterator close_patch(iterator i, const clip_route_sweeper_node& node1, const clip_route_sweeper_node& node2);
     iterator close_patch(iterator i, iterator j);
-    void merge_patch(const clip_assembly_point_node& node1, const clip_assembly_point_node& node2) { merge_patch_parallel(node1.get_patch_iter(), node2.get_patch_iter(), *node1.get_sweeper(), *node2.get_sweeper()); }
-    void merge_patch_parallel(iterator piter1, iterator piter2, clip_sweeper& sweeper1, clip_sweeper& sweeper2);
+    void connect_to_patch1(iterator piter1, iterator piter2, clip_sweeper& sweeper1, clip_sweeper& sweeper2);
+    void connect_to_patch2(iterator piter1, iterator piter2, clip_sweeper& sweeper1, clip_sweeper& sweeper2);
+    void connect_to_patch1(const clip_route_point_node& node1, const clip_route_point_node& node2) { connect_to_patch1(node1.get_patch_iter(), node2.get_patch_iter(), *node1.get_sweeper(), *node2.get_sweeper()); }
+    void connect_to_patch2(const clip_route_point_node& node1, const clip_route_point_node& node2) { connect_to_patch2(node1.get_patch_iter(), node2.get_patch_iter(), *node1.get_sweeper(), *node2.get_sweeper()); }
     void merge_patch_head(iterator piter1, iterator piter2, clip_sweeper& sweeper1, clip_sweeper& sweeper2);
     void merge_patch_tail(iterator piter1, iterator piter2, clip_sweeper& sweeper1, clip_sweeper& sweeper2);
     void split_patch(iterator piter, clip_joint* sp1, clip_joint* sp2);
     bool try_split_patch(iterator piter);
+    iterator try_connect_patch_forward(iterator i, route_iterator former);      /* take former as host */
+    iterator try_connect_patch_backward(iterator i, route_iterator latter);     /* take former as host */
+    iterator try_connect_patch_backward2(iterator i, route_iterator latter);    /* take latter as host */
     static void create_patch(clip_patch& patch, const clip_sweeper& up1, const clip_sweeper& up2, const clip_sweeper& down1, const clip_sweeper& down2);
-    static void proceed_patch(clip_patch& patch, const clip_assembly_sweeper_node& node1, const clip_assembly_sweeper_node& node2);
+    static void proceed_patch(clip_patch& patch, const clip_route_sweeper_node& node1, const clip_route_sweeper_node& node2);
 };
 
-class clip_assembler_exclude:
-    public clip_assembler
+class clip_path_router_exclude:
+    public clip_path_router
 {
 public:
-    clip_assembler_exclude(clip_result& result);
+    clip_path_router_exclude(clip_result& result);
     void proceed(clip_sweep_lines& sweeplines);
 
 protected:
@@ -530,8 +537,8 @@ protected:
     void finish_proceed_sub_patches(iterator p);
 };
 
-// class clip_assembler_union;
-// class clip_assembler_intersect;
+// class clip_path_router_union;
+// class clip_path_router_intersect;
 
 typedef unordered_map<path_info*, curve_spliter*> curve_spliter_map;
 typedef unordered_map<clip_joint*, vec2> clip_fixed_points;

@@ -1062,7 +1062,7 @@ static bool is_upside_corner(clip_sweep_joint* joint)
         auto* i = q->get_prev_joint();
         auto* j = q->get_next_joint();
         assert(i && j);
-        return (i->get_point().y < y) && (j->get_point().y < y);
+        return (i->get_point().y > y) && (j->get_point().y > y);
     }
     else {
         assert(!"unexpected.");
@@ -1084,7 +1084,7 @@ static bool is_downside_corner(clip_sweep_joint* joint)
         auto* i = q->get_prev_joint();
         auto* j = q->get_next_joint();
         assert(i && j);
-        return (i->get_point().y > y) && (j->get_point().y > y);
+        return (i->get_point().y < y) && (j->get_point().y < y);
     }
     else {
         assert(!"unexpected.");
@@ -1192,7 +1192,7 @@ static void create_upside_relay(clip_sweepers& sweepers, clip_sweep_relay* joint
 static void create_upside_sweeper(clip_sweepers& sweepers, float y0, float y1, clip_sweep_joint* joint)
 {
     assert(joint);
-    if(is_upside_corner(joint))
+    if(is_downside_corner(joint))
         return;
     auto tag = joint->get_tag();
     switch(tag)
@@ -1319,7 +1319,7 @@ static void create_downside_relay(clip_sweepers& sweepers, clip_sweep_relay* joi
 static void create_downside_sweeper(clip_sweepers& sweepers, float y0, float y1, clip_sweep_joint* joint)
 {
     assert(joint);
-    if(is_downside_corner(joint))
+    if(is_upside_corner(joint))
         return;
     auto tag = joint->get_tag();
     switch(tag)
@@ -1671,8 +1671,8 @@ static bool is_neighbour_joint(clip_sweep_joint* i, clip_sweep_joint* j)
 void clip_sweep_line_algorithm::output_exclude(clip_result& result)
 {
     assert(!_sweep_lines.empty());
-    clip_assembler_exclude assembler(result);
-    assembler.proceed(_sweep_lines);
+    clip_path_router_exclude path_router(result);
+    path_router.proceed(_sweep_lines);
 }
 
 void clip_sweep_line_algorithm::output_union(clip_result& result)
@@ -2211,7 +2211,32 @@ void clip_sweep_line_algorithm::replace_curve(clip_polygon& poly, clip_joint*& s
 
 //////////////////////////////////////////////////////////////////////////
 
-void clip_assembler::install_sweepers(clip_sweep_line* line1, clip_sweep_line* line2)
+void clip_path_router::trace_route_nodes() const
+{
+    for(const auto& node : _nodes) {
+        switch(node.get_tag())
+        {
+        case rnt_sweeper:
+            {
+                const auto& n = node.to_const_class1();
+                n.get_up_sweeper()->tracing();
+                n.get_down_sweeper()->tracing();
+                break;
+            }
+        case rnt_point:
+            {
+                const auto& n = node.to_const_class2();
+                n.get_sweeper()->tracing();
+                break;
+            }
+        case rnt_patch:
+        default:
+            break;
+        }
+    }
+}
+
+void clip_path_router::install_sweepers(clip_sweep_line* line1, clip_sweep_line* line2)
 {
     assert(line1 && line2);
     if(!_upside.empty())
@@ -2223,43 +2248,43 @@ void clip_assembler::install_sweepers(clip_sweep_line* line1, clip_sweep_line* l
     assert(_upside.size() == _downside.size());
 }
 
-static const clip_sweeper& get_assembly_sweeper(const clip_assembly_node& node)
+static const clip_sweeper& get_route_sweeper(const clip_route_node& node)
 {
     static clip_sweeper bad_sweeper;
     auto t = node.get_tag();
     switch(t)
     {
-    case ant_sweeper:
+    case rnt_sweeper:
         return *node.to_const_class1().get_up_sweeper();
-    case ant_point:
+    case rnt_point:
         return *node.to_const_class2().get_sweeper();
     default:
-        assert(!"unexpected assembly node.");
+        assert(!"unexpected route node.");
         return bad_sweeper;
     }
 }
 
-static const vec2& get_assembly_node_point(const clip_assembly_node& node)
+static const vec2& get_route_node_point(const clip_route_node& node)
 {
     static vec2 bad_point;
     auto t = node.get_tag();
     switch(t)
     {
-    case ant_sweeper:
+    case rnt_sweeper:
         return node.to_const_class1().get_up_sweeper()->get_point();
-    case ant_point:
+    case rnt_point:
         return node.to_const_class2().get_sweeper()->get_point();
-    case ant_patch:
+    case rnt_patch:
         return node.to_const_class3().get_point();
     default:
-        assert(!"unexpected assembly node.");
+        assert(!"unexpected route node.");
         return bad_point;
     }
 }
 
-static clip_joint* get_assembly_bind_joint(const clip_assembly_node& node)
+static clip_joint* get_route_bind_joint(const clip_route_node& node)
 {
-    if(node.get_tag() != ant_sweeper)
+    if(node.get_tag() != rnt_sweeper)
         return nullptr;
     auto& c1 = node.to_const_class1();
     auto* s = c1.get_up_sweeper();
@@ -2271,9 +2296,9 @@ static clip_joint* get_assembly_bind_joint(const clip_assembly_node& node)
     return ep->get_joint();
 }
 
-static clip_joint* get_assembly_dual_joint(const clip_assembly_node& node)
+static clip_joint* get_route_dual_joint(const clip_route_node& node)
 {
-    if(node.get_tag() != ant_point)
+    if(node.get_tag() != rnt_point)
         return nullptr;
     auto& c2 = node.to_const_class2();
     auto* s = c2.get_sweeper();
@@ -2285,49 +2310,49 @@ static clip_joint* get_assembly_dual_joint(const clip_assembly_node& node)
     return ep->get_joint();
 }
 
-static void emplace_assembly_node(clip_assembly_nodes& nodes, const clip_assembly_node& node)
+static void emplace_route_node(clip_route_nodes& nodes, const clip_route_node& node)
 {
-    auto f = std::lower_bound(nodes.begin(), nodes.end(), node, [](const clip_assembly_node& node1, const clip_assembly_node& node2)->bool {
-        auto& p1 = get_assembly_node_point(node1);
-        auto& p2 = get_assembly_node_point(node2);
+    auto f = std::lower_bound(nodes.begin(), nodes.end(), node, [](const clip_route_node& node1, const clip_route_node& node2)->bool {
+        auto& p1 = get_route_node_point(node1);
+        auto& p2 = get_route_node_point(node2);
         assert(p1.y == p2.y);
         return p1.x < p2.x;
     });
     nodes.insert(f, node);
 }
 
-static void emplace_assembly_nodes(clip_assembly_nodes& nodes, clip_result_iter p)
+static void emplace_route_nodes(clip_route_nodes& nodes, clip_result_iter p)
 {
     assert(p.is_valid());
     for(auto i = p.child(); i.is_valid(); i.to_next()) {
         if(!i->is_patch())
             continue;
         auto& patch = static_cast<clip_patch&>(*i);
-        clip_assembly_node left(ant_point), right(ant_point);
+        clip_route_node left(rnt_point), right(rnt_point);
         auto& lcls = left.to_class2();
         auto& rcls = right.to_class2();
         lcls.set_patch_iter(i);
         rcls.set_patch_iter(i);
         lcls.set_sweeper(&patch.get_end_point());
         rcls.set_sweeper(&patch.get_start_point());
-        emplace_assembly_node(nodes, left);
-        emplace_assembly_node(nodes, right);
+        emplace_route_node(nodes, left);
+        emplace_route_node(nodes, right);
         if(!i.is_leaf())
-            emplace_assembly_nodes(nodes, i);
+            emplace_route_nodes(nodes, i);
     }
 }
 
-void clip_assembler::prepare_assembly_nodes()
+void clip_path_router::prepare_route_nodes()
 {
     if(!_nodes.empty())
         _nodes.clear();
-    /* 1.create assembly nodes from sweepers */
+    /* 1.create route nodes from sweepers */
     assert(_upside.size() == _downside.size());
     auto i = _upside.begin();
     auto j = _downside.begin();
     auto end = _upside.end();
     for(; i != end; ++ i, ++ j) {
-        clip_assembly_node node(ant_sweeper);
+        clip_route_node node(rnt_sweeper);
         auto& sweeper = node.to_class1();
         sweeper.set_up_sweeper(&(*i));
         sweeper.set_down_sweeper(&(*j));
@@ -2336,10 +2361,10 @@ void clip_assembler::prepare_assembly_nodes()
     /* 2.emplace the patches end points to the suitable position */
     auto r = _result.get_root();
     assert(r.is_valid());
-    emplace_assembly_nodes(_nodes, r);
+    emplace_route_nodes(_nodes, r);
 }
 
-clip_result_iter clip_assembler::close_patch(iterator i, const clip_assembly_sweeper_node& node1, const clip_assembly_sweeper_node& node2)
+clip_result_iter clip_path_router::close_patch(iterator i, const clip_route_sweeper_node& node1, const clip_route_sweeper_node& node2)
 {
     assert(i && i->is_patch());
     auto n = _result.insert<clip_polygon>(i);
@@ -2380,7 +2405,7 @@ clip_result_iter clip_assembler::close_patch(iterator i, const clip_assembly_swe
     return n;
 }
 
-clip_result_iter clip_assembler::close_patch(iterator i, iterator j)
+clip_result_iter clip_path_router::close_patch(iterator i, iterator j)
 {
     assert(i && i->is_patch() && j && j->is_patch());
     auto n = _result.insert<clip_patch>(i);
@@ -2414,7 +2439,7 @@ clip_result_iter clip_assembler::close_patch(iterator i, iterator j)
     return n;
 }
 
-void clip_assembler::merge_patch_parallel(iterator piter1, iterator piter2, clip_sweeper& sweeper1, clip_sweeper& sweeper2)
+void clip_path_router::connect_to_patch1(iterator piter1, iterator piter2, clip_sweeper& sweeper1, clip_sweeper& sweeper2)
 {
     assert(piter1 && piter2);
     assert(piter1->is_patch() && piter2->is_patch());
@@ -2441,7 +2466,34 @@ void clip_assembler::merge_patch_parallel(iterator piter1, iterator piter2, clip
     _result.erase(piter2);
 }
 
-void clip_assembler::merge_patch_head(iterator piter1, iterator piter2, clip_sweeper& sweeper1, clip_sweeper& sweeper2)
+void clip_path_router::connect_to_patch2(iterator piter1, iterator piter2, clip_sweeper& sweeper1, clip_sweeper& sweeper2)
+{
+    assert(piter1 && piter2);
+    assert(piter1->is_patch() && piter2->is_patch());
+    auto& patch1 = static_cast<clip_patch&>(*piter1);
+    auto& patch2 = static_cast<clip_patch&>(*piter2);
+    assert(&patch1.get_start_point() == &sweeper1 &&
+        &patch2.get_end_point() == &sweeper2
+        );
+    patch2.adopt(patch1);
+    auto* line2 = patch1.get_line_start();
+    auto* line1 = patch2.get_line_end();
+    assert(line2 && line1);
+    (sweeper1.get_point() == sweeper2.get_point()) ? clip_connect(line1->get_joint(1), line2) :
+        patch2.create_line(line1->get_joint(1), line2->get_joint(0));
+    patch2.set_line_end(patch1.get_line_end());
+    patch2.set_end_point(patch1.get_end_point());
+    for(auto c = piter1.child(); c.is_valid();) {
+        auto next = c.next();
+        clip_result t;
+        _result.detach(t, c);
+        _result.attach(t, _result.birth_tail(piter2));
+        c = next;
+    }
+    _result.erase(piter1);
+}
+
+void clip_path_router::merge_patch_head(iterator piter1, iterator piter2, clip_sweeper& sweeper1, clip_sweeper& sweeper2)
 {
     assert(piter1 && piter2);
     assert(piter1->is_patch() && piter2->is_patch());
@@ -2469,7 +2521,7 @@ void clip_assembler::merge_patch_head(iterator piter1, iterator piter2, clip_swe
     _result.erase(piter2);
 }
 
-void clip_assembler::merge_patch_tail(iterator piter1, iterator piter2, clip_sweeper& sweeper1, clip_sweeper& sweeper2)
+void clip_path_router::merge_patch_tail(iterator piter1, iterator piter2, clip_sweeper& sweeper1, clip_sweeper& sweeper2)
 {
     assert(piter1 && piter2);
     assert(piter1->is_patch() && piter2->is_patch());
@@ -2573,7 +2625,7 @@ static bool is_polygon_inside_polygon(clip_polygon* poly, clip_polygon* inner)
     return is_point_inside_polygon(poly, p);
 }
 
-void clip_assembler::split_patch(iterator piter, clip_joint* sp1, clip_joint* sp2)
+void clip_path_router::split_patch(iterator piter, clip_joint* sp1, clip_joint* sp2)
 {
     assert(piter && sp1 && sp2);
     assert(piter->is_patch());
@@ -2621,7 +2673,7 @@ static bool is_same_joint(clip_joint* joint1, clip_joint* joint2)
     return false;
 }
 
-bool clip_assembler::try_split_patch(iterator piter)
+bool clip_path_router::try_split_patch(iterator piter)
 {
     assert(piter && piter->is_patch());
     auto& patch = static_cast<clip_patch&>(*piter);
@@ -2674,7 +2726,76 @@ bool clip_assembler::try_split_patch(iterator piter)
     return true;
 }
 
-void clip_assembler::create_patch(clip_patch& patch, const clip_sweeper& up1, const clip_sweeper& up2, const clip_sweeper& down1, const clip_sweeper& down2)
+clip_path_router::iterator clip_path_router::try_connect_patch_forward(iterator i, route_iterator former)
+{
+    assert(i && i->is_patch());
+    assert(former->get_tag() == rnt_sweeper);
+    if(former == _nodes.begin())
+        return iterator(nullptr);
+    auto fr = std::prev(former);
+    if(fr->get_tag() != rnt_patch)
+        return iterator(nullptr);
+    clip_route_sweeper_node& snode = former->to_class1();
+    clip_route_patch_node& pnode = fr->to_class3();
+    clip_patch& ip = static_cast<clip_patch&>(*i);
+    assert(snode.get_down_sweeper()->joint == ip.get_end_point().joint);
+    auto j = pnode.get_patch_iter();
+    clip_patch& jp = static_cast<clip_patch&>(*j);
+    if(is_neighbour_joint(ip.get_start_point().joint, jp.get_end_point().joint)) {
+        connect_to_patch1(j, i, jp.get_end_point(), ip.get_start_point());
+        return j;
+    }
+    return iterator(nullptr);
+}
+
+clip_path_router::iterator clip_path_router::try_connect_patch_backward(iterator i, route_iterator latter)
+{
+    /* [sweeper1, sweeper2 as @latter] [sweeper3 as next patch @lr]
+     * [new patch as @i {host}]
+     */
+    assert(i && i->is_patch());
+    assert(latter->get_tag() == rnt_sweeper);
+    if(latter == _nodes.end())
+        return iterator(nullptr);
+    auto lr = std::next(latter);
+    if(lr == _nodes.end() || lr->get_tag() != rnt_patch)
+        return iterator(nullptr);
+    clip_route_sweeper_node& snode = latter->to_class1();
+    clip_route_patch_node& pnode = lr->to_class3();
+    clip_patch& ip = static_cast<clip_patch&>(*i);
+    assert(snode.get_down_sweeper()->joint == ip.get_start_point().joint);
+    auto j = pnode.get_patch_iter();
+    clip_patch& jp = static_cast<clip_patch&>(*j);
+    if(is_neighbour_joint(ip.get_start_point().joint, jp.get_end_point().joint)) {
+        connect_to_patch1(i, j, ip.get_start_point(), jp.get_end_point());
+        return i;
+    }
+    return iterator(nullptr);
+}
+
+clip_path_router::iterator clip_path_router::try_connect_patch_backward2(iterator i, route_iterator latter)
+{
+    assert(i && i->is_patch());
+    assert(latter->get_tag() == rnt_sweeper);
+    if(latter == _nodes.end())
+        return iterator(nullptr);
+    auto lr = std::next(latter);
+    if(lr == _nodes.end() || lr->get_tag() != rnt_patch)
+        return iterator(nullptr);
+    clip_route_sweeper_node& snode = latter->to_class1();
+    clip_route_patch_node& pnode = lr->to_class3();
+    clip_patch& ip = static_cast<clip_patch&>(*i);
+    assert(snode.get_down_sweeper()->joint == ip.get_start_point().joint);
+    auto j = pnode.get_patch_iter();
+    clip_patch& jp = static_cast<clip_patch&>(*j);
+    if(is_neighbour_joint(ip.get_start_point().joint, jp.get_end_point().joint)) {
+        connect_to_patch2(i, j, ip.get_start_point(), jp.get_end_point());
+        return j;
+    }
+    return iterator(nullptr);
+}
+
+void clip_path_router::create_patch(clip_patch& patch, const clip_sweeper& up1, const clip_sweeper& up2, const clip_sweeper& down1, const clip_sweeper& down2)
 {
     clip_mirror_joint *t1, *t2, *b1, *b2;
     t1 = patch.create_assumed_mj(up1);
@@ -2695,7 +2816,7 @@ void clip_assembler::create_patch(clip_patch& patch, const clip_sweeper& up1, co
     patch.set_end_point(down1);
 }
 
-void clip_assembler::proceed_patch(clip_patch& patch, const clip_assembly_sweeper_node& node1, const clip_assembly_sweeper_node& node2)
+void clip_path_router::proceed_patch(clip_patch& patch, const clip_route_sweeper_node& node1, const clip_route_sweeper_node& node2)
 {
     auto& left_o = patch.get_end_point();
     auto& right_o = patch.get_start_point();
@@ -2721,12 +2842,12 @@ void clip_assembler::proceed_patch(clip_patch& patch, const clip_assembly_sweepe
     patch.set_end_point(left_d);
 }
 
-clip_assembler_exclude::clip_assembler_exclude(clip_result& result):
-    clip_assembler(result)
+clip_path_router_exclude::clip_path_router_exclude(clip_result& result):
+    clip_path_router(result)
 {
 }
 
-void clip_assembler_exclude::proceed(clip_sweep_lines& sweeplines)
+void clip_path_router_exclude::proceed(clip_sweep_lines& sweeplines)
 {
     /* feed an empty root to achieve the multi top entries. */
     assert(!_result.is_valid());
@@ -2740,27 +2861,27 @@ void clip_assembler_exclude::proceed(clip_sweep_lines& sweeplines)
         proceed(*i, *j);
 }
 
-void clip_assembler_exclude::proceed(clip_sweep_line* line1, clip_sweep_line* line2)
+void clip_path_router_exclude::proceed(clip_sweep_line* line1, clip_sweep_line* line2)
 {
     assert(line1 && line2);
     install_sweepers(line1, line2);
-    prepare_assembly_nodes();
+    prepare_route_nodes();
     proceed_patches();
     proceed_sweepers();
     finish_proceed_sub_patches(_result.get_root());
 }
 
-static clip_assembly_nodes::iterator find_assembly_node(clip_assembly_nodes& nodes, clip_patch* patch, clip_sweeper* sweeper)
+static clip_route_nodes::iterator find_route_node(clip_route_nodes& nodes, clip_patch* patch, clip_sweeper* sweeper)
 {
     assert(patch && sweeper);
     float x = sweeper->get_point().x;
-    auto f = std::lower_bound(nodes.begin(), nodes.end(), x, [](const clip_assembly_node& node, float x)->bool {
-        auto& p = get_assembly_node_point(node);
+    auto f = std::lower_bound(nodes.begin(), nodes.end(), x, [](const clip_route_node& node, float x)->bool {
+        auto& p = get_route_node_point(node);
         return p.x < x;
     });
     if(f == nodes.end())
         return f;
-    if(f->get_tag() == ant_point) {
+    if(f->get_tag() == rnt_point) {
         auto& cp =  f->to_class2();
         auto iter = cp.get_patch_iter();
         assert(iter && iter->is_patch());
@@ -2769,12 +2890,12 @@ static clip_assembly_nodes::iterator find_assembly_node(clip_assembly_nodes& nod
     }
     /* test the codes below! */
     auto f1 = f, f2 = f;
-    for(; f1 != nodes.begin() && get_assembly_node_point(*f1).x == x; -- f1);
-    for(; f2 != nodes.end() && get_assembly_node_point(*f2).x == x; ++ f2);
-    if(get_assembly_node_point(*f1).x != x)
+    for(; f1 != nodes.begin() && get_route_node_point(*f1).x == x; -- f1);
+    for(; f2 != nodes.end() && get_route_node_point(*f2).x == x; ++ f2);
+    if(get_route_node_point(*f1).x != x)
         ++ f1;
     for(auto i = f1; i != f2; ++ i) {
-        if(i->get_tag() == ant_point) {
+        if(i->get_tag() == rnt_point) {
             auto& cp = i->to_class2();
             auto iter = cp.get_patch_iter();
             assert(iter && iter->is_patch());
@@ -2782,25 +2903,25 @@ static clip_assembly_nodes::iterator find_assembly_node(clip_assembly_nodes& nod
                 return i;
         }
     }
-    assert(!"unexpected situation in find assembly node.");
+    assert(!"unexpected situation in find route node.");
     return nodes.end();
 }
 
-static clip_assembly_nodes::iterator find_assembly_related_node(clip_assembly_nodes& nodes, clip_assembly_nodes::iterator i)
+static clip_route_nodes::iterator find_route_related_node(clip_route_nodes& nodes, clip_route_nodes::iterator i)
 {
     assert(i != nodes.end());
-    assert(i->get_tag() == ant_point);
+    assert(i->get_tag() == rnt_point);
     auto& p_node = i->to_class2();
     auto* sweeper = p_node.get_sweeper();
     assert(sweeper);
     float x = sweeper->get_point().x;
     auto f1 = i, f2 = i;
-    for(; f1 != nodes.begin() && get_assembly_node_point(*f1).x == x; -- f1);
-    for(; f2 != nodes.end() && get_assembly_node_point(*f2).x == x; ++ f2);
-    if(get_assembly_node_point(*f1).x != x)
+    for(; f1 != nodes.begin() && get_route_node_point(*f1).x == x; -- f1);
+    for(; f2 != nodes.end() && get_route_node_point(*f2).x == x; ++ f2);
+    if(get_route_node_point(*f1).x != x)
         ++ f1;
     for(auto j = f1; j != f2; ++ j) {
-        if(j->get_tag() == ant_sweeper)
+        if(j->get_tag() == rnt_sweeper)
             return j;
     }
     /* maybe there was a horizontal linkage. */
@@ -2819,18 +2940,18 @@ static clip_assembly_nodes::iterator find_assembly_related_node(clip_assembly_no
             f = nextj;
         if(f) {
             float x = f->get_point().x;
-            auto fd = std::lower_bound(nodes.begin(), nodes.end(), x, [](const clip_assembly_node& node, float x)->bool {
-                auto& p = get_assembly_node_point(node);
+            auto fd = std::lower_bound(nodes.begin(), nodes.end(), x, [](const clip_route_node& node, float x)->bool {
+                auto& p = get_route_node_point(node);
                 return p.x < x;
             });
             if(fd != nodes.end()) {
                 auto f1 = fd, f2 = fd;
-                for(; f1 != nodes.begin() && get_assembly_node_point(*f1).x == x; -- f1);
-                for(; f2 != nodes.end() && get_assembly_node_point(*f2).x == x; ++ f2);
-                if(get_assembly_node_point(*f1).x != x)
+                for(; f1 != nodes.begin() && get_route_node_point(*f1).x == x; -- f1);
+                for(; f2 != nodes.end() && get_route_node_point(*f2).x == x; ++ f2);
+                if(get_route_node_point(*f1).x != x)
                     ++ f1;
                 for(auto j = f1; j != f2; ++ j) {
-                    if(get_assembly_bind_joint(*j) == f)
+                    if(get_route_bind_joint(*j) == f)
                         return j;
                 }
             }
@@ -2839,21 +2960,21 @@ static clip_assembly_nodes::iterator find_assembly_related_node(clip_assembly_no
     return nodes.end();
 }
 
-static clip_assembly_nodes::iterator find_assembly_dual_node(clip_assembly_nodes& nodes, clip_assembly_nodes::iterator i)
+static clip_route_nodes::iterator find_route_dual_node(clip_route_nodes& nodes, clip_route_nodes::iterator i)
 {
     assert(i != nodes.end());
-    assert(i->get_tag() == ant_point);
+    assert(i->get_tag() == rnt_point);
     auto& p_node = i->to_class2();
     auto* sweeper = p_node.get_sweeper();
     assert(sweeper);
     float x = sweeper->get_point().x;
     auto f1 = i, f2 = i;
-    for(; f1 != nodes.begin() && get_assembly_node_point(*f1).x == x; -- f1);
-    for(; f2 != nodes.end() && get_assembly_node_point(*f2).x == x; ++ f2);
-    if(get_assembly_node_point(*f1).x != x)
+    for(; f1 != nodes.begin() && get_route_node_point(*f1).x == x; -- f1);
+    for(; f2 != nodes.end() && get_route_node_point(*f2).x == x; ++ f2);
+    if(get_route_node_point(*f1).x != x)
         ++ f1;
     for(auto j = f1; j != f2; ++ j) {
-        if(j != i && j->get_tag() == ant_point)
+        if(j != i && j->get_tag() == rnt_point)
             return j;
     }
     auto* sj = sweeper->joint;
@@ -2871,20 +2992,20 @@ static clip_assembly_nodes::iterator find_assembly_dual_node(clip_assembly_nodes
             f = nextj;
         if(f) {
             float x = f->get_point().x;
-            auto fd = std::lower_bound(nodes.begin(), nodes.end(), x, [](const clip_assembly_node& node, float x)->bool {
-                auto& p = get_assembly_node_point(node);
+            auto fd = std::lower_bound(nodes.begin(), nodes.end(), x, [](const clip_route_node& node, float x)->bool {
+                auto& p = get_route_node_point(node);
                 return p.x < x;
             });
             if(fd != nodes.end()) {
                 auto f1 = fd, f2 = fd;
-                for(; f1 != nodes.begin() && get_assembly_node_point(*f1).x == x; -- f1);
-                for(; f2 != nodes.end() && get_assembly_node_point(*f2).x == x; ++ f2);
-                if(get_assembly_node_point(*f1).x != x)
+                for(; f1 != nodes.begin() && get_route_node_point(*f1).x == x; -- f1);
+                for(; f2 != nodes.end() && get_route_node_point(*f2).x == x; ++ f2);
+                if(get_route_node_point(*f1).x != x)
                     ++ f1;
                 for(auto j = f1; j != f2; ++ j) {
-                    if(j->get_tag() == ant_point) {
+                    if(j->get_tag() == rnt_point) {
                         auto& sp = j->to_const_class2();
-                        if(sp.get_patch_iter() != p_node.get_patch_iter() && get_assembly_dual_joint(*j) == f)
+                        if(sp.get_patch_iter() != p_node.get_patch_iter() && get_route_dual_joint(*j) == f)
                             return j;
                     }
                 }
@@ -2894,7 +3015,7 @@ static clip_assembly_nodes::iterator find_assembly_dual_node(clip_assembly_nodes
     return nodes.end();
 }
 
-static bool is_patch_closed(const clip_assembly_sweeper_node& node1, const clip_assembly_sweeper_node& node2)
+static bool is_patch_closed(const clip_route_sweeper_node& node1, const clip_route_sweeper_node& node2)
 {
     auto* s1 = node1.get_down_sweeper();
     auto* s2 = node2.get_down_sweeper();
@@ -2902,12 +3023,12 @@ static bool is_patch_closed(const clip_assembly_sweeper_node& node1, const clip_
     return is_neighbour_joint(s1->joint, s2->joint);
 }
 
-void clip_assembler_exclude::proceed_patches()
+void clip_path_router_exclude::proceed_patches()
 {
     auto i = _nodes.begin();
     auto end = _nodes.end();
     while(i != end) {
-        if(i->get_tag() != ant_point) {
+        if(i->get_tag() != rnt_point) {
             ++ i;
             continue;
         }
@@ -2916,18 +3037,18 @@ void clip_assembler_exclude::proceed_patches()
         assert(patch_iter && patch_iter->is_patch());
         auto* patch = static_cast<clip_patch*>(&*patch_iter);
         assert(patch && (&patch->get_end_point() == left.get_sweeper()));
-        auto f = find_assembly_node(_nodes, patch, &patch->get_start_point());
-        auto sweeper_l = find_assembly_related_node(_nodes, i);
-        auto sweeper_r = find_assembly_related_node(_nodes, f);
+        auto f = find_route_node(_nodes, patch, &patch->get_start_point());
+        auto sweeper_l = find_route_related_node(_nodes, i);
+        auto sweeper_r = find_route_related_node(_nodes, f);
         assert(sweeper_l != _nodes.end());
         if(sweeper_r == _nodes.end()) {
-            auto dual = find_assembly_dual_node(_nodes, f);
+            auto dual = find_route_dual_node(_nodes, f);
             assert(dual != _nodes.end());
             auto& c2 = dual->to_class2();
             auto* patch2 = static_cast<clip_patch*>(&*c2.get_patch_iter());
-            auto m = find_assembly_node(_nodes, patch2, &patch2->get_start_point());
-            assert(m != _nodes.end() && m->get_tag() == ant_point);
-            merge_patch(f->to_const_class2(), dual->to_const_class2());
+            auto m = find_route_node(_nodes, patch2, &patch2->get_start_point());
+            assert(m != _nodes.end() && m->get_tag() == rnt_point);
+            connect_to_patch1(f->to_const_class2(), dual->to_const_class2());
             _nodes.erase(f);
             _nodes.erase(dual);
             m->to_class2().set_patch_iter(patch_iter);
@@ -2940,13 +3061,13 @@ void clip_assembler_exclude::proceed_patches()
         else {
             proceed_patch(*patch, s1, s2);
             /* repair nodes */
-            clip_assembly_node node1(ant_patch), node2(ant_patch);
+            clip_route_node node1(rnt_patch), node2(rnt_patch);
             auto& l = node1.to_class3();
             auto& r = node2.to_class3();
             l.set_patch_iter(patch_iter);
             r.set_patch_iter(patch_iter);
-            l.set_point(get_assembly_node_point(*sweeper_l));
-            r.set_point(get_assembly_node_point(*sweeper_r));
+            l.set_point(get_route_node_point(*sweeper_l));
+            r.set_point(get_route_node_point(*sweeper_r));
             _nodes.insert(sweeper_l, node1);
             _nodes.insert(sweeper_r, node2);
         }
@@ -2958,7 +3079,7 @@ void clip_assembler_exclude::proceed_patches()
     }
 }
 
-void clip_assembler_exclude::proceed_sweepers()
+void clip_path_router_exclude::proceed_sweepers()
 {
     if(!_iter_st.empty())
         _iter_st.swap(iterator_stack());
@@ -2972,8 +3093,8 @@ void clip_assembler_exclude::proceed_sweepers()
     auto end = _nodes.end();
     while(i != end) {
         auto t = i->get_tag();
-        assert(t != ant_point);
-        if(t == ant_patch) {
+        assert(t != rnt_point);
+        if(t == rnt_patch) {
             auto& p = i->to_class3();
             auto patch_iter = p.get_patch_iter();
             assert(patch_iter);
@@ -2988,9 +3109,9 @@ void clip_assembler_exclude::proceed_sweepers()
             ++ i;
             continue;
         }
-        assert(t == ant_sweeper);
+        assert(t == rnt_sweeper);
         auto j = std::next(i);
-        assert(j != end && (j->get_tag() == ant_sweeper));
+        assert(j != end && (j->get_tag() == rnt_sweeper));
         auto parent = _iter_st.top();
         auto p = _last_sib ? _result.insert_after<clip_patch>(_last_sib) : _result.birth_tail<clip_patch>(parent);
         assert(p && p->is_patch());
@@ -2998,7 +3119,15 @@ void clip_assembler_exclude::proceed_sweepers()
         auto& s1 = i->to_class1();
         auto& s2 = j->to_class1();
         create_patch(patch, *s1.get_up_sweeper(), *s2.get_up_sweeper(), *s1.get_down_sweeper(), *s2.get_down_sweeper());
-        i = std::next(j);
+        auto cf = try_connect_patch_forward(p, i);
+        if(cf.is_valid()) {
+            auto r = try_connect_patch_backward(cf, j);
+            i = !r ? std::next(j) : std::next(std::next(j));
+        }
+        else {
+            try_connect_patch_backward2(p, j);
+            i = std::next(j);
+        }
     }
 }
 
@@ -3038,7 +3167,7 @@ static clip_joint* detect_ring_joint(clip_patch& patch)
     return nullptr;
 }
 
-void clip_assembler_exclude::finish_proceed_patches(iterator p)
+void clip_path_router_exclude::finish_proceed_patches(iterator p)
 {
     assert(p.is_valid());
     if(!p->is_patch())
@@ -3096,7 +3225,7 @@ void clip_assembler_exclude::finish_proceed_patches(iterator p)
     }
 }
 
-void clip_assembler_exclude::finish_proceed_sub_patches(iterator p)
+void clip_path_router_exclude::finish_proceed_sub_patches(iterator p)
 {
     assert(p.is_valid());
     for(auto c = p.child(); c.is_valid(); ) {
@@ -3121,7 +3250,7 @@ void clip_assembler_exclude::finish_proceed_sub_patches(iterator p)
         auto& patch2 = static_cast<clip_patch&>(*c2);
         auto& sweeper1 = patch1.get_start_point();
         auto& sweeper2 = patch2.get_end_point();
-        is_neighbour_joint(sweeper1.joint, sweeper2.joint) ? merge_patch_parallel(c, c2, sweeper1, sweeper2) : c = c2;
+        is_neighbour_joint(sweeper1.joint, sweeper2.joint) ? connect_to_patch1(c, c2, sweeper1, sweeper2) : c = c2;
     }
 }
 

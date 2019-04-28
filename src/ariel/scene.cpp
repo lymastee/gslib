@@ -26,6 +26,7 @@
 #include <ariel/scene.h>
 #include <ariel/rose.h>
 #include <ariel/fsyswin32.h>
+#include <ariel/fsysdwrite.h>
 
 __ariel_begin__
 
@@ -270,7 +271,7 @@ void scene::setup()
     ui->setup();
     _notify = _present = ui;
     _uisys = ui->get_wsys_manager();
-    _fontsys = new fsys_win32;      /* using win32 fontsys */
+    _fontsys = new fsys_dwrite;
     _fontsys->initialize();
 }
 

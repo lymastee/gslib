@@ -115,15 +115,16 @@ void fsys_win32::set_font(const font& ft)
     }
     int w = ft.weight % 10;
     w *= 100;
-    dword dw = ft.height > 18 ? PROOF_QUALITY : DEFAULT_QUALITY;
-    HFONT h = CreateFont(ft.height, ft.width, ft.escape, ft.orient, w,
+    dword dw = ft.size > 18 ? PROOF_QUALITY : DEFAULT_QUALITY;
+    int height = MulDiv(ft.size, GetDeviceCaps(_container_dc, LOGPIXELSY), 72);
+    HFONT h = CreateFont(height, 0, ft.escape, ft.orient, w,
         (ft.mask & font::ftm_italic) ? 1 : 0, 
         (ft.mask & font::ftm_underline) ? 1 : 0, 
         (ft.mask & font::ftm_strikeout) ? 1 : 0,
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, dw, DEFAULT_PITCH, ft.name.c_str()
         );
     ft.sysfont = (uint)h;
-    _font_map.insert(std::make_pair(ft, h));
+    _font_map.emplace(ft, h);
     h = (HFONT)SelectObject(_container_dc, h);
     if(!_old_font)
         _old_font = h;
@@ -135,9 +136,9 @@ bool fsys_win32::get_size(const gchar* str, int& w, int& h, int len)
         w = 0, h = 0;
         return false;
     }
-    int slen = strtool::length(str);
-    if(len < 0 || len > slen)
-        len = slen;
+    assert(len <= strtool::length(str));
+    if(len <= 0)
+        len = strtool::length(str);
     SIZE sz;
     BOOL b = GetTextExtentPoint32(_container_dc, str, len, &sz);
     assert(b);

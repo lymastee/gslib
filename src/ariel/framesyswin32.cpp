@@ -120,6 +120,9 @@ void framesys::set_ime(point pt, const font& ft)
 {
     memset(&__frame_immpos, 0, sizeof(__frame_immpos));
     memset(&__frame_immfont, 0, sizeof(__frame_immfont));
+    HDC hdc = GetDC(__frame_hwnd);
+    int height = MulDiv(ft.size, GetDeviceCaps(hdc, LOGPIXELSY), 72);
+    ReleaseDC(__frame_hwnd, hdc);
     __frame_immpos.dwStyle = CFS_POINT;
     __frame_immpos.ptCurrentPos.x = pt.x;
     __frame_immpos.ptCurrentPos.y = pt.y;
@@ -128,11 +131,11 @@ void framesys::set_ime(point pt, const font& ft)
     __frame_immfont.lfOutPrecision = OUT_DEFAULT_PRECIS;
     __frame_immfont.lfQuality = DEFAULT_QUALITY;
     __frame_immfont.lfPitchAndFamily = DEFAULT_PITCH;
-    __frame_immfont.lfHeight = ft.height;
-    __frame_immfont.lfWidth = ft.width;
+    __frame_immfont.lfHeight = height;
+    __frame_immfont.lfWidth = 0;
     __frame_immfont.lfEscapement = ft.escape;
     __frame_immfont.lfOrientation = ft.orient;
-    __frame_immfont.lfWeight = ft.weight<10 ? ft.weight : ft.weight%10*100;
+    __frame_immfont.lfWeight = ft.weight < 10 ? ft.weight : ft.weight % 10 * 100;
     if(__frame_imc) {
         ImmSetCompositionWindow(__frame_imc, &__frame_immpos);
         ImmSetCompositionFont(__frame_imc, &__frame_immfont);

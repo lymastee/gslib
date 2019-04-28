@@ -65,8 +65,7 @@ struct font
 
 public:
     string      name;
-    int         height;
-    int         width;
+    int         size;
     int         escape;
     int         orient;
     int         weight; /* 0-9 */
@@ -74,46 +73,43 @@ public:
 
 private:
     friend class fsys_win32;
+    friend class fsys_dwrite;
     mutable uint sysfont;
 
 public:
     font()
     {
-        height = 0;
-        width = 0;
+        size = 0;
         escape = 0;
         orient = 0;
-        weight = 0;
+        weight = 3;
         mask = 0;
         sysfont = 0;
     }
     font(const font& that)
     {
         name    = that.name;
-        height  = that.height;
-        width   = that.width;
+        size    = that.size;
         escape  = that.escape;
         orient  = that.orient;
         weight  = that.weight;
         mask    = that.mask;
         sysfont = that.sysfont;
     }
-    font(const gchar* n, int size)
+    font(const gchar* n, int sz)
     {
         name.assign(n);
-        height = size;
-        width = 0;
+        size = sz;
         escape = 0;
         orient = 0;
-        weight = 0;
+        weight = 3;
         mask = 0;
         sysfont = 0;
     }
     font& operator = (const font& that)
     {
         name    = that.name;
-        height  = that.height;
-        width   = that.width;
+        size  = that.size;
         escape  = that.escape;
         orient  = that.orient;
         weight  = that.weight;
@@ -124,9 +120,7 @@ public:
     {
         if(name != that.name)
             return false;
-        if(height != that.height)
-            return false;
-        if(width != that.width)
+        if(size != that.size)
             return false;
         if(escape != that.escape)
             return false;
@@ -142,9 +136,7 @@ public:
     {
         if(name != that.name)
             return true;
-        if(height != that.height)
-            return true;
-        if(width != that.width)
+        if(size != that.size)
             return true;
         if(escape != that.escape)
             return true;
@@ -160,8 +152,7 @@ public:
     {
         hasher h;
         h.add_bytes((const byte*)name.c_str(), name.length() * sizeof(gchar));
-        h.add_bytes((const byte*)&height, sizeof(height));
-        h.add_bytes((const byte*)&width, sizeof(width));
+        h.add_bytes((const byte*)&size, sizeof(size));
         h.add_bytes((const byte*)&escape, sizeof(escape));
         h.add_bytes((const byte*)&orient, sizeof(orient));
         h.add_bytes((const byte*)&weight, sizeof(weight));

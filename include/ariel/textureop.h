@@ -62,6 +62,7 @@ public:
     static void get_texture_dimension(render_texture2d* p, int& w, int& h);
     static void get_assoc_device(render_texture2d* p, render_device** ppdev);
     static bool convert_to_image(image& img, render_texture2d* src);
+    static render_texture2d* convert_from_premultiplied(render_texture2d* src);
 
 protected:
     rendersys*          _rsys;

@@ -192,11 +192,6 @@ public:
         if(_ptr)
             _ptr->AddRef();
     }
-    com_ptr(IUnknown* p): _ptr(nullptr)
-    {
-        if(p != nullptr)
-            p->QueryInterface(__uuidof(_cls), (void**)&_ptr);
-    }
     void attach(_cls* p)
     {
         if(_ptr)
@@ -230,15 +225,6 @@ public:
         if(_ptr)
             _ptr->Release();
         return _ptr = p._ptr;
-    }
-    _cls* operator=(IUnknown* p)
-    {
-        _cls* tmp = nullptr;
-        if(p)
-            p->QueryInterface(__uuidof(_cls), (void**)&tmp);
-        if(_ptr)
-            _ptr->Release();
-        return _ptr = tmp;
     }
     _cls** operator&()
     {

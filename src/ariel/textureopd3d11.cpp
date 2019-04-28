@@ -32,8 +32,14 @@
 #include "ariel_set_gray_cs.h"
 #include "ariel_set_fade_cs.h"
 #include "ariel_set_inverse_cs.h"
+#include "ariel_conv_from_premul.h"
 
 __ariel_begin__
+
+static inline int disp_size(int s)
+{
+    return (int)ceil((float)s / 8.f);
+}
 
 render_texture2d* textureop::load(const string& path)
 {
@@ -132,7 +138,7 @@ void textureop::initialize_rect(unordered_access_view* dest, const color& cr, co
     dc->CSSetUnorderedAccessViews(0, 1, &dest, nullptr);
     _rsys->update_buffer(cb, sizeof(cb_configs), &cfg);
     dc->CSSetConstantBuffers(0, 1, &cb);
-    dc->Dispatch(w, h, 1);
+    dc->Dispatch(disp_size(w), disp_size(h), 1);
     dc->CSSetShader(nullptr, nullptr, 0);
     unordered_access_view* uav = nullptr;
     dc->CSSetUnorderedAccessViews(0, 1, &uav, nullptr);
@@ -179,7 +185,7 @@ void textureop::transpose_rect(unordered_access_view* dest, render_texture2d* sr
     dc->CSSetUnorderedAccessViews(0, 1, &dest, nullptr);
     _rsys->update_buffer(cb, sizeof(cb_configs), &cfg);
     dc->CSSetConstantBuffers(0, 1, &cb);
-    dc->Dispatch(w, h, 1);
+    dc->Dispatch(disp_size(w), disp_size(h), 1);
     dc->CSSetShader(nullptr, nullptr, 0);
     srv = nullptr;
     dc->CSSetShaderResources(0, 1, &srv);
@@ -225,7 +231,7 @@ void textureop::set_brightness(unordered_access_view* dest, render_texture2d* sr
     dc->CSSetUnorderedAccessViews(0, 1, &dest, nullptr);
     _rsys->update_buffer(cb, sizeof(cb_configs), &cfg);
     dc->CSSetConstantBuffers(0, 1, &cb);
-    dc->Dispatch(w, h, 1);
+    dc->Dispatch(disp_size(w), disp_size(h), 1);
     dc->CSSetShader(nullptr, nullptr, 0);
     srv = nullptr;
     dc->CSSetShaderResources(0, 1, &srv);
@@ -271,7 +277,7 @@ void textureop::set_fade(unordered_access_view* dest, render_texture2d* src, flo
     dc->CSSetUnorderedAccessViews(0, 1, &dest, nullptr);
     _rsys->update_buffer(cb, sizeof(cb_configs), &cfg);
     dc->CSSetConstantBuffers(0, 1, &cb);
-    dc->Dispatch(w, h, 1);
+    dc->Dispatch(disp_size(w), disp_size(h), 1);
     dc->CSSetShader(nullptr, nullptr, 0);
     srv = nullptr;
     dc->CSSetShaderResources(0, 1, &srv);
@@ -309,7 +315,7 @@ void textureop::set_gray(unordered_access_view* dest, render_texture2d* src)
     dc->CSSetShader(spcs.get(), nullptr, 0);
     dc->CSSetShaderResources(0, 1, &srv);
     dc->CSSetUnorderedAccessViews(0, 1, &dest, nullptr);
-    dc->Dispatch(w, h, 1);
+    dc->Dispatch(disp_size(w), disp_size(h), 1);
     dc->CSSetShader(nullptr, nullptr, 0);
     srv = nullptr;
     dc->CSSetShaderResources(0, 1, &srv);
@@ -345,7 +351,7 @@ void textureop::set_inverse(unordered_access_view* dest, render_texture2d* src)
     dc->CSSetShader(spcs.get(), nullptr, 0);
     dc->CSSetShaderResources(0, 1, &srv);
     dc->CSSetUnorderedAccessViews(0, 1, &dest, nullptr);
-    dc->Dispatch(w, h, 1);
+    dc->Dispatch(disp_size(w), disp_size(h), 1);
     dc->CSSetShader(nullptr, nullptr, 0);
     srv = nullptr;
     dc->CSSetShaderResources(0, 1, &srv);
@@ -467,6 +473,50 @@ bool textureop::convert_to_image(image& img, render_texture2d* tex)
         memcpy(bits + (i * bpl), src + (i * subres.RowPitch), bpl);
     spdc->Unmap(cpytex.get(), 0);
     return true;
+}
+
+render_texture2d* textureop::convert_from_premultiplied(render_texture2d* src)
+{
+    assert(src);
+    com_ptr<render_device> spdev;
+    src->GetDevice(&spdev);
+    assert(spdev);
+    static com_ptr<compute_shader> spcs;
+    if(!spcs)
+        spdev->CreateComputeShader(g_ariel_conv_from_premul, sizeof(g_ariel_conv_from_premul), nullptr, &spcs);
+    assert(spcs);
+    com_ptr<render_context> spdc;
+    spdev->GetImmediateContext(&spdc);
+    assert(spdc);
+    D3D11_TEXTURE2D_DESC desc;
+    src->GetDesc(&desc);
+    desc.Usage = D3D11_USAGE_DEFAULT;
+    desc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    desc.BindFlags = D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS;
+    desc.MiscFlags = 0;
+    com_ptr<ID3D11Texture2D> tex;
+    if(FAILED(spdev->CreateTexture2D(&desc, nullptr, &tex)))
+        return nullptr;
+    com_ptr<ID3D11ShaderResourceView> spsrv;
+    if(FAILED(spdev->CreateShaderResourceView(src, nullptr, &spsrv)))
+        return nullptr;
+    com_ptr<ID3D11UnorderedAccessView> spuav;
+    if(FAILED(spdev->CreateUnorderedAccessView(tex.get(), nullptr, &spuav)))
+        return nullptr;
+    int w = desc.Width;
+    int h = desc.Height;
+    auto* srv = spsrv.get();
+    auto* uav = spuav.get();
+    spdc->CSSetShader(spcs.get(), nullptr, 0);
+    spdc->CSSetShaderResources(0, 1, &srv);
+    spdc->CSSetUnorderedAccessViews(0, 1, &uav, nullptr);
+    spdc->Dispatch(disp_size(w), disp_size(h), 1);
+    spdc->CSSetShader(nullptr, nullptr, 0);
+    srv = nullptr;
+    spdc->CSSetShaderResources(0, 1, &srv);
+    uav = nullptr;
+    spdc->CSSetUnorderedAccessViews(0, 1, &uav, nullptr);
+    return tex.detach();
 }
 
 render_device* textureop::get_device() const

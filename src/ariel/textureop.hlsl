@@ -8,19 +8,19 @@ cbuffer texop_configs : register(b0)
 Texture2D<float4>       g_src : register(t0);
 RWTexture2D<float4>     g_dest : register(u0);
 
-[numthreads(1, 1, 1)]
+[numthreads(8, 8, 1)]
 void ariel_transpose_image_cs(uint3 dtid : SV_DispatchThreadID)
 {
     g_dest[dtid.yx + g_offset.xy] = g_src[dtid.xy];
 }
 
-[numthreads(1, 1, 1)]
+[numthreads(8, 8, 1)]
 void ariel_initialize_image_cs(uint3 dtid : SV_DispatchThreadID)
 {
     g_dest[dtid.xy + g_offset.xy] = g_color;
 }
 
-[numthreads(1, 1, 1)]
+[numthreads(8, 8, 1)]
 void ariel_set_brightness_cs(uint3 dtid : SV_DispatchThreadID)
 {
     float4 cr = g_src[dtid.xy];
@@ -28,7 +28,7 @@ void ariel_set_brightness_cs(uint3 dtid : SV_DispatchThreadID)
         lerp(float4(0.f, 0.f, 0.f, cr.w), cr, g_arg);
 }
 
-[numthreads(1, 1, 1)]
+[numthreads(8, 8, 1)]
 void ariel_set_gray_cs(uint3 dtid : SV_DispatchThreadID)
 {
     float4 cr = g_src[dtid.xy];
@@ -36,18 +36,27 @@ void ariel_set_gray_cs(uint3 dtid : SV_DispatchThreadID)
     g_dest[dtid.xy] = float4(aver, aver, aver, cr.w);
 }
 
-[numthreads(1, 1, 1)]
+[numthreads(8, 8, 1)]
 void ariel_set_fade_cs(uint3 dtid : SV_DispatchThreadID)
 {
     float4 cr = g_src[dtid.xy];
     g_dest[dtid.xy] = float4(cr.xyz, cr.w * g_arg);
 }
 
-[numthreads(1, 1, 1)]
+[numthreads(8, 8, 1)]
 void ariel_set_inverse_cs(uint3 dtid : SV_DispatchThreadID)
 {
     float4 cr = g_src[dtid.xy];
     float4 s = float4(1.f, 1.f, 1.f, 1.f) - cr;
     s.w = cr.w;
     g_dest[dtid.xy] = s;
+}
+
+[numthreads(8, 8, 1)]
+void ariel_conv_from_premul(uint3 dtid : SV_DispatchThreadID)
+{
+    float4 cr = g_src[dtid.xy];
+    float alpha = cr.w;
+    cr /= alpha;
+    g_dest[dtid.xy] = float4(cr.xyz, alpha);
 }

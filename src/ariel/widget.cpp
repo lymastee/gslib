@@ -409,7 +409,7 @@ edit::edit(wsys_manager* m): widget(m)
     _txtcolor = color(0, 0, 0);
     _selcolor = color(0, 125, 255);
     _crtcolor = color(0, 0, 0);
-    _font = font(_t("simsun"), 14);
+    _font = font(_t("simsun"), 10);
 }
 
 bool edit::create(widget* ptr, const gchar* name, const rect& rc, uint style)
@@ -764,7 +764,7 @@ void edit::draw_caret(painter* paint)
         s.assign(_textbuf.c_str(), _caretpos);
         int w, h;
         paint->get_text_dimension(s.c_str(), w, h, s.length());
-        paint->draw_line(pointf((float)w, 0.f), pointf((float)w, (float)_font.height), _crtcolor);
+        paint->draw_line(pointf((float)w, 0.f), pointf((float)w, (float)get_height()), _crtcolor);
     }
 }
 
@@ -951,6 +951,7 @@ int edit::trim_if_overrun(bool alarm)
         return 0;
     fontsys* fsys = scene::get_singleton_ptr()->get_fontsys();
     assert(fsys);
+    fsys->set_font(_font);
     int len = _textbuf.length();
     int c = len;
     for( ; c > 0; c --) {

@@ -307,7 +307,8 @@ project "ariel"
 		'fxc /T cs_5_0 /E "ariel_set_brightness_cs" /Fd /Zi /Fh "ariel_set_brightness_cs.h" "../../src/ariel/textureop.hlsl"',
 		'fxc /T cs_5_0 /E "ariel_set_gray_cs" /Fd /Zi /Fh "ariel_set_gray_cs.h" "../../src/ariel/textureop.hlsl"',
 		'fxc /T cs_5_0 /E "ariel_set_fade_cs" /Fd /Zi /Fh "ariel_set_fade_cs.h" "../../src/ariel/textureop.hlsl"',
-		'fxc /T cs_5_0 /E "ariel_set_inverse_cs" /Fd /Zi /Fh "ariel_set_inverse_cs.h" "../../src/ariel/textureop.hlsl"'
+		'fxc /T cs_5_0 /E "ariel_set_inverse_cs" /Fd /Zi /Fh "ariel_set_inverse_cs.h" "../../src/ariel/textureop.hlsl"',
+		'fxc /T cs_5_0 /E "ariel_conv_from_premul" /Fd /Zi /Fh "ariel_conv_from_premul.h" "../../src/ariel/textureop.hlsl"'
 	}
 	files {
 		"include/ariel/batch.h",
@@ -318,7 +319,7 @@ project "ariel"
 		"include/ariel/dirty.h",
 		"include/ariel/framesys.h",
 		"include/ariel/fsyswin32.h",
-		--"include/ariel/fsysdwrite.h",
+		"include/ariel/fsysdwrite.h",
 		"include/ariel/image.h",
 		"include/ariel/imageop.h",
 		"include/ariel/imageio.h",
@@ -349,7 +350,7 @@ project "ariel"
 		"src/ariel/framesys.cpp",
 		"src/ariel/framesyswin32.cpp",
 		"src/ariel/fsyswin32.cpp",
-		--"src/ariel/fsysdwrite.cpp",
+		"src/ariel/fsysdwrite.cpp",
 		"src/ariel/image.cpp",
 		"src/ariel/imageop.cpp",
 		"src/ariel/imageio.cpp",
@@ -443,7 +444,10 @@ project "widget"
 		"gslib.lib",
 		"ariel.lib",
 		"imm32.lib",
-		"snmpapi.lib"
+		"snmpapi.lib",
+		"d3d10_1.lib",
+		"d2d1.lib",
+		"dwrite.lib"
 	}
 	files {
 		"framework/entrywin32.h",
@@ -545,7 +549,10 @@ project "cdt"
 		"libjpeg.lib",
 		"libpng.lib",
 		"gslib.lib",
-		"ariel.lib"
+		"ariel.lib",
+		"d3d10_1.lib",
+		"dwrite.lib",
+		"d2d1.lib"
 	}
 	files {
 		"test/cdt/main.cpp"
@@ -652,7 +659,10 @@ project "texpack"
 		"dxgi.lib",
 		"imm32.lib",
 		"d3d11.lib",
-		"snmpapi.lib"
+		"snmpapi.lib",
+		"d3d10_1.lib",
+		"dwrite.lib",
+		"d2d1.lib"
 	}
 	files {
 		"test/texpack/main.cpp",
@@ -729,3 +739,48 @@ project "uieditor"
 		"proj/uieditor/io.h"
 	}
 	
+project "msomorph"
+	language "C++"
+	kind "WindowedApp"
+	entrypoint ""
+	dependson {
+		"zlib",
+		"libpng",
+		"libjpeg",
+		"gslib",
+		"ariel"
+	}
+	includedirs {
+		todir,
+		"include",
+		"src",
+		"ext",
+		"framework"
+	}
+	libdirs {
+		"$(OutDir)"
+	}
+	links {
+		"dxgi.lib",
+		"d3d11.lib",
+		"zlib.lib",
+		"libjpeg.lib",
+		"libpng.lib",
+		"gslib.lib",
+		"ariel.lib",
+		"imm32.lib",
+		"snmpapi.lib",
+		"d3d10_1.lib",
+		"dwrite.lib",
+		"d2d1.lib"
+	}
+	prebuildcommands {
+		'fxc /T vs_4_0 /E "vs_main" /Fd /Zi /Fh "vs_main.h" "../../proj/msomorph/shader.hlsl"',
+		'fxc /T ps_4_0 /E "ps_main" /Fd /Zi /Fh "ps_main.h" "../../proj/msomorph/shader.hlsl"'
+	}
+	files {
+		"framework/entrywin32.h",
+		"framework/entrywin32.cpp",
+		"proj/msomorph/main.cpp",
+		"proj/msomorph/shader.hlsl"
+	}

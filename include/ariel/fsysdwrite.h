@@ -26,22 +26,42 @@
 #ifndef fsysdwrite_c5ab9cfc_e66a_40b6_8ea1_29b3bde4f5e3_h
 #define fsysdwrite_c5ab9cfc_e66a_40b6_8ea1_29b3bde4f5e3_h
 
+#include <d3d11.h>
+#include <d3d10_1.h>
+#include <dxgi.h>
+#include <d2d1.h>
+#include <dwrite.h>
 #include <gslib/std.h>
 #include <ariel/sysop.h>
+#include <ariel/rendersysd3d11.h>
 
 __ariel_begin__
 
-class fsys_dwrite_private;
+typedef unordered_map<font, IDWriteTextFormat*> dwrite_font_map;
 
 class fsys_dwrite:
     public fontsys
 {
 public:
-    fsys_dwrite(render_device* dev);
+    fsys_dwrite();
     virtual ~fsys_dwrite();
+    virtual void initialize() override;
+    virtual void set_font(const font& f) override;
+    virtual bool get_size(const gchar* str, int& w, int& h, int len = -1) override;
+    virtual bool create_text_image(image& img, const gchar* str, int x, int y, const color& cr, int len = -1) override;
+    virtual bool create_text_texture(texture2d** tex, const gchar* str, int margin, const color& cr, int len = -1) override;
+    virtual void draw(image& img, const gchar* str, int x, int y, const color& cr, int len = -1) override;
 
-private:
-    fsys_dwrite_private*    _host;
+protected:
+    dwrite_font_map                     _font_map;
+    IDWriteTextFormat*                  _current_font;
+    com_ptr<ID3D11Device>               _dev11;
+    com_ptr<ID3D10Device1>              _dev101;
+    com_ptr<IDWriteFactory>             _dwfactory;
+    com_ptr<ID2D1Factory>               _d2dfactory;
+
+protected:
+    void destroy_font_map();
 };
 
 __ariel_end__

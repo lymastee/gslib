@@ -154,8 +154,7 @@ void style_sheet::setup_pen_by_color(painter_pen& pen, const color& cr)
 void style_sheet::setup_font(font& ft, const string& name, int size)
 {
     ft.name = name;
-    ft.height = size;
-    ft.width = 0;
+    ft.size = size;
 }
 
 __ariel_end__

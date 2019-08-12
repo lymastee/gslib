@@ -40,7 +40,7 @@ const uuid uuid_widget(_t("a18b997a-aa05-4d8b-b5b1-f6e98b9ff426"));
 widget::widget(wsys_manager* m)
 {
     _manager = m;
-    _last = _next = _child = _parent = nullptr;
+    _prev = _next = _child = _last_child = _parent = nullptr;
     _style = 0;
     _show = false;
     _enable = true;
@@ -60,14 +60,16 @@ void* widget::query_interface(const uuid& uid)
 bool widget::create(widget* ptr, const gchar* name, const rect& rc, uint style)
 {
     if(_parent = ptr) {
-        if(!ptr->_child)
+        if(!ptr->_child) {
             ptr->_child = this;
+            assert(!ptr->_last_child);
+            ptr->_last_child = this;
+        }
         else {
-            widget* c = ptr->_child;
-            while(c->_next)
-                c = c->_next;
+            widget* c = ptr->_last_child;
             c->_next = this;
-            _last = c;
+            _prev = c;
+            ptr->_last_child = this;
         }
     }
     assert(name);
@@ -89,10 +91,12 @@ void widget::close()
     assert(!_child);
     if(_parent && _parent->_child == this)
         _parent->_child = _next;
-    if(_last)
-        _last->_next = _next;
+    if(_parent && _parent->_last_child == this)
+        _parent->_last_child = _prev;
+    if(_prev)
+        _prev->_next = _next;
     if(_next)
-        _next->_last = _last;
+        _next->_prev = _prev;
 }
 
 void widget::show(bool b)
@@ -400,7 +404,7 @@ void button::set_image(texture2d* img, bool fs)
     _enable ? set_normal() : set_gray();
 }
 
-edit::edit(wsys_manager* m): widget(m)
+edit_line::edit_line(wsys_manager* m): widget(m)
 {
     _caret_on = false;
     _caretpos = 0;
@@ -412,14 +416,14 @@ edit::edit(wsys_manager* m): widget(m)
     _font = font(_t("simsun"), 10);
 }
 
-bool edit::create(widget* ptr, const gchar* name, const rect& rc, uint style)
+bool edit_line::create(widget* ptr, const gchar* name, const rect& rc, uint style)
 {
     /* should not be movable */
     style &= ~sm_movable;
     return superref::create(ptr, name, rc, style);
 }
 
-void edit::draw(painter* paint)
+void edit_line::draw(painter* paint)
 {
     draw_background(paint);
     draw_normal_text(paint);
@@ -427,7 +431,7 @@ void edit::draw(painter* paint)
     draw_caret(paint);
 }
 
-void edit::on_press(uint um, unikey uk, const point& pt)
+void edit_line::on_press(uint um, unikey uk, const point& pt)
 {
     if(uk == mk_left) {
         int pos = hit_char(pt);
@@ -437,7 +441,7 @@ void edit::on_press(uint um, unikey uk, const point& pt)
     superref::on_press(um, uk, pt);
 }
 
-void edit::on_click(uint um, unikey uk, const point& pt)
+void edit_line::on_click(uint um, unikey uk, const point& pt)
 {
     if(uk == mk_left) {
         int pos = hit_char(pt);
@@ -447,7 +451,7 @@ void edit::on_click(uint um, unikey uk, const point& pt)
     superref::on_click(um, uk, pt);
 }
 
-void edit::on_hover(uint um, const point& pt)
+void edit_line::on_hover(uint um, const point& pt)
 {
     if(um & um_lmouse) {
         int pos = hit_char(pt);
@@ -457,7 +461,7 @@ void edit::on_hover(uint um, const point& pt)
     superref::on_hover(um, pt);
 }
 
-void edit::on_char(uint um, uint ch)
+void edit_line::on_char(uint um, uint ch)
 {
     /* ASCII codes */
     if((ch >= 0x20 && ch < 0x7f) || ch == 0x09 || ch == 0x0a) {
@@ -488,7 +492,7 @@ void edit::on_char(uint um, uint ch)
 #endif
 }
 
-void edit::on_keydown(uint um, unikey uk)
+void edit_line::on_keydown(uint um, unikey uk)
 {
     if(uk == uk_bs) {
         if((um & um_control) || (um & um_scontrol)) {
@@ -622,13 +626,13 @@ void edit::on_keydown(uint um, unikey uk)
     }
 }
 
-void edit::on_caret()
+void edit_line::on_caret()
 {
     _caret_on = !_caret_on;
     refresh(false);
 }
 
-void edit::on_focus(bool b)
+void edit_line::on_focus(bool b)
 {
     if(!b) {
         _caret_on = false;
@@ -636,7 +640,7 @@ void edit::on_focus(bool b)
     }
 }
 
-void edit::set_text(const gchar* str)
+void edit_line::set_text(const gchar* str)
 {
     if(!str) {
         _textbuf.clear();
@@ -651,7 +655,7 @@ void edit::set_text(const gchar* str)
     set_select(-1, 0);
 }
 
-void edit::set_caret(int n)
+void edit_line::set_caret(int n)
 {
     _caretpos = n < 0 || n > _textbuf.length() ? 
         _textbuf.length() : n;
@@ -666,7 +670,7 @@ void edit::set_caret(int n)
     refresh(false);
 }
 
-void edit::set_select(int start, int end)
+void edit_line::set_select(int start, int end)
 {
     if(end == -1)
         end = _textbuf.length();
@@ -679,7 +683,7 @@ void edit::set_select(int start, int end)
     set_caret(end);
 }
 
-void edit::replace_select(const gchar* str)
+void edit_line::replace_select(const gchar* str)
 {
     del_select();
     if(str) {
@@ -689,14 +693,14 @@ void edit::replace_select(const gchar* str)
     }
 }
 
-void edit::draw_background(painter* paint)
+void edit_line::draw_background(painter* paint)
 {
     assert(paint);
     if(_bkground)
         paint->draw_image(_bkground, 0, 0);
 }
 
-void edit::draw_normal_text(painter* paint)
+void edit_line::draw_normal_text(painter* paint)
 {
     assert(paint);
     if(_sel_start < 0 || _sel_start == _sel_end) {
@@ -728,7 +732,7 @@ void edit::draw_normal_text(painter* paint)
     }
 }
 
-void edit::draw_select_text(painter* paint)
+void edit_line::draw_select_text(painter* paint)
 {
     assert(paint);
     if(_sel_start < 0 || _sel_start == _sel_end)    /* no selection */
@@ -756,7 +760,7 @@ void edit::draw_select_text(painter* paint)
     paint->draw_text(_textbuf.c_str() + start, bias, 0, color(255, 255, 255), end - start);
 }
 
-void edit::draw_caret(painter* paint)
+void edit_line::draw_caret(painter* paint)
 {
     assert(paint);
     if(_caret_on) {
@@ -768,7 +772,7 @@ void edit::draw_caret(painter* paint)
     }
 }
 
-void edit::del_select()
+void edit_line::del_select()
 {
     if(_sel_start < 0)
         return;
@@ -789,7 +793,7 @@ void edit::del_select()
     _sel_start = -1;
 }
 
-int edit::hit_char(point pt)
+int edit_line::hit_char(point pt)
 {
     if(pt.x <= 0 || !_textbuf.length())
         return 0;
@@ -850,7 +854,7 @@ int edit::hit_char(point pt)
     return fixc;
 }
 
-int edit::prev_char(int pos)
+int edit_line::prev_char(int pos)
 {
     if(pos < 0 || pos > _textbuf.length())
         pos = _textbuf.length();
@@ -865,7 +869,7 @@ int edit::prev_char(int pos)
     return pos;
 }
 
-int edit::next_char(int pos)
+int edit_line::next_char(int pos)
 {
     if(pos < 0 || pos > _textbuf.length())
         pos = _textbuf.length();
@@ -913,7 +917,7 @@ static int get_logic_field(uint c)
     return -1;
 }
 
-int edit::prev_logic_char(int pos)
+int edit_line::prev_logic_char(int pos)
 {
     if(!pos || !(pos = prev_char(pos)))
         return 0;
@@ -930,7 +934,7 @@ int edit::prev_logic_char(int pos)
     return pos;
 }
 
-int edit::next_logic_char(int pos)
+int edit_line::next_logic_char(int pos)
 {
     if(pos < 0 || pos >= _textbuf.length())
         return _textbuf.length();
@@ -945,7 +949,7 @@ int edit::next_logic_char(int pos)
     return pos;
 }
 
-int edit::trim_if_overrun(bool alarm)
+int edit_line::trim_if_overrun(bool alarm)
 {
     if(_textbuf.empty())
         return 0;
@@ -1374,9 +1378,7 @@ void wsys_manager::update(widget* w)
     _painter->set_tranform(m);
     w->draw(_painter);
     if(widget* c = w->_child) {
-        while(c->_next)
-            c = c->_next;
-        for( ; c; c = c->_last)
+        for( ; c; c = c->_next)
             update(c);
     }
     _painter->restore();
@@ -1391,7 +1393,7 @@ widget* wsys_manager::hit_test(widget* ptr, point pt)
         return nullptr;
     point p = pt;
     p.offset(-rc.left, -rc.top);
-    for(widget* c = ptr->_child; c; c = c->_next) {
+    for(widget* c = ptr->_last_child; c; c = c->_prev) {
         if(widget* r = hit_test(c, p))
             return r;
     }
@@ -1413,10 +1415,14 @@ widget* wsys_manager::hit_proc(const point& pt, point& pt1)
 widget* wsys_manager::set_capture(widget* ptr, bool b)
 {
     widget* r = _capture;
-    if(b == true)
+    if(b == true) {
         _capture = ptr;
-    else if(_capture == ptr)
+        ptr->on_capture(true);
+    }
+    else if(_capture == ptr) {
         _capture = nullptr;
+        ptr->on_capture(false);
+    }
     return r;
 }
 
@@ -1433,6 +1439,12 @@ void wsys_manager::on_caret(uint)
 {
     if(_focus && _focus->is_enable() && _focus->is_visible())
         _focus->on_caret();
+}
+
+void wsys_manager::set_cursor(cursor_type curty)
+{
+    if(_driver)
+        _driver->set_cursor(curty);
 }
 
 void wsys_manager::on_show(bool b)
@@ -1609,7 +1621,7 @@ bool wsys_manager::remove_widget_internal(widget* ptr)
     }
     /* notification */
     ptr->close();
-    verify(notify_collector::get_singleton_ptr()->set_delete_later(ptr));
+    dvt_collector::get_singleton_ptr()->set_delete_later(ptr);
     if(_root == ptr)
         _root = nullptr;
     if(_capture == ptr)

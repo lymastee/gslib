@@ -32,7 +32,7 @@
 #include "ariel_set_gray_cs.h"
 #include "ariel_set_fade_cs.h"
 #include "ariel_set_inverse_cs.h"
-#include "ariel_conv_from_premul.h"
+#include "ariel_conv_from_premul_cs.h"
 
 __ariel_begin__
 
@@ -130,6 +130,8 @@ void textureop::initialize_rect(unordered_access_view* dest, const color& cr, co
     cb_configs cfg;
     cfg.x = (int)floor(rc.left);
     cfg.y = (int)floor(rc.top);
+    cfg.width = w;
+    cfg.height = h;
     cfg.cr = vec4((float)cr.red / 255.f, (float)cr.green / 255.f, (float)cr.blue / 255.f, (float)cr.alpha / 255.f);
     /* do initialize */
     auto* dc = get_immediate_context();
@@ -177,6 +179,8 @@ void textureop::transpose_rect(unordered_access_view* dest, render_texture2d* sr
     cb_configs cfg;
     cfg.x = (int)floor(rc.left);
     cfg.y = (int)floor(rc.top);
+    cfg.width = w;
+    cfg.height = h;
     /* do transpose */
     auto* dc = get_immediate_context();
     assert(dc);
@@ -223,6 +227,8 @@ void textureop::set_brightness(unordered_access_view* dest, render_texture2d* sr
     get_texture_dimension(src, w, h);
     cb_configs cfg;
     cfg.arg = s;
+    cfg.width = w;
+    cfg.height = h;
     /* proc */
     auto* dc = get_immediate_context();
     assert(dc);
@@ -269,6 +275,8 @@ void textureop::set_fade(unordered_access_view* dest, render_texture2d* src, flo
     get_texture_dimension(src, w, h);
     cb_configs cfg;
     cfg.arg = s;
+    cfg.width = w;
+    cfg.height = h;
     /* proc */
     auto* dc = get_immediate_context();
     assert(dc);
@@ -478,12 +486,14 @@ bool textureop::convert_to_image(image& img, render_texture2d* tex)
 render_texture2d* textureop::convert_from_premultiplied(render_texture2d* src)
 {
     assert(src);
+    if(!check_valid_device(src))
+        return nullptr;
     com_ptr<render_device> spdev;
     src->GetDevice(&spdev);
     assert(spdev);
     static com_ptr<compute_shader> spcs;
     if(!spcs)
-        spdev->CreateComputeShader(g_ariel_conv_from_premul, sizeof(g_ariel_conv_from_premul), nullptr, &spcs);
+        spdev->CreateComputeShader(g_ariel_conv_from_premul_cs, sizeof(g_ariel_conv_from_premul_cs), nullptr, &spcs);
     assert(spcs);
     com_ptr<render_context> spdc;
     spdev->GetImmediateContext(&spdc);

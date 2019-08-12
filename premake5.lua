@@ -15,11 +15,12 @@ solution "gslib"
 	filter "configurations:Debug"
 		defines { "DEBUG" }
 		symbols "On"
+		optimize "Debug"
 
 	-- release configs
 	filter "configurations:Release"
 		defines { "NDEBUG" }
-		flags { "Optimize" }
+		optimize "Full"
 		
 	-- windows specific
 	filter "system:Windows"
@@ -27,10 +28,10 @@ solution "gslib"
 		
 	filter "action:vs2017"
 		sysincludedirs {
-			"C:/Program Files (x86)/Windows Kits/10/Include/10.0.15063.0/ucrt"
+			"C:/Program Files (x86)/Windows Kits/10/Include/10.0.17763.0/ucrt"
 		}
 		syslibdirs {
-			"C:/Program Files (x86)/Windows Kits/10/Lib/10.0.15063.0/ucrt/x86"
+			"C:/Program Files (x86)/Windows Kits/10/Lib/10.0.17763.0/ucrt/x86"
 		}
 
 project "zlib"
@@ -232,6 +233,7 @@ project "gslib"
 		"include/gslib/error.h",
 		"include/gslib/file.h",
 		"include/gslib/json.h",
+		"include/gslib/library.h",
 		"include/gslib/linequ.h",
 		"include/gslib/math.h",
 		"include/gslib/math.inl",
@@ -256,6 +258,7 @@ project "gslib"
 		"src/gslib/dvt.cpp",
 		"src/gslib/error.cpp",
 		"src/gslib/json.cpp",
+		"src/gslib/library.cpp",
 		"src/gslib/math.cpp",
 		"src/gslib/md5.cpp",
 		"src/gslib/mtrand.cpp",
@@ -308,7 +311,7 @@ project "ariel"
 		'fxc /T cs_5_0 /E "ariel_set_gray_cs" /Fd /Zi /Fh "ariel_set_gray_cs.h" "../../src/ariel/textureop.hlsl"',
 		'fxc /T cs_5_0 /E "ariel_set_fade_cs" /Fd /Zi /Fh "ariel_set_fade_cs.h" "../../src/ariel/textureop.hlsl"',
 		'fxc /T cs_5_0 /E "ariel_set_inverse_cs" /Fd /Zi /Fh "ariel_set_inverse_cs.h" "../../src/ariel/textureop.hlsl"',
-		'fxc /T cs_5_0 /E "ariel_conv_from_premul" /Fd /Zi /Fh "ariel_conv_from_premul.h" "../../src/ariel/textureop.hlsl"'
+		'fxc /T cs_5_0 /E "ariel_conv_from_premul_cs" /Fd /Zi /Fh "ariel_conv_from_premul_cs.h" "../../src/ariel/textureop.hlsl"'
 	}
 	files {
 		"include/ariel/batch.h",
@@ -369,11 +372,11 @@ project "ariel"
 		"src/ariel/temporal.cpp",
 		"src/ariel/texbatch.cpp",
 		"src/ariel/textureop.cpp",
-		"src/ariel/textureop.hlsl",
+		--"src/ariel/textureop.hlsl",
 		"src/ariel/utility.cpp",
 		"src/ariel/widget.cpp",
-		"src/ariel/rose.hlsl",
-		"src/ariel/smaa.hlsl"
+		--"src/ariel/rose.hlsl",
+		--"src/ariel/smaa.hlsl"
 	}
 	
 project "test111"
@@ -725,7 +728,11 @@ project "uieditor"
 		"libpng.lib",
 		"gslib.lib",
 		"ariel.lib",
-		"imm32.lib"
+		"imm32.lib",
+		"snmpapi.lib",
+		"d3d10_1.lib",
+		"d2d1.lib",
+		"dwrite.lib"
 	}
 	files {
 		"framework/entrywin32.h",
@@ -781,6 +788,6 @@ project "msomorph"
 	files {
 		"framework/entrywin32.h",
 		"framework/entrywin32.cpp",
-		"proj/msomorph/main.cpp",
-		"proj/msomorph/shader.hlsl"
+		"proj/msomorph/main.cpp"
+		--"proj/msomorph/shader.hlsl"
 	}

@@ -133,6 +133,21 @@ enum unikey
     vk_f12,
 };
 
+enum cursor_type
+{
+    cur_arrow,
+    cur_beam,
+    cur_cross,
+    cur_up_arrow,
+    cur_size_nwse,
+    cur_size_nesw,
+    cur_size_we,
+    cur_size_ns,
+    cur_size_all,
+    cur_hand,
+    cur_help,
+};
+
 class system_driver;
 typedef render_texture2d texture2d;
 
@@ -232,6 +247,7 @@ public:
     virtual void update() = 0;
     virtual void emit(int msgid, void* msg, int size) = 0;
     virtual void set_ime(point pt, const font& ft) = 0;
+    virtual void set_cursor(cursor_type curty) = 0;
     //virtual void set_clipboard(const gchar* fmt, const void* ptr, int size) = 0;
     //virtual int get_clipboard(const gchar* fmt, const void*& ptr) = 0;
     //virtual int get_clipboard(clipboard_list& cl, int c) = 0;

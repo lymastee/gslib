@@ -66,7 +66,7 @@ bool style_sheet::to_color(color& cr, const string& str)
     }
     if(str.compare_cl(_t("rgb"), 3) == 0) {     /* rgb(r,g,b) */
         int r, g, b;
-        if(strtool::sscanf(&str.at(3), _t("(%d,%d,%d)"), &r, sizeof(r), &g, sizeof(g), &b, sizeof(b)) == 3) {
+        if(strtool::sscanf(&str.at(3), _t("(%d,%d,%d)"), &r, &g, &b) == 3) {
             cr.red = r;
             cr.green = g;
             cr.blue = b;

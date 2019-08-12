@@ -204,14 +204,20 @@ protected:
 #else
     bool _stl_grow(int newsize, bool trim = false) { return _Grow(newsize, trim); }
 #endif
-#if (_MSC_VER >= 1914)
+#if (_MSC_VER >= 1920)
+    element* _stl_rawstr() { return const_cast<element*>(c_str()); }
+    const element* _stl_rawstr() const { return c_str(); }
+#elif (_MSC_VER >= 1914)
     element* _stl_rawstr() { return _Get_data()._Myptr(); }
     const element* _stl_rawstr() const { return _Get_data()._Myptr(); }
 #else
     element* _stl_rawstr() { return _Myptr(); }
     const element* _stl_rawstr() const { return _Myptr(); }
 #endif
-#if (_MSC_VER >= 1914)
+#if (_MSC_VER >= 1920)
+    int _stl_cap() const { return (int)capacity(); }
+    void _stl_fix() { resize(_strtool::length(c_str())); }
+#elif (_MSC_VER >= 1914)
     int& _stl_cap() { return (int&)_Get_data()._Myres; }
     int& _stl_size() { return (int&)_Get_data()._Mysize; }
     void _stl_fix() { _stl_size() = _strtool::length(c_str()); }
@@ -224,7 +230,11 @@ protected:
     int& _stl_size() { return (int&)_Mysize; }
     void _stl_fix() { _Mysize = (size_t)_strtool::length(c_str()); }
 #endif
+#if (_MSC_VER >= 1920)
+    void _stl_eos(int pos) { resize(pos); }
+#else
     void _stl_eos(int pos) { _Eos(pos); }
+#endif
 #endif      /* endif _MSC_VER */
 
 private:
@@ -328,44 +338,65 @@ public:
         _stl_size() = _strtool::vprintf(_stl_rawstr(), _stl_cap(), fmt, ptr);
     }
     */
-    void to_lower()
+    _string& to_lower()
     {
         if(empty())
-            return;
+            return *this;
         _strtool::to_lower(_stl_rawstr(), _stl_cap());
+        return *this;
     }
-    void to_upper()
+    _string& to_upper()
     {
         if(empty())
-            return;
+            return *this;
         _strtool::to_upper(_stl_rawstr(), _stl_cap());
+        return *this;
     }
     int to_int() const { return _strtool::to_int(_stl_rawstr()); }
     int to_int(int radix) const { return _strtool::to_int(_stl_rawstr(), radix); }
     int64 to_int64() const { return _strtool::to_int64(_stl_rawstr()); }
     int64 to_int64(int radix) const { return _strtool::to_int64(_stl_rawstr(), radix); }
     real to_real() const { return _strtool::to_real(_stl_rawstr()); }
-    void from(const char* str) { convert_from<element>(str); }
-    void from(const wchar* str) { convert_from<element>(str); }
-    void from(const char* str, int len) { convert_from<element>(str, len); }
-    void from(const wchar* str, int len) { convert_from<element>(str, len); }
-    void from_int(int i, int radix = 10)
+    _string& from(const char* str)
+    {
+        convert_from<element>(str);
+        return *this;
+    }
+    _string& from(const wchar* str)
+    {
+        convert_from<element>(str);
+        return *this;
+    }
+    _string& from(const char* str, int len)
+    {
+        convert_from<element>(str, len);
+        return *this;
+    }
+    _string& from(const wchar* str, int len)
+    {
+        convert_from<element>(str, len);
+        return *this;
+    }
+    _string& from_int(int i, int radix = 10)
     {
         _stl_grow(12);
         _strtool::from_int(i, _stl_rawstr(), _stl_cap(), radix);
         _stl_fix();
+        return *this;
     }
-    void from_int64(int64 i, int radix = 10)
+    _string& from_int64(int64 i, int radix = 10)
     {
         _stl_grow(24);
         _strtool::from_int64(i, _stl_rawstr(), _stl_cap(), radix);
         _stl_fix();
+        return *this;
     }
-    void from_real(real d, int precis = 22)
+    _string& from_real(real d, int precis = 22)
     {
         _stl_grow(precis + 2);
         _strtool::from_real(_stl_rawstr(), _stl_cap(), d, precis);
         _stl_fix();
+        return *this;
     }
     int compare(const element* str) const { return _strtool::compare(_stl_rawstr(), str); }
     int compare(const element* str, int len) const { return _strtool::compare(_stl_rawstr(), str, len); }

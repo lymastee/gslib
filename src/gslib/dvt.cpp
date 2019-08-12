@@ -86,6 +86,13 @@ static const byte __notify_code_n[] =
     0xff, 0xe0,                             /* jmp eax */
 };
 
+static const byte __reflect_code_n[] =
+{
+    0x8d, 0x0d, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea ecx, 0xcccccccc:host */
+    0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:action */
+    0xff, 0xe0,                             /* jmp eax */
+};
+
 #if defined(WIN32) || defined(_WINDOWS)
 #define alloc_writable_exec_codebytes(len)          VirtualAlloc(nullptr, len, MEM_COMMIT, PAGE_EXECUTE_READWRITE)
 #define lock_exec_codebytes(ptr, len, oldprotag)    VirtualProtect(ptr, len, PAGE_EXECUTE_READ, &oldprotag)
@@ -93,47 +100,60 @@ static const byte __notify_code_n[] =
 #define dealloc_exec_codebytes(ptr, len)            VirtualFree(ptr, len, MEM_DECOMMIT)
 #endif
 
-notify_code::notify_code(int argsize)
+dvt_detour_code::dvt_detour_code(detour_type dty, int argsize)
 {
+    _type = dty;
     _argsize = argsize;
-    if(argsize <= 0) {
-        _len = sizeof(__notify_code_0);
+    switch(dty)
+    {
+    case detour_notify:
+        if(argsize <= 0) {
+            _len = sizeof(__notify_code_0);
+            _ptr = (byte*)alloc_writable_exec_codebytes(_len);
+            assert(_ptr);
+            memcpy(_ptr, __notify_code_0, _len);
+        }
+        else if(argsize <= 4) {
+            _len = sizeof(__notify_code_1);
+            _ptr = (byte*)alloc_writable_exec_codebytes(_len);
+            assert(_ptr);
+            memcpy(_ptr, __notify_code_1, _len);
+        }
+        else if(argsize <= 8) {
+            _len = sizeof(__notify_code_2);
+            _ptr = (byte*)alloc_writable_exec_codebytes(_len);
+            assert(_ptr);
+            memcpy(_ptr, __notify_code_2, _len);
+        }
+        else if(argsize <= 12) {
+            _len = sizeof(__notify_code_3);
+            _ptr = (byte*)alloc_writable_exec_codebytes(_len);
+            assert(_ptr);
+            memcpy(_ptr, __notify_code_3, _len);
+        }
+        else {
+            _len = sizeof(__notify_code_n);
+            _ptr = (byte*)alloc_writable_exec_codebytes(_len);
+            assert(_ptr);
+            memcpy(_ptr, __notify_code_n, _len);
+            /* for x86 case */
+            int size_in_dwords = (argsize <= 0) ? 0 : (int)(((uint)(argsize - 1)) >> 2) + 1;
+            int size_in_bytes = (int)((uint)size_in_dwords << 2);
+            *(uint*)(_ptr + 6) = size_in_bytes;
+            *(uint*)(_ptr + 15) = size_in_dwords;
+        }
+        break;
+    case detour_reflect:
+    default:
+        _len = sizeof(__reflect_code_n);
         _ptr = (byte*)alloc_writable_exec_codebytes(_len);
         assert(_ptr);
-        memcpy(_ptr, __notify_code_0, _len);
-    }
-    else if(argsize <= 4) {
-        _len = sizeof(__notify_code_1);
-        _ptr = (byte*)alloc_writable_exec_codebytes(_len);
-        assert(_ptr);
-        memcpy(_ptr, __notify_code_1, _len);
-    }
-    else if(argsize <= 8) {
-        _len = sizeof(__notify_code_2);
-        _ptr = (byte*)alloc_writable_exec_codebytes(_len);
-        assert(_ptr);
-        memcpy(_ptr, __notify_code_2, _len);
-    }
-    else if(argsize <= 12) {
-        _len = sizeof(__notify_code_3);
-        _ptr = (byte*)alloc_writable_exec_codebytes(_len);
-        assert(_ptr);
-        memcpy(_ptr, __notify_code_3, _len);
-    }
-    else {
-        _len = sizeof(__notify_code_n);
-        _ptr = (byte*)alloc_writable_exec_codebytes(_len);
-        assert(_ptr);
-        memcpy(_ptr, __notify_code_n, _len);
-        /* for x86 case */
-        int size_in_dwords = (argsize <= 0) ? 0 : (int)(((uint)(argsize - 1)) >> 2) + 1;
-        int size_in_bytes = (int)((uint)size_in_dwords << 2);
-        *(uint*)(_ptr + 6) = size_in_bytes;
-        *(uint*)(_ptr + 15) = size_in_dwords;
+        memcpy(_ptr, __reflect_code_n, _len);
+        break;
     }
 }
 
-notify_code::~notify_code()
+dvt_detour_code::~dvt_detour_code()
 {
     if(_ptr) {
         unlock_exec_codebytes(_ptr, _len, _oldpro);
@@ -143,66 +163,97 @@ notify_code::~notify_code()
     }
 }
 
-void notify_code::finalize(uint old_func, uint host, uint action)
+void dvt_detour_code::finalize(uint old_func, uint host, uint action)
 {
-    if(_argsize <= 0) {
-        *(uint*)(_ptr + 2) = old_func;
-        *(uint*)(_ptr + 10) = host;
-        *(uint*)(_ptr + 16) = action;
-    }
-    else if(_argsize <= 4) {
-        *(uint*)(_ptr + 6) = old_func;
-        *(uint*)(_ptr + 14) = host;
-        *(uint*)(_ptr + 20) = action;
-    }
-    else if(_argsize <= 8) {
-        *(uint*)(_ptr + 10) = old_func;
-        *(uint*)(_ptr + 18) = host;
-        *(uint*)(_ptr + 24) = action;
-    }
-    else if(_argsize <= 12) {
-        *(uint*)(_ptr + 14) = old_func;
-        *(uint*)(_ptr + 22) = host;
-        *(uint*)(_ptr + 28) = action;
-    }
-    else {
-        *(uint*)(_ptr + 25) = old_func;
-        *(uint*)(_ptr + 33) = host;
-        *(uint*)(_ptr + 39) = action;
+    switch(_type)
+    {
+    case detour_notify:
+        if(_argsize <= 0) {
+            *(uint*)(_ptr + 2) = old_func;
+            *(uint*)(_ptr + 10) = host;
+            *(uint*)(_ptr + 16) = action;
+        }
+        else if(_argsize <= 4) {
+            *(uint*)(_ptr + 6) = old_func;
+            *(uint*)(_ptr + 14) = host;
+            *(uint*)(_ptr + 20) = action;
+        }
+        else if(_argsize <= 8) {
+            *(uint*)(_ptr + 10) = old_func;
+            *(uint*)(_ptr + 18) = host;
+            *(uint*)(_ptr + 24) = action;
+        }
+        else if(_argsize <= 12) {
+            *(uint*)(_ptr + 14) = old_func;
+            *(uint*)(_ptr + 22) = host;
+            *(uint*)(_ptr + 28) = action;
+        }
+        else {
+            *(uint*)(_ptr + 25) = old_func;
+            *(uint*)(_ptr + 33) = host;
+            *(uint*)(_ptr + 39) = action;
+        }
+        break;
+    case detour_reflect:
+    default:
+        *(uint*)(_ptr + 2) = host;
+        *(uint*)(_ptr + 8) = action;
+        break;
     }
     lock_exec_codebytes(_ptr, _len, _oldpro);
 }
 
-notify_holder::notify_holder()
+dvt_holder::dvt_holder()
 {
     _backvt = nullptr;
     _backvtsize = 0;
+    _switchvt = nullptr;
     _delete_later = false;
 }
 
-notify_holder::~notify_holder()
+dvt_holder::~dvt_holder()
 {
     if(_backvt) {
+        switch_to_dvt();    /* ensure we have dvt here */
         dvt_recover_vtable(this, _backvt, _backvtsize);
         _backvt = nullptr;
         _backvtsize = 0;
     }
-    for(auto* notify : _notifiers) {
-        assert(notify);
-        delete notify;
+    for(auto* detour : _detours) {
+        assert(detour);
+        delete detour;
     }
-    _notifiers.clear();
+    _detours.clear();
 }
 
-notify_code* notify_holder::add_notifier(int argsize)
+dvt_detour_code* dvt_holder::add_detour(dvt_detour_code::detour_type dty, int argsize)
 {
-    auto* notify = new notify_code(argsize);
+    auto* notify = new dvt_detour_code(dty, argsize);
     assert(notify);
-    _notifiers.push_back(notify);
+    _detours.push_back(notify);
     return notify;
 }
 
-bool notify_collector::set_delete_later(notify_holder* holder)
+dvt_holder* dvt_holder::switch_to_ovt()
+{
+    if(_switchvt || !_backvt)
+        return this;
+    byte* pvt = *(byte**)this;
+    _switchvt = pvt;
+    memcpy(this, &_backvt, 4);
+    return this;
+}
+
+dvt_holder* dvt_holder::switch_to_dvt()
+{
+    if(!_switchvt)
+        return this;
+    memcpy(this, &_switchvt, 4);
+    _switchvt = nullptr;
+    return this;
+}
+
+bool dvt_collector::set_delete_later(dvt_holder* holder)
 {
     assert(holder);
     if(!holder->is_delete_later()) {
@@ -213,7 +264,7 @@ bool notify_collector::set_delete_later(notify_holder* holder)
     return false;
 }
 
-void notify_collector::cleanup()
+void dvt_collector::cleanup()
 {
     for(auto* p : _holders) {
         assert(p);

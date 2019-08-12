@@ -42,18 +42,12 @@ struct xml_key:
 };
 
 struct xml_kvp_hash
-#if defined(_MSC_VER) && (_MSC_VER < 1914)
-    : public std::unary_function<xml_kvpair, size_t>
-#endif
 {
     size_t operator()(const xml_kvpair& kvp) const
     { return string_hash(kvp.key); }
 };
 
 struct xml_kvp_equalto
-#if defined(_MSC_VER) && (_MSC_VER < 1914)
-    : public std::binary_function<xml_kvpair, xml_kvpair, bool>
-#endif
 {
     bool operator()(const xml_kvpair& p1, const xml_kvpair& p2) const
     { return p1.key == p2.key; }
@@ -86,6 +80,7 @@ public:
     virtual string* get_attribute(const string& k) = 0;
     virtual const string* get_attribute(const string& k) const = 0;
     virtual void set_attribute(const gchar* k, int len1, const gchar* v, int len2) = 0;
+    virtual void set_attribute(const string& k, const string& v) = 0;
     virtual int get_attribute_count() const = 0;
     virtual const string& get_name() const = 0;
     virtual void set_name(const gchar* str, int len) = 0;
@@ -124,10 +119,17 @@ public:
         attr.value.assign(v, len2);
         add_attribute(attr);
     }
-    void set_attribute(const gchar* k, const gchar* v)
+    void set_attribute(const string& k, const string& v) override
     {
-        assert(k && v);
-        set_attribute(k, strtool::length(k), v, strtool::length(v));
+        string* vstr = get_attribute(k);
+        if(vstr) {
+            vstr->assign(v);
+            return;
+        }
+        xml_attr attr;
+        attr.key = k;
+        attr.value = v;
+        add_attribute(attr);
     }
     int get_attribute_count() const override { return (int)attrlist.size(); }
     const string& get_name() const override { return key; }
@@ -148,6 +150,7 @@ public:
     string* get_attribute(const string& k) override { return nullptr; }
     const string* get_attribute(const string& k) const override { return nullptr; }
     void set_attribute(const gchar* k, int len1, const gchar* v, int len2) override { assert(!"error!"); }
+    void set_attribute(const string& k, const string& v) override { assert(!"error!"); }
     int get_attribute_count() const override { return 0; }
     const string& get_name() const override { return value; }
     void set_name(const gchar* str, int len) override { value.assign(str, len); }
@@ -262,14 +265,15 @@ public:
         encode_utf8,
         encode_utf16,
     };
-    encodesys   _encodesys;
-    encode      _encode;
+    encodesys       _encodesys;
+    encode          _encode;
 
 protected:
     static const gchar* skip(const gchar* str);
     static const gchar* skip(const gchar* str, const gchar* skp);
     static void replace(string& str, const gchar* s1, const gchar* s2);
     static void filter_entity_reference(string& s);
+    static void recover_entity_reference(string& s);
     static void write_attribute(string& str, const gchar* prefix, const xml_attr& attr, const gchar* postfix);
     static void close_write_item(string& str, const gchar* prefix, const xml_node* node, const gchar* postfix);
     static void begin_write_item(string& str, const gchar* prefix, const xml_node* node, const gchar* postfix);

@@ -48,6 +48,7 @@ typedef dword uint;
 typedef word uint16;
 typedef dword uint32;
 typedef qword uint64;
+typedef void* addrptr;
 
 #ifdef _UNICODE
 typedef wchar gchar;

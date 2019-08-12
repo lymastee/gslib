@@ -33,6 +33,7 @@ __ariel_begin__
 
 namespace classic_style {
 
+const uuid uuid_style_sheet(_t("a6facff7-20f7-486f-9fc0-78b7f68f06fb"));
 const uuid uuid_menu_item(_t("5dca28c1-47c4-4ea8-8fac-440f2b57c2bc"));
 
 static const style_sheet_pair __widget_style_sheet_pairs[] =
@@ -43,7 +44,7 @@ static const style_sheet_pair __widget_style_sheet_pairs[] =
     std::make_pair(sst_float, _t("stroke_opacity")),
 };
 
-static const style_sheet_pair __background_style_sheet_pairs[] =
+static const style_sheet_pair __root_widget_style_sheet_pairs[] =
 {
     std::make_pair(sst_color, _t("background_color")),
     std::make_pair(sst_string, _t("background_image")),
@@ -69,7 +70,7 @@ static const style_sheet_pair __button_style_sheet_pairs[] =
     std::make_pair(sst_string, _t("caption_font_color")),
 };
 
-static const style_sheet_pair __edit_style_sheet_pairs[] =
+static const style_sheet_pair __edit_line_style_sheet_pairs[] =
 {
     std::make_pair(sst_color, _t("normal_fill_color")),
     std::make_pair(sst_color, _t("normal_stroke_color")),
@@ -185,27 +186,27 @@ const string& widget_style_sheet::get_content_name(int index) const
     return __widget_style_sheet_pairs[index].second;
 }
 
-background_style_sheet::background_style_sheet()
+root_widget_style_sheet::root_widget_style_sheet()
 {
     _bkground_color = color(245, 246, 247);
 }
 
-bool background_style_sheet::get_value(const string& name, string& value)
+bool root_widget_style_sheet::get_value(const string& name, string& value)
 {
-    if(name == __background_style_sheet_pairs[0].second)
+    if(name == __root_widget_style_sheet_pairs[0].second)
         return from_color(value, _bkground_color);
-    else if(name == __background_style_sheet_pairs[1].second) {
+    else if(name == __root_widget_style_sheet_pairs[1].second) {
         value = _bkground_image;
         return true;
     }
     return false;
 }
 
-void background_style_sheet::set_value(const string& name, const string& value)
+void root_widget_style_sheet::set_value(const string& name, const string& value)
 {
-    if(name == __background_style_sheet_pairs[0].second)
+    if(name == __root_widget_style_sheet_pairs[0].second)
         verify(to_color(_bkground_color, value));
-    else if(name == __background_style_sheet_pairs[1].second)
+    else if(name == __root_widget_style_sheet_pairs[1].second)
         _bkground_image = value;
     else {
         assert(!"unexpected style sheet name.");
@@ -213,28 +214,28 @@ void background_style_sheet::set_value(const string& name, const string& value)
     }
 }
 
-int background_style_sheet::get_content_size() const
+int root_widget_style_sheet::get_content_size() const
 {
-    return _countof(__background_style_sheet_pairs);
+    return _countof(__root_widget_style_sheet_pairs);
 }
 
-style_sheet_type background_style_sheet::get_content_type(int index) const
+style_sheet_type root_widget_style_sheet::get_content_type(int index) const
 {
     if(index < 0 || index >= get_content_size()) {
         assert(!"bad index for style sheet.");
         return sst_unknown;
     }
-    return __background_style_sheet_pairs[index].first;
+    return __root_widget_style_sheet_pairs[index].first;
 }
 
-const string& background_style_sheet::get_content_name(int index) const
+const string& root_widget_style_sheet::get_content_name(int index) const
 {
     static const string err(_t("unknown name."));
     if(index < 0 || index >= get_content_size()) {
         assert(!"bad index for style sheet.");
         return err;
     }
-    return __background_style_sheet_pairs[index].second;
+    return __root_widget_style_sheet_pairs[index].second;
 }
 
 button_style_sheet::button_style_sheet()
@@ -246,7 +247,7 @@ button_style_sheet::button_style_sheet()
     _press_fill_color = color(201, 224, 247);
     _press_stroke_color = color(98, 162, 228);
     _caption_font_name.assign(_t("Tahoma"));
-    _caption_font_size = 14;
+    _caption_font_size = 10;
     _caption_font_color = color(0, 0, 0);
 }
 
@@ -400,55 +401,55 @@ const string& button_style_sheet::get_content_name(int index) const
     return __button_style_sheet_pairs[index].second;
 }
 
-edit_style_sheet::edit_style_sheet()
+edit_line_style_sheet::edit_line_style_sheet()
 {
     _normal_fill_color = color(255, 255, 255);
     _normal_stroke_color = color(23, 23, 23);
     _focused_fill_color = color(255, 255, 255);
     _focused_stroke_color = color(0, 120, 215);
     _text_font_name.assign(_t("simsun"));
-    _text_font_size = 14;
+    _text_font_size = 10;
     _text_font_color = color(0, 0, 0);
 }
 
-bool edit_style_sheet::get_value(const string& name, string& value)
+bool edit_line_style_sheet::get_value(const string& name, string& value)
 {
-    if(name == __edit_style_sheet_pairs[0].second)
+    if(name == __edit_line_style_sheet_pairs[0].second)
         return from_color(value, _normal_fill_color);
-    else if(name == __edit_style_sheet_pairs[1].second)
+    else if(name == __edit_line_style_sheet_pairs[1].second)
         return from_color(value, _normal_stroke_color);
-    else if(name == __edit_style_sheet_pairs[2].second)
+    else if(name == __edit_line_style_sheet_pairs[2].second)
         return from_float(value, (float)_normal_fill_color.alpha / 255.f);
-    else if(name == __edit_style_sheet_pairs[3].second)
+    else if(name == __edit_line_style_sheet_pairs[3].second)
         return from_float(value, (float)_normal_stroke_color.alpha / 255.f);
-    else if(name == __edit_style_sheet_pairs[4].second)
+    else if(name == __edit_line_style_sheet_pairs[4].second)
         return from_color(value, _focused_fill_color);
-    else if(name == __edit_style_sheet_pairs[5].second)
+    else if(name == __edit_line_style_sheet_pairs[5].second)
         return from_color(value, _focused_stroke_color);
-    else if(name == __edit_style_sheet_pairs[6].second)
+    else if(name == __edit_line_style_sheet_pairs[6].second)
         return from_float(value, (float)_focused_fill_color.alpha / 255.f);
-    else if(name == __edit_style_sheet_pairs[7].second)
+    else if(name == __edit_line_style_sheet_pairs[7].second)
         return from_float(value, (float)_focused_stroke_color.alpha / 255.f);
-    else if(name == __edit_style_sheet_pairs[8].second) {
+    else if(name == __edit_line_style_sheet_pairs[8].second) {
         value = _text_font_name;
         return true;
     }
-    else if(name == __edit_style_sheet_pairs[9].second)
+    else if(name == __edit_line_style_sheet_pairs[9].second)
         return from_integer(value, _text_font_size);
-    else if(name == __edit_style_sheet_pairs[10].second)
+    else if(name == __edit_line_style_sheet_pairs[10].second)
         return from_color(value, _text_font_color);
-    else if(name == __edit_style_sheet_pairs[11].second)
+    else if(name == __edit_line_style_sheet_pairs[11].second)
         return from_float(value, (float)_text_font_color.alpha / 255.f);
     return false;
 }
 
-void edit_style_sheet::set_value(const string& name, const string& value)
+void edit_line_style_sheet::set_value(const string& name, const string& value)
 {
-    if(name == __edit_style_sheet_pairs[0].second)
+    if(name == __edit_line_style_sheet_pairs[0].second)
         verify(to_color(_normal_fill_color, value));
-    else if(name == __edit_style_sheet_pairs[1].second)
+    else if(name == __edit_line_style_sheet_pairs[1].second)
         verify(to_color(_normal_stroke_color, value));
-    else if(name == __edit_style_sheet_pairs[2].second) {
+    else if(name == __edit_line_style_sheet_pairs[2].second) {
         float f;
         verify(to_float(f, value));
         if(f < 0.f || f > 1.f) {
@@ -457,7 +458,7 @@ void edit_style_sheet::set_value(const string& name, const string& value)
         }
         _normal_fill_color.alpha = round(f * 255.f);
     }
-    else if(name == __edit_style_sheet_pairs[3].second) {
+    else if(name == __edit_line_style_sheet_pairs[3].second) {
         float f;
         verify(to_float(f, value));
         if(f < 0.f || f > 1.f) {
@@ -466,11 +467,11 @@ void edit_style_sheet::set_value(const string& name, const string& value)
         }
         _normal_stroke_color.alpha = round(f * 255.f);
     }
-    else if(name == __edit_style_sheet_pairs[4].second)
+    else if(name == __edit_line_style_sheet_pairs[4].second)
         verify(to_color(_focused_fill_color, value));
-    else if(name == __edit_style_sheet_pairs[5].second)
+    else if(name == __edit_line_style_sheet_pairs[5].second)
         verify(to_color(_focused_stroke_color, value));
-    else if(name == __edit_style_sheet_pairs[6].second) {
+    else if(name == __edit_line_style_sheet_pairs[6].second) {
         float f;
         verify(to_float(f, value));
         if(f < 0.f || f > 1.f) {
@@ -479,7 +480,7 @@ void edit_style_sheet::set_value(const string& name, const string& value)
         }
         _focused_fill_color.alpha = round(f * 255.f);
     }
-    else if(name == __edit_style_sheet_pairs[7].second) {
+    else if(name == __edit_line_style_sheet_pairs[7].second) {
         float f;
         verify(to_float(f, value));
         if(f < 0.f || f > 1.f) {
@@ -488,13 +489,13 @@ void edit_style_sheet::set_value(const string& name, const string& value)
         }
         _focused_stroke_color.alpha = round(f * 255.f);
     }
-    else if(name == __edit_style_sheet_pairs[8].second)
+    else if(name == __edit_line_style_sheet_pairs[8].second)
         _text_font_name = value;
-    else if(name == __edit_style_sheet_pairs[9].second)
+    else if(name == __edit_line_style_sheet_pairs[9].second)
         verify(to_integer(_text_font_size, value));
-    else if(name == __edit_style_sheet_pairs[10].second)
+    else if(name == __edit_line_style_sheet_pairs[10].second)
         verify(to_color(_text_font_color, value));
-    else if(name == __edit_style_sheet_pairs[11].second) {
+    else if(name == __edit_line_style_sheet_pairs[11].second) {
         float f;
         verify(to_float(f, value));
         if(f < 0.f || f > 1.f) {
@@ -509,28 +510,28 @@ void edit_style_sheet::set_value(const string& name, const string& value)
     }
 }
 
-int edit_style_sheet::get_content_size() const
+int edit_line_style_sheet::get_content_size() const
 {
-    return _countof(__edit_style_sheet_pairs);
+    return _countof(__edit_line_style_sheet_pairs);
 }
 
-style_sheet_type edit_style_sheet::get_content_type(int index) const
+style_sheet_type edit_line_style_sheet::get_content_type(int index) const
 {
     if(index < 0 || index >= get_content_size()) {
         assert(!"bad index for style sheet.");
         return sst_unknown;
     }
-    return __edit_style_sheet_pairs[index].first;
+    return __edit_line_style_sheet_pairs[index].first;
 }
 
-const string& edit_style_sheet::get_content_name(int index) const
+const string& edit_line_style_sheet::get_content_name(int index) const
 {
     static const string err(_t("unknown name."));
     if(index < 0 || index >= get_content_size()) {
         assert(!"bad index for style sheet.");
         return err;
     }
-    return __edit_style_sheet_pairs[index].second;
+    return __edit_line_style_sheet_pairs[index].second;
 }
 
 menu_style_sheet::menu_style_sheet()
@@ -543,7 +544,7 @@ menu_style_sheet::menu_style_sheet()
     _caption_reserved_space = 40;
     _accel_reserved_space = 20;
     _caption_font_name.assign(_t("Tahoma"));
-    _caption_font_size = 14;
+    _caption_font_size = 10;
     _normal_fill_color = color(255, 255, 255);
     _hover_fill_color = _press_fill_color;
     _hover_stroke_color = _press_stroke_color;
@@ -773,6 +774,13 @@ const string& menubar_button_style_sheet::get_content_name(int index) const
     return __menubar_button_style_sheet_pairs[0].second;
 }
 
+void* widget::query_interface(const uuid& uid)
+{
+    if(uid == uuid_style_sheet)
+        return static_cast<style_sheet*>(this);
+    return __super::query_interface(uid);
+}
+
 void widget::draw(painter* paint)
 {
     assert(paint);
@@ -787,14 +795,21 @@ void widget::flush_style()
     setup_pen_by_color(_normal_pen, _stroke_color);
 }
 
-void background::draw(painter* paint)
+void* root_widget::query_interface(const uuid& uid)
+{
+    if(uid == uuid_style_sheet)
+        return static_cast<style_sheet*>(this);
+    return __super::query_interface(uid);
+}
+
+void root_widget::draw(painter* paint)
 {
     assert(paint);
     if(_bktex.get())
         paint->draw_image(_bktex.get(), 0.f, 0.f);
 }
 
-void background::flush_style()
+void root_widget::flush_style()
 {
     auto* rsys = scene::get_singleton_ptr()->get_rendersys();
     assert(rsys);
@@ -804,6 +819,13 @@ void background::flush_style()
         assert(tex);
         _bktex.attach(tex);
     }
+}
+
+void* button::query_interface(const uuid& uid)
+{
+    if(uid == uuid_style_sheet)
+        return static_cast<style_sheet*>(this);
+    return __super::query_interface(uid);
 }
 
 void button::draw(painter* paint)
@@ -878,7 +900,14 @@ void button::set_gray()
     }
 }
 
-void edit::draw(painter* paint)
+void* edit_line::query_interface(const uuid& uid)
+{
+    if(uid == uuid_style_sheet)
+        return static_cast<style_sheet*>(this);
+    return __super::query_interface(uid);
+}
+
+void edit_line::draw(painter* paint)
 {
     assert(paint);
     set_font(_text_font);
@@ -886,7 +915,7 @@ void edit::draw(painter* paint)
     __super::draw(paint);
 }
 
-void edit::flush_style()
+void edit_line::flush_style()
 {
     setup_brush_by_color(_normal_brush, _normal_fill_color);
     setup_pen_by_color(_normal_pen, _normal_stroke_color);
@@ -895,7 +924,7 @@ void edit::flush_style()
     setup_font(_text_font, _text_font_name, _text_font_size);
 }
 
-void edit::draw_background(painter* paint)
+void edit_line::draw_background(painter* paint)
 {
     assert(paint);
     paint->save();
@@ -934,7 +963,11 @@ void menu_separator::draw(painter* paint)
 
 void* menu_sub_item::query_interface(const uuid& uid)
 {
-    return (uid == uuid_menu_item) ? static_cast<menu_item*>(this) : __super::query_interface(uid);
+    if(uid == uuid_menu_item)
+        return static_cast<menu_item*>(this);
+    else if(uid == uuid_style_sheet)
+        return static_cast<style_sheet*>(this);
+    return __super::query_interface(uid);
 }
 
 void menu_sub_item::draw(painter* paint)
@@ -1044,7 +1077,11 @@ void menu_sub_item::get_caption_dimensions(int& w, int& h) const
 
 void* menu_cmd_item::query_interface(const uuid& uid)
 {
-    return (uid == uuid_menu_item) ? static_cast<menu_item*>(this) : __super::query_interface(uid);
+    if(uid == uuid_menu_item)
+        return static_cast<menu_item*>(this);
+    else if(uid == uuid_style_sheet)
+        return static_cast<style_sheet*>(this);
+    return __super::query_interface(uid);
 }
 
 void menu_cmd_item::draw(painter* paint)
@@ -1271,6 +1308,13 @@ _ctor* menu_group::add_item(uint sm)
     assert(p);
     p->set_menu(_menu);
     return p;
+}
+
+void* menu::query_interface(const uuid& uid)
+{
+    if(uid == uuid_style_sheet)
+        return static_cast<style_sheet*>(this);
+    return __super::query_interface(uid);
 }
 
 void menu::close()
@@ -1509,6 +1553,13 @@ void menu::on_select_menu_item(menu_item* item)
     }
 }
 
+void* menubar_button::query_interface(const uuid& uid)
+{
+    if(uid == uuid_style_sheet)
+        return static_cast<style_sheet*>(this);
+    return __super::query_interface(uid);
+}
+
 void menubar_button::draw(painter* paint)
 {
     paint->save();
@@ -1586,6 +1637,13 @@ void menubar::refresh_menubar_size()
     };
     traverse_child_widget(travch);
     resize(width, height);
+}
+
+void* menubar::query_interface(const uuid& uid)
+{
+    if(uid == uuid_style_sheet)
+        return static_cast<style_sheet*>(this);
+    return __super::query_interface(uid);
 }
 
 void menubar::flush_style()

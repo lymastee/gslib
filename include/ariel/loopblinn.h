@@ -54,9 +54,9 @@ enum lb_joint_type
 };
 
 /*
- * The reason why the original point and the ncoord(normalized coordinate) point should be
- * separated was that we need the original point for the convenience of the error handling
- * works, and we need the ncoord point to do the loopblinn calculations so that the float
+ * The reason why the original point and the NDC(normalized device coordinate) point should
+ * be separated was that we need the original point for the convenience of the error handling
+ * works, and we need the NDC point to do the loopblinn calculations so that the float
  * point won't overflow.
  */
 class __gs_novtable lb_joint abstract
@@ -65,7 +65,7 @@ protected:
     lb_line*            _prev;
     lb_line*            _next;
     vec2                _point;
-    vec2                _ncoord;
+    vec2                _ndcpoint;
     void*               _binding;
 
 public:
@@ -77,11 +77,11 @@ public:
     virtual ~lb_joint() {}
     virtual lb_joint_type get_type() const = 0;
     virtual const vec2& get_point() const { return _point; }
-    virtual const vec2& get_ncoord_point() const { return _ncoord; }
+    virtual const vec2& get_ndc_point() const { return _ndcpoint; }
 
 public:
     void set_point(const vec2& p) { _point = p; }
-    void set_ncoord_point(const vec2& p) { _ncoord = p; }
+    void set_ndc_point(const vec2& p) { _ndcpoint = p; }
     void set_prev_line(lb_line* p) { _prev = p; }
     void set_next_line(lb_line* p) { _next = p; }
     lb_line* get_prev_line() const { return _prev; }
@@ -261,7 +261,7 @@ public:
     void ensure_create_shrink() { if(!is_shrink_available()) create_shrink(); }
     bool is_inside(const vec2& p) const { return _shrink.is_inside(p); }
     lb_rtree& get_rtree() { return _mytree; }
-    void convert_to_ncoord(const mat3& m);
+    void convert_to_ndc(const mat3& m);
     void create_dt_joints();
     void pack_constraints();
     void build_cdt();

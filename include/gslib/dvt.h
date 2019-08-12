@@ -92,10 +92,10 @@ public:
     {
         return get_virtual_method_index(method_address(myref::end_of_vtable));
     }
-    void* create_per_instance_vtable(_cls* p)
+    void* create_per_instance_vtable(_cls* p, int cascade_vt_layers = 1)
     {
         assert(p);
-        int size = size_of_vtable() * 4;
+        int size = size_of_vtable() * 4 * cascade_vt_layers;
         byte* ovt = *(byte**)p;
         void* pvt = VirtualAlloc(nullptr, size, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
         assert(pvt);
@@ -124,61 +124,98 @@ public:
     }
 };
 
-class notify_code
+class dvt_detour_code
 {
     typedef unsigned long ulong;
 
 public:
-    notify_code(int argsize);
-    ~notify_code();
+    enum detour_type
+    {
+        detour_notify,
+        detour_reflect,
+    };
+
+public:
+    dvt_detour_code(detour_type dty, int argsize);
+    ~dvt_detour_code();
     void finalize(uint old_func, uint host, uint action);
     uint get_code_address() const { return (uint)_ptr; }
 
 private:
+    detour_type     _type;
     int             _argsize;
     byte*           _ptr;
     int             _len;
     ulong           _oldpro;
 };
 
-#define connect_typed_notify(targettype, target, trigger, host, action, argsize) { \
+/*
+ * This installation step does not always have to be done before the connection steps.
+ * Only if your class has complex derivations and you just happen to need call __super::func, etc.
+ */
+#define install_typed_dvt(targettype, target, cascade_vt_layers) { \
+    auto& vo = vtable_ops<targettype>(nullptr); \
+    (target)->ensure_dvt_available<targettype>(cascade_vt_layers); \
+}
+
+#define install_dvt(target, cascade_vt_layers) \
+    install_typed_dvt(std::remove_reference_t<decltype(*target)>, target, cascade_vt_layers)
+
+/*
+ * The two kind of DVT callings:
+ * 1.notify:    the original function would be called first, and then the notify function will be called after, you MUST specify the size of the argument table.
+ * 2.reflect:   the original function would NOT be called, simply jump to the reflect function, and the argument table of the reflect function SHOULD be exactly the same with the original function.
+ */
+#define connect_typed_detour(targettype, target, trigger, host, action, dty, argsize) { \
     auto& vo = vtable_ops<targettype>(nullptr); \
     (target)->ensure_dvt_available<targettype>(); \
-    auto* notify = (target)->add_notifier(argsize); \
-    assert(notify); \
-    uint old_func = vo.replace_vtable_method(target, vo.get_virtual_method_index(method_address(trigger)), notify->get_code_address()); \
-    notify->finalize(old_func, (uint)host, method_address(action)); \
+    auto* detour = (target)->add_detour(dty, argsize); \
+    assert(detour); \
+    uint old_func = vo.replace_vtable_method(target, vo.get_virtual_method_index(method_address(trigger)), detour->get_code_address()); \
+    detour->finalize(old_func, (uint)host, method_address(action)); \
 }
+
+#define connect_typed_notify(targettype, target, trigger, host, action, argsize) \
+    connect_typed_detour(targettype, target, trigger, host, action, dvt_detour_code::detour_notify, argsize)
 
 #define connect_notify(target, trigger, host, action, argsize) \
     connect_typed_notify(std::remove_reference_t<decltype(*target)>, target, trigger, host, action, argsize)
 
-class notify_holder
+#define connect_typed_reflect(targettype, target, trigger, host, action) \
+    connect_typed_detour(targettype, target, trigger, host, action, dvt_detour_code::detour_reflect, 0)
+
+#define connect_reflect(target, trigger, host, action) \
+    connect_typed_reflect(std::remove_reference_t<decltype(*target)>, target, trigger, host, action)
+
+class dvt_holder
 {
 public:
-    typedef vector<notify_code*> notify_list;
+    typedef vector<dvt_detour_code*> detour_list;
 
 public:
-    notify_holder();
-    virtual ~notify_holder();
+    dvt_holder();
+    virtual ~dvt_holder();
 
 private:
     void*           _backvt;
     int             _backvtsize;
-    notify_list     _notifiers;
+    void*           _switchvt;
+    detour_list     _detours;
     bool            _delete_later;
 
 public:
     template<class _cls>
-    void ensure_dvt_available()
+    void ensure_dvt_available(int cascade_vt_layers = 1)
     {
         if(_backvt)
             return;
         auto& vo = vtable_ops<_cls>(nullptr);
         _backvtsize = vo.size_of_vtable();
-        _backvt = vo.create_per_instance_vtable(static_cast<_cls*>(this));
+        _backvt = vo.create_per_instance_vtable(static_cast<_cls*>(this), cascade_vt_layers);
     }
-    notify_code* add_notifier(int argsize);
+    dvt_detour_code* add_detour(dvt_detour_code::detour_type dty, int argsize);
+    dvt_holder* switch_to_ovt();        /* switch to original vtable */
+    dvt_holder* switch_to_dvt();
     /*
      * In case the holder would be tagged more than once by the garbage collector, the cause might be
      * a message re-entrant of the msg callback function. So here we tag it.
@@ -187,23 +224,23 @@ public:
     bool is_delete_later() const { return _delete_later; }
 };
 
-class notify_collector
+class dvt_collector
 {
 public:
-    typedef vector<notify_holder*> holder_list;
+    typedef vector<dvt_holder*> holder_list;
 
 private:
     holder_list     _holders;
-    notify_collector() {}
+    dvt_collector() {}
 
 public:
-    static notify_collector* get_singleton_ptr()
+    static dvt_collector* get_singleton_ptr()
     {
-        static notify_collector inst;
+        static dvt_collector inst;
         return &inst;
     }
-    ~notify_collector() { cleanup(); }
-    bool set_delete_later(notify_holder* holder);
+    ~dvt_collector() { cleanup(); }
+    bool set_delete_later(dvt_holder* holder);
     void cleanup();
 };
 

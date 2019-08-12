@@ -56,11 +56,11 @@ protected:
     color               _stroke_color;
 };
 
-class background_style_sheet:
+class root_widget_style_sheet:
     public ariel::style_sheet
 {
 public:
-    background_style_sheet();
+    root_widget_style_sheet();
     virtual bool get_value(const string& name, string& value) override;
     virtual void set_value(const string& name, const string& value) override;
     virtual int get_content_size() const override;
@@ -96,11 +96,11 @@ protected:
     color               _caption_font_color;
 };
 
-class edit_style_sheet:
+class edit_line_style_sheet:
     public ariel::style_sheet
 {
 public:
-    edit_style_sheet();
+    edit_line_style_sheet();
     virtual bool get_value(const string& name, string& value) override;
     virtual void set_value(const string& name, const string& value) override;
     virtual int get_content_size() const override;
@@ -202,6 +202,7 @@ class widget:
 {
 public:
     widget(wsys_manager* m): ariel::widget(m) {}
+    virtual void* query_interface(const uuid& uid) override;
     virtual void draw(painter* paint) override;
     virtual void flush_style() override;
 
@@ -210,12 +211,13 @@ protected:
     painter_pen         _normal_pen;
 };
 
-class background:
+class root_widget:
     public ariel::widget,
-    public background_style_sheet
+    public root_widget_style_sheet
 {
 public:
-    background(wsys_manager* m): ariel::widget(m) {}
+    root_widget(wsys_manager* m): ariel::widget(m) {}
+    virtual void* query_interface(const uuid& uid) override;
     virtual void draw(painter* paint) override;
     virtual void flush_style() override;
 
@@ -229,6 +231,7 @@ class button:
 {
 public:
     button(wsys_manager* m): ariel::button(m) {}
+    virtual void* query_interface(const uuid& uid) override;
     virtual void draw(painter* paint) override;
     virtual void flush_style() override;
 
@@ -250,12 +253,13 @@ protected:
     virtual void set_gray() override;
 };
 
-class edit:
-    public ariel::edit,
-    public edit_style_sheet
+class edit_line:
+    public ariel::edit_line,
+    public edit_line_style_sheet
 {
 public:
-    edit(wsys_manager* m): ariel::edit(m) {}
+    edit_line(wsys_manager* m): ariel::edit_line(m) {}
+    virtual void* query_interface(const uuid& uid) override;
     virtual void draw(painter* paint) override;
     virtual void flush_style() override;
 
@@ -430,6 +434,7 @@ public:
 
 public:
     menu(wsys_manager* m): ariel::widget(m), _last_hover(nullptr) {}
+    virtual void* query_interface(const uuid& uid) override;
     virtual void close() override;
     virtual void show(bool b) override;
     virtual bool create(widget* ptr, const gchar* name, const rect& rc, uint style) override;
@@ -476,6 +481,7 @@ class menubar_button:
 {
 public:
     menubar_button(wsys_manager* m): ariel::widget(m), _menubar(nullptr), _menu(nullptr), _brush_ptr(nullptr), _pen_ptr(nullptr) {}
+    virtual void* query_interface(const uuid& uid) override;
     virtual void draw(painter* paint) override;
     virtual void on_press(uint um, unikey uk, const point& pt) override;
     virtual void on_click(uint um, unikey uk, const point& pt) override;
@@ -506,6 +512,7 @@ public:
 
 public:
     menubar(wsys_manager* m): ariel::widget(m) {}
+    virtual void* query_interface(const uuid& uid) override;
     virtual void flush_style() override;
     virtual void refresh_menubar_size();
     virtual menubar_button* register_menubar_button();
@@ -521,6 +528,7 @@ protected:
     font                _menubar_font;
 };
 
+extern const uuid uuid_style_sheet;
 extern const uuid uuid_menu_item;
 
 /*

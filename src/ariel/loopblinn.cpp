@@ -744,7 +744,7 @@ static void lb_create_spans(lb_span_list& spans, lb_line* start)
         line = lb_create_span(spans, line);
 }
 
-static void lb_convert_ncoord(lb_line* start, const mat3& m)
+static void lb_convert_ndc(lb_line* start, const mat3& m)
 {
     assert(start);
     auto* first = start->get_prev_joint();
@@ -753,7 +753,7 @@ static void lb_convert_ncoord(lb_line* start, const mat3& m)
     auto cvt = [&m](lb_joint* j) {
         assert(j);
         auto& p = j->get_point();
-        j->set_ncoord_point(vec2().transformcoord(p, m));
+        j->set_ndc_point(vec2().transformcoord(p, m));
     };
     cvt(first);
     for(; joint != first; joint = joint->get_next_joint())
@@ -1137,12 +1137,12 @@ lb_shrink_line* lb_shrink::query(const vec2& p, lb_shrink_line* last) const
     return last;
 }
 
-void lb_polygon::convert_to_ncoord(const mat3& m)
+void lb_polygon::convert_to_ndc(const mat3& m)
 {
     assert(_boundary);
-    lb_convert_ncoord(_boundary, m);
+    lb_convert_ndc(_boundary, m);
     for(auto* p : _holes)
-        lb_convert_ncoord(p, m);
+        lb_convert_ndc(p, m);
 }
 
 void lb_polygon::create_dt_joints()
@@ -2001,7 +2001,7 @@ void loop_blinn_processor::calc_klm_coords()
         );
     for(auto* p : _polygons) {
         assert(p);
-        p->convert_to_ncoord(m);
+        p->convert_to_ndc(m);
         calc_klm_coords(p);
     }
 }
@@ -2065,7 +2065,7 @@ lb_line* loop_blinn_processor::calc_klm_span(lb_polygon* poly, lb_line* line)
         assert(j3->get_type() == lbt_control_joint);
         assert(j4->get_type() == lbt_end_joint);
         vec3 m[4];
-        float sp = get_cubic_klmcoords(m, j1->get_ncoord_point(), j2->get_ncoord_point(), j3->get_ncoord_point(), j4->get_ncoord_point(),
+        float sp = get_cubic_klmcoords(m, j1->get_ndc_point(), j2->get_ndc_point(), j3->get_ndc_point(), j4->get_ndc_point(),
             j1->get_point(), j2->get_point(), j3->get_point(), j4->get_point()
             );
         if(sp < 0.f) {
@@ -2088,12 +2088,12 @@ lb_line* loop_blinn_processor::calc_klm_span(lb_polygon* poly, lb_line* line)
                 );
             if(c == 1) {
                 auto& p = spj[0]->get_point();
-                spj[0]->set_ncoord_point(vec2().transformcoord(p, m));
+                spj[0]->set_ndc_point(vec2().transformcoord(p, m));
                 return spj[0]->get_next_line();     /* the line was casted. */
             }
             for(int i = 0; i < c; i ++) {
                 auto& p = spj[i]->get_point();
-                spj[i]->set_ncoord_point(vec2().transformcoord(p, m));
+                spj[i]->set_ndc_point(vec2().transformcoord(p, m));
             }
             assert(line == line1);
             return line;

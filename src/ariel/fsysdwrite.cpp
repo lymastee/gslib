@@ -200,7 +200,9 @@ bool fsys_dwrite::create_text_texture(texture2d** tex, const gchar* str, int mar
     kmutex101->ReleaseSync(1);
     kmutex11->AcquireSync(1, INFINITE);
     if(tex) {
-        *tex = textureop::convert_from_premultiplied(sptex11.get());
+        auto* rsys = scene::get_singleton_ptr()->get_rendersys();
+        assert(rsys);
+        *tex = textureop(rsys).convert_from_premultiplied(sptex11.get());
         return *tex ? true : false;
     }
     return false;

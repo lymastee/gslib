@@ -27,6 +27,8 @@
 
 __ariel_begin__
 
+rendersys::rsys_map rendersys::_dev_indexing;
+
 rendersys::rendersys():
     _bkcr {0.f, 0.f, 0.f, 1.f}
 {
@@ -55,6 +57,22 @@ void rendersys::set_background_color(const color& cr)
     _bkcr[1] = (float)cr.green / 255.f;
     _bkcr[2] = (float)cr.blue / 255.f;
     _bkcr[3] = (float)cr.alpha / 255.f;
+}
+
+void rendersys::register_dev_index_service(void* dev, rendersys* rsys)
+{
+    _dev_indexing.emplace(dev, rsys);
+}
+
+void rendersys::unregister_dev_index_service(void* dev)
+{
+    _dev_indexing.erase(dev);
+}
+
+rendersys* rendersys::find_by_dev(void* dev)
+{
+    auto f = _dev_indexing.find(dev);
+    return f == _dev_indexing.end() ? nullptr : f->second;
 }
 
 __ariel_end__

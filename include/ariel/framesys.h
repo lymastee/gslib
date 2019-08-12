@@ -322,6 +322,7 @@ public:
     virtual void update() override;
     virtual void emit(int msgid, void* msg, int size) override;
     virtual void set_ime(point pt, const font& ft) override;
+    virtual void set_cursor(cursor_type curty) override;
 
 private:
     framesys();

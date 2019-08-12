@@ -68,6 +68,7 @@ public:
     typedef render_texture2d texture2d;
     typedef render_texture3d texture3d;
     typedef render_sampler_state sampler_state;
+    typedef unordered_map<void*, rendersys*> rsys_map;
     config_select_type(select_render_platform, vertex_format_desc);
 
 public:
@@ -114,6 +115,9 @@ public:
 public:
     static bool is_vsync_enabled(const configs& cfg);
     static bool is_full_screen(const configs& cfg);
+    static void register_dev_index_service(void* dev, rendersys* rsys);
+    static void unregister_dev_index_service(void* dev);
+    static rendersys* find_by_dev(void* dev);           /* we could usually find the rendersys by its device ptr */
 
 protected:
     render_device_info      _device_info;
@@ -122,6 +126,9 @@ protected:
 public:
     const render_device_info& get_device_info() const { return _device_info; }
     void set_background_color(const color& cr);
+
+private:
+    static rsys_map         _dev_indexing;
 };
 
 extern void release_vertex_buffer(render_vertex_buffer* buf);

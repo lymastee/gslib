@@ -180,11 +180,13 @@ bool rendersys_d3d11::setup(uint hwnd, const configs& cfg)
     if(fail)
         return false;
     _blendstate = blendstate.detach();
+    register_dev_index_service(_device, this);
     return true;
 }
 
 void rendersys_d3d11::destroy()
 {
+    unregister_dev_index_service(_device);
     if(_context)
         _context->ClearState();
     SafeRelease(_blendstate);

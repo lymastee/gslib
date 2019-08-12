@@ -35,11 +35,49 @@
 
 __ariel_begin__
 
+class cursor_manager
+{
+public:
+    typedef unordered_map<uint, HCURSOR> win32_cursor_map;
+
+public:
+    cursor_manager()
+    {
+        _cursor_map.emplace(cur_arrow,      ::LoadCursor(0, IDC_ARROW));
+        _cursor_map.emplace(cur_beam,       ::LoadCursor(0, IDC_IBEAM));
+        _cursor_map.emplace(cur_cross,      ::LoadCursor(0, IDC_CROSS));
+        _cursor_map.emplace(cur_up_arrow,   ::LoadCursor(0, IDC_UPARROW));
+        _cursor_map.emplace(cur_size_nwse,  ::LoadCursor(0, IDC_SIZENWSE));
+        _cursor_map.emplace(cur_size_nesw,  ::LoadCursor(0, IDC_SIZENESW));
+        _cursor_map.emplace(cur_size_we,    ::LoadCursor(0, IDC_SIZEWE));
+        _cursor_map.emplace(cur_size_ns,    ::LoadCursor(0, IDC_SIZENS));
+        _cursor_map.emplace(cur_size_all,   ::LoadCursor(0, IDC_SIZEALL));
+        _cursor_map.emplace(cur_hand,       ::LoadCursor(0, IDC_HAND));
+        _cursor_map.emplace(cur_help,       ::LoadCursor(0, IDC_HELP));
+    }
+    ~cursor_manager()
+    {
+        for(auto& cmpair : _cursor_map)
+            ::DestroyCursor(cmpair.second);
+        _cursor_map.clear();
+    }
+    HCURSOR get_system_cursor(cursor_type curty)
+    {
+        auto f = _cursor_map.find(curty);
+        return f == _cursor_map.end() ? 0 : f->second;
+    }
+
+protected:
+    win32_cursor_map        _cursor_map;
+};
+
 static HWND                 __frame_hwnd = 0;
 static HINSTANCE            __frame_hinst = 0;
 static HIMC                 __frame_imc = 0;
 static COMPOSITIONFORM      __frame_immpos;
 static LOGFONT              __frame_immfont;
+static cursor_manager       __cursor_manager;
+static HCURSOR              __frame_cursor = 0;
 
 int framesys::run()
 {
@@ -140,6 +178,15 @@ void framesys::set_ime(point pt, const font& ft)
         ImmSetCompositionWindow(__frame_imc, &__frame_immpos);
         ImmSetCompositionFont(__frame_imc, &__frame_immfont);
     }
+}
+
+void framesys::set_cursor(cursor_type curty)
+{
+    if(curty == cur_arrow) {
+        __frame_cursor = 0;
+        return;
+    }
+    __frame_cursor = __cursor_manager.get_system_cursor(curty);
 }
 
 static void framesys_getpos(LPARAM lparam, point& pt)
@@ -279,6 +326,12 @@ static system_notify* get_frame_notify()
     return frmsys->get_notify();
 }
 
+static void refresh_frame_cursor()
+{
+    if(__frame_cursor)
+        SetCursor(__frame_cursor);
+}
+
 static LRESULT __stdcall frame_window_proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 {
     LRESULT ret = 0;
@@ -305,6 +358,7 @@ static LRESULT __stdcall frame_window_proc(HWND hwnd, UINT msg, WPARAM wparam, L
             framesys_getmskkey(wparam, um);
             get_frame_notify()->on_mouse_move(um, pt);
             ret = DefWindowProc(hwnd, msg, wparam, lparam);
+            refresh_frame_cursor();
             break;
         }
     case WM_LBUTTONDOWN:
@@ -317,6 +371,7 @@ static LRESULT __stdcall frame_window_proc(HWND hwnd, UINT msg, WPARAM wparam, L
             get_frame_notify()->on_mouse_down(um, msg==WM_LBUTTONDOWN?mk_left:mk_right, pt);
             ret = DefWindowProc(hwnd, msg, wparam, lparam);
             SetCapture(hwnd);
+            refresh_frame_cursor();
             break;
         }
     case WM_LBUTTONUP:
@@ -329,6 +384,7 @@ static LRESULT __stdcall frame_window_proc(HWND hwnd, UINT msg, WPARAM wparam, L
             get_frame_notify()->on_mouse_up(um, msg==WM_LBUTTONUP?mk_left:mk_right, pt);
             ret = DefWindowProc(hwnd, msg, wparam, lparam);
             ReleaseCapture();
+            refresh_frame_cursor();
             break;
         }
     case WM_ERASEBKGND:

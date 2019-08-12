@@ -227,7 +227,7 @@ void framesys::set_frame_strategy(frame_strategy stt)
 
 void framesys::empty_frame_lazy()
 {
-    notify_collector::get_singleton_ptr()->cleanup();
+    dvt_collector::get_singleton_ptr()->cleanup();
 }
 
 void framesys::empty_frame_busy()
@@ -235,7 +235,7 @@ void framesys::empty_frame_busy()
     _dispatcher.on_frame_start();
     _dispatcher.do_draw();
     _dispatcher.on_frame_end();
-    notify_collector::get_singleton_ptr()->cleanup();
+    dvt_collector::get_singleton_ptr()->cleanup();
 }
 
 __ariel_end__

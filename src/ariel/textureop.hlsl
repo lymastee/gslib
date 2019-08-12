@@ -1,6 +1,6 @@
 cbuffer texop_configs : register(b0)
 {
-    int4        g_offset;
+    int4        g_rect;     // x, y, width, height
     float4      g_color;
     float       g_arg;
 };
@@ -11,13 +11,17 @@ RWTexture2D<float4>     g_dest : register(u0);
 [numthreads(8, 8, 1)]
 void ariel_transpose_image_cs(uint3 dtid : SV_DispatchThreadID)
 {
-    g_dest[dtid.yx + g_offset.xy] = g_src[dtid.xy];
+    if(dtid.x >= (uint)g_rect.z || dtid.y >= (uint)g_rect.w)
+        return;
+    g_dest[dtid.yx + g_rect.xy] = g_src[dtid.xy];
 }
 
 [numthreads(8, 8, 1)]
 void ariel_initialize_image_cs(uint3 dtid : SV_DispatchThreadID)
 {
-    g_dest[dtid.xy + g_offset.xy] = g_color;
+    if(dtid.x >= (uint)g_rect.z || dtid.y >= (uint)g_rect.w)
+        return;
+    g_dest[dtid.xy + g_rect.xy] = g_color;
 }
 
 [numthreads(8, 8, 1)]
@@ -53,7 +57,7 @@ void ariel_set_inverse_cs(uint3 dtid : SV_DispatchThreadID)
 }
 
 [numthreads(8, 8, 1)]
-void ariel_conv_from_premul(uint3 dtid : SV_DispatchThreadID)
+void ariel_conv_from_premul_cs(uint3 dtid : SV_DispatchThreadID)
 {
     float4 cr = g_src[dtid.xy];
     float alpha = cr.w;

@@ -35,7 +35,7 @@ class textureop
 public:
     struct cb_configs
     {
-        int             x, y, reserved1, reserved2;
+        int             x, y, width, height;
         vec4            cr;
         float           arg;
     };
@@ -57,12 +57,12 @@ public:
     void set_gray(render_texture2d* dest, render_texture2d* src);
     void set_fade(render_texture2d* dest, render_texture2d* src, float s);
     void set_inverse(render_texture2d* dest, render_texture2d* src);
+    render_texture2d* convert_from_premultiplied(render_texture2d* src);
 
 public:
     static void get_texture_dimension(render_texture2d* p, int& w, int& h);
     static void get_assoc_device(render_texture2d* p, render_device** ppdev);
     static bool convert_to_image(image& img, render_texture2d* src);
-    static render_texture2d* convert_from_premultiplied(render_texture2d* src);
 
 protected:
     rendersys*          _rsys;

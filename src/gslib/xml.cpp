@@ -112,17 +112,30 @@ void xmltree::filter_entity_reference(string& s)
     replace(s, _t("&gt;"), _t(">"));
     replace(s, _t("&quot"), _t("\""));
     replace(s, _t("&apos;"), _t("'"));
+    replace(s, _t("&crarr;"), _t("\n"));    /* CR treated as LF */
     replace(s, _t("&amp;"), _t("&"));
+}
+
+void xmltree::recover_entity_reference(string& s)
+{
+    replace(s, _t("&"), _t("&amp;"));
+    replace(s, _t("<"), _t("&lt;"));
+    replace(s, _t(">"), _t("&gt;"));
+    replace(s, _t("\""), _t("&quot"));
+    replace(s, _t("'"), _t("&apos;"));
+    replace(s, _t("\r"), _t("&crarr;"));
+    replace(s, _t("\n"), _t("&crarr;"));    /* CR treated as LF */
 }
 
 void xmltree::write_attribute(string& str, const gchar* prefix, const xml_attr& attr, const gchar* postfix)
 {
-    /* todo: deal with entity reference */
     if(prefix)
         str.append(prefix);
     str.append(attr.key);
     str.append(_t("=\""));
-    str.append(attr.value);
+    string value = attr.value;
+    recover_entity_reference(value);
+    str.append(value);
     str.push_back(_t('\"'));
     if(postfix)
         str.append(postfix);
@@ -132,7 +145,6 @@ void xmltree::close_write_item(string& str, const gchar* prefix, const xml_node*
 {
     assert(node && !node->is_value());
     static_cast_as(const xml_element*, elem, node);
-    /* todo: deal with entity reference */
     if(prefix)
         str.append(prefix);
     str.push_back(_t('<'));
@@ -144,9 +156,25 @@ void xmltree::close_write_item(string& str, const gchar* prefix, const xml_node*
         str.append(postfix);
 }
 
+/* If the element name has a namespace unmentioned by its attributes, then append a default namespace here. */
+static void try_fix_namespace(string& str, const xml_node* node)
+{
+    assert(node);
+    const string& name = node->get_name();
+    auto p = name.find(_t(':'));
+    if(p == string::npos || p >= (size_t)name.size() || !p)
+        return;
+    string ns(_t("xmlns:"));
+    ns.append(name, 0, p);
+    if(node->get_attribute(ns))
+        return;
+    str.push_back(_t(' '));
+    str.append(ns);
+    str.append(_t("=\"@\""));
+}
+
 void xmltree::begin_write_item(string& str, const gchar* prefix, const xml_node* node, const gchar* postfix)
 {
-    /* todo: deal with entity reference */
     assert(node && !node->is_value());
     static_cast_as(const xml_element*, elem, node);
     if(prefix)
@@ -155,6 +183,7 @@ void xmltree::begin_write_item(string& str, const gchar* prefix, const xml_node*
     str.append(elem->key);
     xml_const_enum cenum(node);
     cenum.const_for_each([&str](const xml_attr& attr) { write_attribute(str, _t(" "), attr, 0); });
+    try_fix_namespace(str, node);
     str.push_back(_t('>'));
     if(postfix)
         str.append(postfix);
@@ -308,7 +337,9 @@ const gchar* xmltree::read_item(const gchar* str, iterator p)
         }
         assert(p);
         iterator n = birth_tail<xml_value>(p);
-        n->set_name(str, endstr-str);
+        assert(n);
+        n->set_name(str, endstr - str);
+        filter_entity_reference(static_cast<xml_value&>(*n).value);
         return endstr;
     }
 }
@@ -360,8 +391,11 @@ void xmltree::write_item(string& str, const_iterator i) const
 {
     assert(i.is_valid());
     const xml_node* node = i.get_ptr();
-    if(node->is_value())
-        str.append(node->get_name());
+    if(node->is_value()) {
+        string value = node->get_name();
+        recover_entity_reference(value);
+        str.append(value);
+    }
     else if(!i.childs())
         close_write_item(str, 0, node, 0);
     else {

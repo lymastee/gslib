@@ -37,7 +37,7 @@ __ariel_begin__
 class wsys_manager;
 
 class widget:
-    public notify_holder
+    public dvt_holder
 {
     friend class wsys_manager;
 
@@ -75,6 +75,7 @@ public:
     virtual void on_keyup(uint um, unikey uk) {}
     virtual void on_char(uint um, uint ch) {}
     virtual void on_caret() {}
+    virtual void on_capture(bool b) {}
     virtual void on_focus(bool b) {}
     virtual void on_scroll(const point& pt, real32 scr, bool vert) {}
     virtual void on_accelerator(unikey key, uint mask) {}
@@ -111,16 +112,18 @@ public:
     widget* unregister_accelerator(unikey key, uint mask);
 
 protected:
-    widget*         _last;
+    widget*         _prev;
     widget*         _next;
     widget*         _child;
+    widget*         _last_child;
     widget*         _parent;
 
 public:
     widget* get_parent() const { return _parent; }
-    widget* get_last() const { return _last; }
+    widget* get_prev() const { return _prev; }
     widget* get_next() const { return _next; }
     widget* get_child() const { return _child; }
+    widget* get_last_child() const { return _last_child; }
 
 public:
     template<class _lamb>
@@ -137,7 +140,7 @@ public:
     static int traverse_widget_reversed(widget* w, _lamb trav_to_stop)
     {
         assert(w);
-        for(auto* p = w; p; p = p->get_last()) {
+        for(auto* p = w; p; p = p->get_prev()) {
             if(auto r = trav_to_stop(p))
                 return r;
         }
@@ -146,7 +149,7 @@ public:
     template<class _lamb>
     int traverse_child_widget(_lamb trav_to_stop) { return traverse_widget(_child, trav_to_stop); }
     template<class _lamb>
-    int traverse_child_widget_reversed(_lamb trav_to_stop) { return traverse_widget_reversed(_child, trav_to_stop); }
+    int traverse_child_widget_reversed(_lamb trav_to_stop) { return traverse_widget_reversed(_last_child, trav_to_stop); }
 };
 
 class button:
@@ -194,15 +197,15 @@ protected:
     btnstate        _btnstate;
 };
 
-class edit:
+class edit_line:
     public widget
 {
 public:
     typedef widget superref;
-    typedef edit self;
+    typedef edit_line self;
 
 public:
-    edit(wsys_manager* m);
+    edit_line(wsys_manager* m);
     virtual bool create(widget* ptr, const gchar* name, const rect& rc, uint style) override;
     virtual void draw(painter* paint) override;
     virtual void on_press(uint um, unikey uk, const point& pt) override;
@@ -283,7 +286,7 @@ typedef system_driver wsys_driver;
 typedef system_notify wsys_notify;
 
 class timer:
-    public notify_holder
+    public dvt_holder
 {
 public:
     timer(wsys_manager* mgr);
@@ -356,6 +359,8 @@ public:
     void on_caret(uint);
     widget* get_capture() const { return _capture; }
     widget* get_focus() const { return _focus; }
+    void set_cursor(cursor_type curty);
+    void reset_cursor() { set_cursor(cur_arrow); }
 
 public:
     virtual ~wsys_manager();
@@ -388,7 +393,7 @@ public:
     template<class _ctor>
     _ctor* add_widget(widget* ptr, const gchar* name, const rect& rc, uint style)
     {
-        if(name && _widget_map.find(name) != _widget_map.end())
+        if(name && name[0] && _widget_map.find(name) != _widget_map.end())
             return nullptr;
         if(!ptr && _root)
             ptr = _root;
@@ -398,7 +403,7 @@ public:
             delete p;
             return nullptr;
         }
-        if(name) {
+        if(name && name[0]) {
             _widget_map.insert(
                 std::make_pair(name, p)
                 );

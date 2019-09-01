@@ -28,6 +28,7 @@
 
 #include <ariel/widget.h>
 #include <ariel/style.h>
+#include <ariel/classicstyle/slider_service.h>
 
 /*
  * Default style for test and reference, flat style.
@@ -47,13 +48,12 @@ public:
     widget_style_sheet();
     virtual bool get_value(const string& name, string& value) override;
     virtual void set_value(const string& name, const string& value) override;
-    virtual int get_content_size() const override;
-    virtual style_sheet_type get_content_type(int index) const override;
-    virtual const string& get_content_name(int index) const override;
 
 protected:
     color               _fill_color;
     color               _stroke_color;
+    color               _disable_fill_color;
+    color               _disable_stroke_color;
 };
 
 class root_widget_style_sheet:
@@ -63,13 +63,27 @@ public:
     root_widget_style_sheet();
     virtual bool get_value(const string& name, string& value) override;
     virtual void set_value(const string& name, const string& value) override;
-    virtual int get_content_size() const override;
-    virtual style_sheet_type get_content_type(int index) const override;
-    virtual const string& get_content_name(int index) const override;
 
 protected:
     color               _bkground_color;
     string              _bkground_image;
+};
+
+class placeholder_style_sheet:
+    public ariel::style_sheet
+{
+public:
+    placeholder_style_sheet();
+    virtual bool get_value(const string& name, string& value) override;
+    virtual void set_value(const string& name, const string& value) override;
+
+protected:
+    color               _fill_color;
+    color               _stroke_color;
+    string              _remark;
+    string              _remark_font_name;
+    int                 _remark_font_size;
+    color               _remark_font_color;
 };
 
 class button_style_sheet:
@@ -79,9 +93,6 @@ public:
     button_style_sheet();
     virtual bool get_value(const string& name, string& value) override;
     virtual void set_value(const string& name, const string& value) override;
-    virtual int get_content_size() const override;
-    virtual style_sheet_type get_content_type(int index) const override;
-    virtual const string& get_content_name(int index) const override;
 
 protected:
     color               _normal_fill_color;
@@ -90,6 +101,8 @@ protected:
     color               _hover_stroke_color;
     color               _press_fill_color;
     color               _press_stroke_color;
+    color               _disable_fill_color;
+    color               _disable_stroke_color;
     string              _caption;
     string              _caption_font_name;
     int                 _caption_font_size;
@@ -103,22 +116,21 @@ public:
     edit_line_style_sheet();
     virtual bool get_value(const string& name, string& value) override;
     virtual void set_value(const string& name, const string& value) override;
-    virtual int get_content_size() const override;
-    virtual style_sheet_type get_content_type(int index) const override;
-    virtual const string& get_content_name(int index) const override;
 
 protected:
     color               _normal_fill_color;
     color               _normal_stroke_color;
-    color               _focused_fill_color;
-    color               _focused_stroke_color;
+    color               _focus_fill_color;
+    color               _focus_stroke_color;
+    color               _disable_fill_color;
+    color               _disable_stroke_color;
     string              _text_font_name;
     int                 _text_font_size;
     color               _text_font_color;
 };
 
 class menu_style_sheet:
-    public button_style_sheet
+    public ariel::style_sheet
 {
     friend class menu_separator;
     friend class menu_cmd_item;
@@ -129,11 +141,20 @@ public:
     menu_style_sheet();
     virtual bool get_value(const string& name, string& value) override;
     virtual void set_value(const string& name, const string& value) override;
-    virtual int get_content_size() const override;
-    virtual style_sheet_type get_content_type(int index) const override;
-    virtual const string& get_content_name(int index) const override;
 
 protected:
+    color               _normal_fill_color;
+    color               _normal_stroke_color;
+    color               _hover_fill_color;
+    color               _hover_stroke_color;
+    color               _press_fill_color;
+    color               _press_stroke_color;
+    color               _disable_fill_color;
+    color               _disable_stroke_color;
+    string              _caption;
+    string              _caption_font_name;
+    int                 _caption_font_size;
+    color               _caption_font_color;
     color               _border_color;
     color               _separator_color;
     int                 _separator_space;
@@ -150,9 +171,6 @@ public:
     menu_cmd_style_sheet();
     virtual bool get_value(const string& name, string& value) override;
     virtual void set_value(const string& name, const string& value) override;
-    virtual int get_content_size() const override;
-    virtual style_sheet_type get_content_type(int index) const override;
-    virtual const string& get_content_name(int index) const override;
 
 protected:
     string              _caption;
@@ -166,9 +184,6 @@ public:
     menu_sub_style_sheet();
     virtual bool get_value(const string& name, string& value) override;
     virtual void set_value(const string& name, const string& value) override;
-    virtual int get_content_size() const override;
-    virtual style_sheet_type get_content_type(int index) const override;
-    virtual const string& get_content_name(int index) const override;
 
 protected:
     string              _caption;
@@ -188,12 +203,27 @@ public:
     menubar_button_style_sheet();
     virtual bool get_value(const string& name, string& value) override;
     virtual void set_value(const string& name, const string& value) override;
-    virtual int get_content_size() const override;
-    virtual style_sheet_type get_content_type(int index) const override;
-    virtual const string& get_content_name(int index) const override;
 
 protected:
     string              _caption;
+};
+
+class tree_view_style_sheet:
+    public ariel::style_sheet
+{
+public:
+    tree_view_style_sheet();
+    virtual bool get_value(const string& name, string& value) override;
+    virtual void set_value(const string& name, const string& value) override;
+
+protected:
+    color               _view_fill_color;
+    color               _view_stroke_color;
+    color               _disable_fill_color;
+    color               _disable_stroke_color;
+    int                 _item_indent;
+    int                 _item_spacing;
+    color               _connect_line_color;
 };
 
 class widget:
@@ -209,6 +239,8 @@ public:
 protected:
     painter_brush       _normal_brush;
     painter_pen         _normal_pen;
+    painter_brush       _disable_brush;
+    painter_pen         _disable_pen;
 };
 
 class root_widget:
@@ -225,6 +257,22 @@ protected:
     com_ptr<texture2d>  _bktex;
 };
 
+class placeholder:
+    public ariel::widget,
+    public placeholder_style_sheet
+{
+public:
+    placeholder(wsys_manager* m): ariel::widget(m) {}
+    virtual void* query_interface(const uuid& uid) override;
+    virtual void draw(painter* paint) override;
+    virtual void flush_style() override;
+
+protected:
+    painter_brush       _normal_brush;
+    painter_pen         _normal_pen;
+    font                _remark_font;
+};
+
 class button:
     public ariel::button,
     public button_style_sheet
@@ -232,6 +280,7 @@ class button:
 public:
     button(wsys_manager* m): ariel::button(m) {}
     virtual void* query_interface(const uuid& uid) override;
+    virtual void enable(bool b) override;
     virtual void draw(painter* paint) override;
     virtual void flush_style() override;
 
@@ -242,6 +291,8 @@ protected:
     painter_pen         _hover_pen;
     painter_brush       _press_brush;
     painter_pen         _press_pen;
+    painter_brush       _disable_brush;
+    painter_pen         _disable_pen;
     font                _caption_font;
     painter_brush       _current_brush;
     painter_pen         _current_pen;
@@ -266,12 +317,264 @@ public:
 protected:
     painter_brush       _normal_brush;
     painter_pen         _normal_pen;
-    painter_brush       _focused_brush;
-    painter_pen         _focused_pen;
+    painter_brush       _focus_brush;
+    painter_pen         _focus_pen;
+    painter_brush       _disable_brush;
+    painter_pen         _disable_pen;
     font                _text_font;
 
 protected:
     virtual void draw_background(painter* paint) override;
+};
+
+typedef slider_service<widget> splitter;
+
+class horizontal_splitter:
+    public splitter
+{
+public:
+    horizontal_splitter(wsys_manager* m): splitter(m) {}
+    virtual void on_hover(uint um, const point& pt) override;
+    virtual void on_dragging(const point& pt) override;
+};
+
+class vertical_splitter:
+    public splitter
+{
+public:
+    vertical_splitter(wsys_manager* m): splitter(m) {}
+    virtual void on_hover(uint um, const point& pt) override;
+    virtual void on_dragging(const point& pt) override;
+};
+
+class __gs_novtable container abstract:
+    public ariel::widget,
+    public slider_notify
+{
+public:
+    container(wsys_manager* m): ariel::widget(m) {}
+    virtual ~container() {}
+    virtual void move(const rect& rc) override;
+    virtual void initialize_container() = 0;
+    virtual void on_splitter_moved(splitter* sp) = 0;
+    virtual void on_container_size_changed() = 0;
+    virtual void on_slider_moved(slider* p) override { on_splitter_moved(static_cast<splitter*>(p)); }
+};
+
+class horizontal_layout_container:
+    public container
+{
+public:
+    horizontal_layout_container(wsys_manager* m);
+    virtual void initialize_container() override;
+    virtual void on_splitter_moved(splitter* sp) override;
+    virtual void on_container_size_changed() override;
+
+public:
+    void set_left_sub_widget(ariel::widget* p) { _left_sub_widget = p; }
+    void set_right_sub_widget(ariel::widget* p) { _right_sub_widget = p; }
+    void set_split_percent(float t);
+    float get_split_percent() const { return _split_percent; }
+    splitter* get_splitter() const { return _splitter; }
+    rect get_left_sub_rect() const;
+    rect get_right_sub_rect() const;
+
+protected:
+    ariel::widget*      _left_sub_widget;
+    ariel::widget*      _right_sub_widget;
+    splitter*           _splitter;
+    int                 _splitter_width;
+    float               _split_percent;
+    int                 _layout_width[2];
+
+protected:
+    void split_by_percent(float sp);
+};
+
+class vertical_layout_container:
+    public container
+{
+public:
+    vertical_layout_container(wsys_manager* m);
+    virtual void initialize_container() override;
+    virtual void on_splitter_moved(splitter* sp) override;
+    virtual void on_container_size_changed() override;
+
+public:
+    void set_up_sub_widget(ariel::widget* p) { _up_sub_widget = p; }
+    void set_down_sub_widget(ariel::widget* p) { _down_sub_widget = p; }
+    void set_split_percent(float t);
+    float get_split_percent() const { return _split_percent; }
+    splitter* get_splitter() const { return _splitter; }
+    rect get_up_sub_rect() const;
+    rect get_down_sub_rect() const;
+
+protected:
+    ariel::widget*      _up_sub_widget;
+    ariel::widget*      _down_sub_widget;
+    splitter*           _splitter;
+    int                 _splitter_width;
+    float               _split_percent;
+    int                 _layout_height[2];
+
+protected:
+    void split_by_percent(float sp);
+};
+
+typedef slider_service<button> scroller;
+
+class horizontal_scroller:
+    public scroller
+{
+public:
+    horizontal_scroller(wsys_manager* m): scroller(m) {}
+    virtual void on_dragging(const point& pt) override;
+};
+
+class vertical_scroller:
+    public scroller
+{
+public:
+    vertical_scroller(wsys_manager* m): scroller(m) {}
+    virtual void on_dragging(const point& pt) override;
+};
+
+class scroll_button:
+    public button
+{
+public:
+    enum button_type
+    {
+        btn_up,
+        btn_down,
+        btn_left,
+        btn_right,
+    };
+
+public:
+    scroll_button(wsys_manager* m);
+    virtual void enable(bool b) override;
+    virtual void draw(painter* paint) override;
+    void set_button_type(button_type btntype) { _btn_type = btntype; }
+
+protected:
+    painter_brush       _arrow_fill;
+    button_type         _btn_type;
+
+protected:
+    void draw_up_arrow(painter* paint, const rectf& rc);
+    void draw_down_arrow(painter* paint, const rectf& rc);
+    void draw_left_arrow(painter* paint, const rectf& rc);
+    void draw_right_arrow(painter* paint, const rectf& rc);
+};
+
+class __gs_novtable scrollbar abstract:
+    public widget,
+    public slider_notify
+{
+public:
+    scrollbar(wsys_manager* m);
+    virtual ~scrollbar() {}
+    virtual void move(const rect& rc) override;
+    virtual void enable(bool b) override;
+    virtual void scroll_by(int by);
+    virtual void initialize_scrollbar(int range) = 0;
+    virtual void on_scrollbar_size_changed();
+    virtual void on_inc_button_clicked(uint um, unikey uk, const point& pt);
+    virtual void on_dec_button_clicked(uint um, unikey uk, const point& pt);
+    virtual void set_canvas_range(int range);
+    virtual void set_scroll_ratio(float t);
+    virtual void adjust_scrollbar() = 0;
+    /*
+     * The difference between adjust_scrollbar & layout_scrollbar was:
+     * adjust_scrollbar happens when only the scroll ratio changes, but the size of the scrollbar remains the same.
+     * layout_scrollbar happens when the size of the scrollbar changes.
+     */
+    virtual void layout_scrollbar() = 0;
+    virtual void on_slider_moved(slider* p) override;
+
+public:
+    void set_scrollbar_min_width(int w) { _min_width = w; }
+    void set_scrollbar_min_height(int h) { _min_height = h; }
+    int get_scrollbar_min_width() const { return _min_width; }
+    int get_scrollbar_min_height() const { return _min_height; }
+    int get_canvas_range() const { return _canvas_range; }
+    float get_scroll_ratio() const { return _scroll_ratio; }
+    void set_scroll_pace(int pace) { _scroll_pace = pace; }
+    int get_scroll_pace() const { return _scroll_pace; }
+
+protected:
+    scroller*           _scroller;
+    scroll_button*      _inc_button;
+    scroll_button*      _dec_button;
+    int                 _scroll_pace;
+    int                 _canvas_range;
+    float               _scroll_ratio;
+    int                 _min_width;
+    int                 _min_height;
+    int                 _hori_margin;
+    int                 _vert_margin;
+
+protected:
+    virtual float calc_scroll_ratio(int bias) const = 0;
+    virtual void refresh_scroller_pos() = 0;
+    void connect_scrollbar_notifications();
+};
+
+class horizontal_scrollbar:
+    public scrollbar
+{
+public:
+    horizontal_scrollbar(wsys_manager* m);
+    virtual void initialize_scrollbar(int range) override;
+    virtual void adjust_scrollbar() override;
+    virtual void layout_scrollbar() override;
+
+protected:
+    virtual float calc_scroll_ratio(int bias) const override;
+    virtual void refresh_scroller_pos() override;
+    int calc_scroll_button_width() const;
+    int calc_scroll_button_height() const;
+    int calc_scroll_range() const;
+    int calc_scroll_range_start() const;
+};
+
+class vertical_scrollbar:
+    public scrollbar
+{
+public:
+    vertical_scrollbar(wsys_manager* m);
+    virtual void initialize_scrollbar(int range) override;
+    virtual void adjust_scrollbar() override;
+    virtual void layout_scrollbar() override;
+
+protected:
+    virtual float calc_scroll_ratio(int bias) const override;
+    virtual void refresh_scroller_pos() override;
+    int calc_scroll_button_width() const;
+    int calc_scroll_button_height() const;
+    int calc_scroll_range() const;
+    int calc_scroll_range_start() const;
+};
+
+class tree_view:
+    public ariel::widget,
+    public tree_view_style_sheet
+{
+public:
+    friend class raw_tree_view;
+
+public:
+    tree_view(wsys_manager* m);
+    virtual ~tree_view();
+    virtual void* query_interface(const uuid& uid) override;
+    virtual void draw(painter* paint) override;
+
+protected:
+    raw_tree_view*      _raw_view;
+    //ariel::scroller*    _;
+    painter_brush       _view_brush;
+    painter_pen         _view_pen;
 };
 
 class menu;
@@ -460,6 +763,8 @@ protected:
     painter_pen         _menu_hover_pen;
     painter_brush       _menu_press_brush;
     painter_pen         _menu_press_pen;
+    painter_brush       _menu_disable_brush;
+    painter_pen         _menu_disable_pen;
     font                _menu_font;
     ariel::widget*      _last_hover;
 
@@ -525,6 +830,8 @@ protected:
     painter_pen         _menubar_hover_pen;
     painter_brush       _menubar_press_brush;
     painter_pen         _menubar_press_pen;
+    painter_brush       _menubar_disable_brush;
+    painter_pen         _menubar_disable_pen;
     font                _menubar_font;
 };
 

@@ -77,7 +77,6 @@ public:
     virtual void on_caret() {}
     virtual void on_capture(bool b) {}
     virtual void on_focus(bool b) {}
-    virtual void on_scroll(const point& pt, real32 scr, bool vert) {}
     virtual void on_accelerator(unikey key, uint mask) {}
 
 protected:
@@ -85,16 +84,15 @@ protected:
     string          _name;
     uint            _style;
     rect            _pos;
-    bool            _show;
-    bool            _enable;
-    point           _htpos;
+    bool            _visible;
+    bool            _enabled;
 
 public:
     const string& get_name() const { return _name; }
     const rect& get_rect() const { return _pos; }
     rectf get_rectf() const { return rectf(0.f, 0.f, (float)get_width(), (float)get_height()); }
-    bool is_visible() const { return _show && (_style & sm_visible); }
-    bool is_enable() const { return _enable; }
+    bool is_visible() const { return _visible && (_style & sm_visible); }
+    bool is_enabled() const { return _enabled; }
     bool is_focused() const;
     void hide() { show(false); }
     void disable() { enable(false); }
@@ -206,7 +204,6 @@ public:
 
 public:
     edit_line(wsys_manager* m);
-    virtual bool create(widget* ptr, const gchar* name, const rect& rc, uint style) override;
     virtual void draw(painter* paint) override;
     virtual void on_press(uint um, unikey uk, const point& pt) override;
     virtual void on_click(uint um, unikey uk, const point& pt) override;
@@ -259,27 +256,6 @@ protected:
 
 protected:
     int trim_if_overrun(bool alarm);
-};
-
-class scroller:
-    public button
-{
-public:
-    typedef button superref;
-    typedef scroller self;
-
-public:
-    scroller(wsys_manager* m);
-    virtual bool create(widget* ptr, const gchar* name, const rect& rc, uint style) override;
-    virtual void on_hover(uint um, const point& pt) override;
-    void set_scroller(int r1, int r2, bool vts, texture2d* img, bool as = false);
-    void set_scroll(real32 s);
-    real32 get_scroll() const { return _scrpos; }
-
-protected:
-    int             _rangemin, _rangemax;
-    real32          _scrpos;
-    bool            _vtscroll;
 };
 
 typedef system_driver wsys_driver;

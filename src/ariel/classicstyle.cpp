@@ -36,21 +36,37 @@ namespace classic_style {
 const uuid uuid_style_sheet(_t("a6facff7-20f7-486f-9fc0-78b7f68f06fb"));
 const uuid uuid_menu_item(_t("5dca28c1-47c4-4ea8-8fac-440f2b57c2bc"));
 
-static const style_sheet_pair __widget_style_sheet_pairs[] =
+static const style_sheet_def __widget_style_sheet_defs[] =
 {
     std::make_pair(sst_color, _t("fill_color")),
     std::make_pair(sst_color, _t("stroke_color")),
     std::make_pair(sst_float, _t("fill_opacity")),
     std::make_pair(sst_float, _t("stroke_opacity")),
+    std::make_pair(sst_color, _t("disable_fill_color")),
+    std::make_pair(sst_color, _t("disable_stroke_color")),
+    std::make_pair(sst_float, _t("disable_fill_opacity")),
+    std::make_pair(sst_float, _t("disable_stroke_opacity")),
 };
 
-static const style_sheet_pair __root_widget_style_sheet_pairs[] =
+static const style_sheet_def __root_widget_style_sheet_defs[] =
 {
     std::make_pair(sst_color, _t("background_color")),
     std::make_pair(sst_string, _t("background_image")),
 };
 
-static const style_sheet_pair __button_style_sheet_pairs[] =
+static const style_sheet_def __placeholder_style_sheet_defs[] =
+{
+    std::make_pair(sst_color, _t("fill_color")),
+    std::make_pair(sst_color, _t("stroke_color")),
+    std::make_pair(sst_float, _t("fill_opacity")),
+    std::make_pair(sst_float, _t("stroke_opacity")),
+    std::make_pair(sst_string, _t("remark")),
+    std::make_pair(sst_string, _t("remark_font_name")),
+    std::make_pair(sst_integer, _t("remark_font_size")),
+    std::make_pair(sst_color, _t("remark_font_color")),
+};
+
+static const style_sheet_def __button_style_sheet_defs[] =
 {
     std::make_pair(sst_color, _t("normal_fill_color")),
     std::make_pair(sst_color, _t("normal_stroke_color")),
@@ -58,19 +74,23 @@ static const style_sheet_pair __button_style_sheet_pairs[] =
     std::make_pair(sst_color, _t("hover_stroke_color")),
     std::make_pair(sst_color, _t("press_fill_color")),
     std::make_pair(sst_color, _t("press_stroke_color")),
+    std::make_pair(sst_color, _t("disable_fill_color")),
+    std::make_pair(sst_color, _t("disable_stroke_color")),
     std::make_pair(sst_float, _t("normal_fill_opacity")),
     std::make_pair(sst_float, _t("normal_stroke_opacity")),
     std::make_pair(sst_float, _t("hover_fill_opacity")),
     std::make_pair(sst_float, _t("hover_stroke_opacity")),
     std::make_pair(sst_float, _t("press_fill_opacity")),
     std::make_pair(sst_float, _t("press_stroke_opacity")),
+    std::make_pair(sst_float, _t("disable_fill_opacity")),
+    std::make_pair(sst_float, _t("disable_stroke_opacity")),
     std::make_pair(sst_string, _t("caption")),
     std::make_pair(sst_string, _t("caption_font_name")),
     std::make_pair(sst_integer, _t("caption_font_size")),
     std::make_pair(sst_string, _t("caption_font_color")),
 };
 
-static const style_sheet_pair __edit_line_style_sheet_pairs[] =
+static const style_sheet_def __edit_line_style_sheet_defs[] =
 {
     std::make_pair(sst_color, _t("normal_fill_color")),
     std::make_pair(sst_color, _t("normal_stroke_color")),
@@ -80,14 +100,40 @@ static const style_sheet_pair __edit_line_style_sheet_pairs[] =
     std::make_pair(sst_color, _t("focused_stroke_color")),
     std::make_pair(sst_float, _t("focused_fill_opacity")),
     std::make_pair(sst_float, _t("focused_stroke_opacity")),
+    std::make_pair(sst_color, _t("disable_fill_color")),
+    std::make_pair(sst_color, _t("disable_stroke_color")),
+    std::make_pair(sst_float, _t("disable_fill_opacity")),
+    std::make_pair(sst_float, _t("disable_stroke_opacity")),
     std::make_pair(sst_string, _t("text_font_name")),
     std::make_pair(sst_integer, _t("text_font_size")),
     std::make_pair(sst_color, _t("text_font_color")),
     std::make_pair(sst_float, _t("text_font_opacity")),
 };
 
-static const style_sheet_pair __menu_style_sheet_pairs[] =
+static const style_sheet_def __menu_style_sheet_defs[] =
 {
+    /* same with button style */
+    std::make_pair(sst_color, _t("normal_fill_color")),
+    std::make_pair(sst_color, _t("normal_stroke_color")),
+    std::make_pair(sst_color, _t("hover_fill_color")),
+    std::make_pair(sst_color, _t("hover_stroke_color")),
+    std::make_pair(sst_color, _t("press_fill_color")),
+    std::make_pair(sst_color, _t("press_stroke_color")),
+    std::make_pair(sst_color, _t("disable_fill_color")),
+    std::make_pair(sst_color, _t("disable_stroke_color")),
+    std::make_pair(sst_float, _t("normal_fill_opacity")),
+    std::make_pair(sst_float, _t("normal_stroke_opacity")),
+    std::make_pair(sst_float, _t("hover_fill_opacity")),
+    std::make_pair(sst_float, _t("hover_stroke_opacity")),
+    std::make_pair(sst_float, _t("press_fill_opacity")),
+    std::make_pair(sst_float, _t("press_stroke_opacity")),
+    std::make_pair(sst_float, _t("disable_fill_opacity")),
+    std::make_pair(sst_float, _t("disable_stroke_opacity")),
+    std::make_pair(sst_string, _t("caption")),
+    std::make_pair(sst_string, _t("caption_font_name")),
+    std::make_pair(sst_integer, _t("caption_font_size")),
+    std::make_pair(sst_string, _t("caption_font_color")),
+    /* extensions */
     std::make_pair(sst_color, _t("border_color")),
     std::make_pair(sst_color, _t("separator_color")),
     std::make_pair(sst_integer, _t("separator_space")),
@@ -97,148 +143,265 @@ static const style_sheet_pair __menu_style_sheet_pairs[] =
     std::make_pair(sst_integer, _t("accel_reserved_space")),
 };
 
-static const style_sheet_pair __menu_cmd_style_sheet_pairs[] =
+static const style_sheet_def __menu_cmd_style_sheet_defs[] =
 {
     std::make_pair(sst_string, _t("caption")),
     std::make_pair(sst_string, _t("accel_key")),
 };
 
-static const style_sheet_pair __menu_sub_style_sheet_pairs[] =
+static const style_sheet_def __menu_sub_style_sheet_defs[] =
 {
     std::make_pair(sst_string, _t("caption")),
 };
 
-static const style_sheet_pair __menubar_button_style_sheet_pairs[] =
+static const style_sheet_def __menubar_button_style_sheet_defs[] =
 {
     std::make_pair(sst_string, _t("caption")),
 };
 
-widget_style_sheet::widget_style_sheet()
+static const style_sheet_def __tree_view_style_sheet_defs[] =
+{
+    std::make_pair(sst_color, _t("view_fill_color")),
+    std::make_pair(sst_color, _t("view_stroke_color")),
+    std::make_pair(sst_float, _t("view_fill_opacity")),
+    std::make_pair(sst_float, _t("view_stroke_opacity")),
+    std::make_pair(sst_integer, _t("item_indent")),
+    std::make_pair(sst_integer, _t("item_spacing")),
+    std::make_pair(sst_color, _t("connect_line_color")),
+};
+
+widget_style_sheet::widget_style_sheet():
+    ariel::style_sheet(__widget_style_sheet_defs, _countof(__widget_style_sheet_defs))
 {
     _fill_color = color(245, 246, 247);
     _stroke_color = color(245, 246, 247, 0);
+    _disable_fill_color = color(245, 246, 247);
+    _disable_stroke_color = color(0, 0, 0);
 }
 
 bool widget_style_sheet::get_value(const string& name, string& value)
 {
-    if(name == __widget_style_sheet_pairs[0].second)
+    int index = get_style_sheet_index(name);
+    switch(index)
+    {
+    case 0:
         return from_color(value, _fill_color);
-    else if(name == __widget_style_sheet_pairs[1].second)
+    case 1:
         return from_color(value, _stroke_color);
-    else if(name == __widget_style_sheet_pairs[2].second)
+    case 2:
         return from_float(value, (float)_fill_color.alpha / 255.f);
-    else if(name == __widget_style_sheet_pairs[3].second)
+    case 3:
         return from_float(value, (float)_stroke_color.alpha / 255.f);
-    return false;
+    case 4:
+        return from_color(value, _disable_fill_color);
+    case 5:
+        return from_color(value, _disable_stroke_color);
+    case 6:
+        return from_float(value, (float)_disable_fill_color.alpha / 255.f);
+    case 7:
+        return from_float(value, (float)_disable_stroke_color.alpha / 255.f);
+    default:
+        return false;
+    }
 }
 
 void widget_style_sheet::set_value(const string& name, const string& value)
 {
-    if(name == __widget_style_sheet_pairs[0].second)
+    int index = get_style_sheet_index(name);
+    switch(index)
+    {
+    case 0:
         verify(to_color(_fill_color, value));
-    else if(name == __widget_style_sheet_pairs[1].second)
+        break;
+    case 1:
         verify(to_color(_stroke_color, value));
-    else if(name == __widget_style_sheet_pairs[2].second) {
-        float f;
-        verify(to_float(f, value));
-        if(f < 0.f || f > 1.f) {
-            assert(!"invalid opacity for widget_style_sheet.");
-            return;
+        break;
+    case 2:
+        {
+            float f;
+            verify(to_float(f, value));
+            if(f < 0.f || f > 1.f) {
+                assert(!"invalid opacity for widget_style_sheet.");
+                return;
+            }
+            _fill_color.alpha = round(f * 255.f);
+            break;
         }
-        _fill_color.alpha = round(f * 255.f);
-    }
-    else if(name == __widget_style_sheet_pairs[3].second) {
-        float f;
-        verify(to_float(f, value));
-        if(f < 0.f || f > 1.f) {
-            assert(!"invalid opacity for widget_style_sheet.");
-            return;
+    case 3:
+        {
+            float f;
+            verify(to_float(f, value));
+            if(f < 0.f || f > 1.f) {
+                assert(!"invalid opacity for widget_style_sheet.");
+                return;
+            }
+            _stroke_color.alpha = round(f * 255.f);
+            break;
         }
-        _stroke_color.alpha = round(f * 255.f);
-    }
-    else {
+    case 4:
+        verify(to_color(_disable_fill_color, value));
+        break;
+    case 5:
+        verify(to_color(_disable_stroke_color, value));
+        break;
+    case 6:
+        {
+            float f;
+            verify(to_float(f, value));
+            if(f < 0.f || f > 1.f) {
+                assert(!"invalid opacity for widget_style_sheet.");
+                return;
+            }
+            _disable_fill_color.alpha = round(f * 255.f);
+            break;
+        }
+    case 7:
+        {
+            float f;
+            verify(to_float(f, value));
+            if(f < 0.f || f > 1.f) {
+                assert(!"invalid opacity for widget_style_sheet.");
+                return;
+            }
+            _disable_stroke_color.alpha = round(f * 255.f);
+            break;
+        }
+    default:
         assert(!"unexpected style sheet name.");
-        return;
+        break;
     }
 }
 
-int widget_style_sheet::get_content_size() const
-{
-    return _countof(__widget_style_sheet_pairs);
-}
-
-style_sheet_type widget_style_sheet::get_content_type(int index) const
-{
-    if(index < 0 || index >= get_content_size()) {
-        assert(!"bad index for style sheet.");
-        return sst_unknown;
-    }
-    return __widget_style_sheet_pairs[index].first;
-}
-
-const string& widget_style_sheet::get_content_name(int index) const
-{
-    static const string err(_t("unknown name."));
-    if(index < 0 || index >= get_content_size()) {
-        assert(!"bad index for style sheet.");
-        return err;
-    }
-    return __widget_style_sheet_pairs[index].second;
-}
-
-root_widget_style_sheet::root_widget_style_sheet()
+root_widget_style_sheet::root_widget_style_sheet():
+    ariel::style_sheet(__root_widget_style_sheet_defs, _countof(__root_widget_style_sheet_defs))
 {
     _bkground_color = color(245, 246, 247);
 }
 
 bool root_widget_style_sheet::get_value(const string& name, string& value)
 {
-    if(name == __root_widget_style_sheet_pairs[0].second)
+    int index = get_style_sheet_index(name);
+    switch(index)
+    {
+    case 0:
         return from_color(value, _bkground_color);
-    else if(name == __root_widget_style_sheet_pairs[1].second) {
+    case 1:
         value = _bkground_image;
         return true;
+    default:
+        return false;
     }
-    return false;
 }
 
 void root_widget_style_sheet::set_value(const string& name, const string& value)
 {
-    if(name == __root_widget_style_sheet_pairs[0].second)
+    int index = get_style_sheet_index(name);
+    switch(index)
+    {
+    case 0:
         verify(to_color(_bkground_color, value));
-    else if(name == __root_widget_style_sheet_pairs[1].second)
+        break;
+    case 1:
         _bkground_image = value;
-    else {
+        break;
+    default:
         assert(!"unexpected style sheet name.");
-        return;
+        break;
     }
 }
 
-int root_widget_style_sheet::get_content_size() const
+placeholder_style_sheet::placeholder_style_sheet():
+    ariel::style_sheet(__placeholder_style_sheet_defs, _countof(__placeholder_style_sheet_defs))
 {
-    return _countof(__root_widget_style_sheet_pairs);
+    _fill_color = color(255, 255, 255);
+    _stroke_color = color(128, 128, 128);
+    _remark.assign(_t("ui placeholder"));
+    _remark_font_name.assign(_t("Tahoma"));
+    _remark_font_size = 10;
+    _remark_font_color = color(0, 0, 0);
 }
 
-style_sheet_type root_widget_style_sheet::get_content_type(int index) const
+bool placeholder_style_sheet::get_value(const string& name, string& value)
 {
-    if(index < 0 || index >= get_content_size()) {
-        assert(!"bad index for style sheet.");
-        return sst_unknown;
+    int index = get_style_sheet_index(name);
+    switch(index)
+    {
+    case 0:
+        return from_color(value, _fill_color);
+    case 1:
+        return from_color(value, _stroke_color);
+    case 2:
+        return from_float(value, (float)_fill_color.alpha / 255.f);
+    case 3:
+        return from_float(value, (float)_stroke_color.alpha / 255.f);
+    case 4:
+        value = _remark;
+        return true;
+    case 5:
+        value = _remark_font_name;
+        return true;
+    case 6:
+        return from_integer(value, _remark_font_size);
+    case 7:
+        return from_color(value, _remark_font_color);
+    default:
+        return false;
     }
-    return __root_widget_style_sheet_pairs[index].first;
 }
 
-const string& root_widget_style_sheet::get_content_name(int index) const
+void placeholder_style_sheet::set_value(const string& name, const string& value)
 {
-    static const string err(_t("unknown name."));
-    if(index < 0 || index >= get_content_size()) {
-        assert(!"bad index for style sheet.");
-        return err;
+    int index = get_style_sheet_index(name);
+    switch(index)
+    {
+    case 0:
+        verify(to_color(_fill_color, value));
+        break;
+    case 1:
+        verify(to_color(_stroke_color, value));
+        break;
+    case 2:
+        {
+            float f;
+            verify(to_float(f, value));
+            if(f < 0.f || f > 1.f) {
+                assert(!"invalid opacity for widget_style_sheet.");
+                return;
+            }
+            _fill_color.alpha = round(f * 255.f);
+            break;
+        }
+    case 3:
+        {
+            float f;
+            verify(to_float(f, value));
+            if(f < 0.f || f > 1.f) {
+                assert(!"invalid opacity for widget_style_sheet.");
+                return;
+            }
+            _stroke_color.alpha = round(f * 255.f);
+            break;
+        }
+    case 4:
+        _remark = value;
+        break;
+    case 5:
+        _remark_font_name = value;
+        break;
+    case 6:
+        verify(to_integer(_remark_font_size, value));
+        break;
+    case 7:
+        verify(to_color(_remark_font_color, value));
+        break;
+    default:
+        assert(!"unexpected style sheet name.");
+        break;
     }
-    return __root_widget_style_sheet_pairs[index].second;
 }
 
-button_style_sheet::button_style_sheet()
+button_style_sheet::button_style_sheet():
+    ariel::style_sheet(__button_style_sheet_defs, _countof(__button_style_sheet_defs))
 {
     _normal_fill_color = color(245, 246, 247);
     _normal_stroke_color = color(245, 246, 247, 0);
@@ -246,6 +409,8 @@ button_style_sheet::button_style_sheet()
     _hover_stroke_color = color(164, 206, 249);
     _press_fill_color = color(201, 224, 247);
     _press_stroke_color = color(98, 162, 228);
+    _disable_fill_color = color(245, 246, 247);
+    _disable_stroke_color = color(0, 0, 0);
     _caption_font_name.assign(_t("Tahoma"));
     _caption_font_size = 10;
     _caption_font_color = color(0, 0, 0);
@@ -253,160 +418,204 @@ button_style_sheet::button_style_sheet()
 
 bool button_style_sheet::get_value(const string& name, string& value)
 {
-    if(name == __button_style_sheet_pairs[0].second)
+    int index = get_style_sheet_index(name);
+    switch(index)
+    {
+    case 0:
         return from_color(value, _normal_fill_color);
-    else if(name == __button_style_sheet_pairs[1].second)
+    case 1:
         return from_color(value, _normal_stroke_color);
-    else if(name == __button_style_sheet_pairs[2].second)
+    case 2:
         return from_color(value, _hover_fill_color);
-    else if(name == __button_style_sheet_pairs[3].second)
+    case 3:
         return from_color(value, _hover_stroke_color);
-    else if(name == __button_style_sheet_pairs[4].second)
+    case 4:
         return from_color(value, _press_fill_color);
-    else if(name == __button_style_sheet_pairs[5].second)
+    case 5:
         return from_color(value, _press_stroke_color);
-    else if(name == __button_style_sheet_pairs[6].second)
+    case 6:
+        return from_color(value, _disable_fill_color);
+    case 7:
+        return from_color(value, _disable_stroke_color);
+    case 8:
         return from_float(value, (float)_normal_fill_color.alpha / 255.f);
-    else if(name == __button_style_sheet_pairs[7].second)
+    case 9:
         return from_float(value, (float)_normal_stroke_color.alpha / 255.f);
-    else if(name == __button_style_sheet_pairs[8].second)
+    case 10:
         return from_float(value, (float)_hover_fill_color.alpha / 255.f);
-    else if(name == __button_style_sheet_pairs[9].second)
+    case 11:
         return from_float(value, (float)_hover_stroke_color.alpha / 255.f);
-    else if(name == __button_style_sheet_pairs[10].second)
+    case 12:
         return from_float(value, (float)_press_fill_color.alpha / 255.f);
-    else if(name == __button_style_sheet_pairs[11].second)
+    case 13:
         return from_float(value, (float)_press_stroke_color.alpha / 255.f);
-    else if(name == __button_style_sheet_pairs[12].second) {
+    case 14:
+        return from_float(value, (float)_disable_fill_color.alpha / 255.f);
+    case 15:
+        return from_float(value, (float)_disable_stroke_color.alpha / 255.f);
+    case 16:
         value = _caption;
         return true;
-    }
-    else if(name == __button_style_sheet_pairs[13].second) {
+    case 17:
         value = _caption_font_name;
         return true;
-    }
-    else if(name == __button_style_sheet_pairs[14].second)
+    case 18:
         return from_integer(value, _caption_font_size);
-    else if(name == __button_style_sheet_pairs[15].second)
+    case 19:
         return from_color(value, _caption_font_color);
-    return false;
+    default:
+        return false;
+    }
 }
 
 void button_style_sheet::set_value(const string& name, const string& value)
 {
-    if(name == __button_style_sheet_pairs[0].second)
+    int index = get_style_sheet_index(name);
+    switch(index)
+    {
+    case 0:
         verify(to_color(_normal_fill_color, value));
-    else if(name == __button_style_sheet_pairs[1].second)
+        break;
+    case 1:
         verify(to_color(_normal_stroke_color, value));
-    else if(name == __button_style_sheet_pairs[2].second)
+        break;
+    case 2:
         verify(to_color(_hover_fill_color, value));
-    else if(name == __button_style_sheet_pairs[3].second)
+        break;
+    case 3:
         verify(to_color(_hover_stroke_color, value));
-    else if(name == __button_style_sheet_pairs[4].second)
+        break;
+    case 4:
         verify(to_color(_press_fill_color, value));
-    else if(name == __button_style_sheet_pairs[5].second)
+        break;
+    case 5:
         verify(to_color(_press_stroke_color, value));
-    else if(name == __button_style_sheet_pairs[6].second) {
-        float f;
-        verify(to_float(f, value));
-        if(f < 0.f || f > 1.f) {
-            assert(!"invalid opacity for button_style_sheet.");
-            return;
+        break;
+    case 6:
+        verify(to_color(_disable_fill_color, value));
+        break;
+    case 7:
+        verify(to_color(_disable_stroke_color, value));
+        break;
+    case 8:
+        {
+            float f;
+            verify(to_float(f, value));
+            if(f < 0.f || f > 1.f) {
+                assert(!"invalid opacity for button_style_sheet.");
+                return;
+            }
+            _normal_fill_color.alpha = round(f * 255.f);
+            break;
         }
-        _normal_fill_color.alpha = round(f * 255.f);
-    }
-    else if(name == __button_style_sheet_pairs[7].second) {
-        float f;
-        verify(to_float(f, value));
-        if(f < 0.f || f > 1.f) {
-            assert(!"invalid opacity for button_style_sheet.");
-            return;
+    case 9:
+        {
+            float f;
+            verify(to_float(f, value));
+            if(f < 0.f || f > 1.f) {
+                assert(!"invalid opacity for button_style_sheet.");
+                return;
+            }
+            _normal_stroke_color.alpha = round(f * 255.f);
+            break;
         }
-        _normal_stroke_color.alpha = round(f * 255.f);
-    }
-    else if(name == __button_style_sheet_pairs[8].second) {
-        float f;
-        verify(to_float(f, value));
-        if(f < 0.f || f > 1.f) {
-            assert(!"invalid opacity for button_style_sheet.");
-            return;
+    case 10:
+        {
+            float f;
+            verify(to_float(f, value));
+            if(f < 0.f || f > 1.f) {
+                assert(!"invalid opacity for button_style_sheet.");
+                return;
+            }
+            _hover_fill_color.alpha = round(f * 255.f);
+            break;
         }
-        _hover_fill_color.alpha = round(f * 255.f);
-    }
-    else if(name == __button_style_sheet_pairs[9].second) {
-        float f;
-        verify(to_float(f, value));
-        if(f < 0.f || f > 1.f) {
-            assert(!"invalid opacity for button_style_sheet.");
-            return;
+    case 11:
+        {
+            float f;
+            verify(to_float(f, value));
+            if(f < 0.f || f > 1.f) {
+                assert(!"invalid opacity for button_style_sheet.");
+                return;
+            }
+            _hover_stroke_color.alpha = round(f * 255.f);
+            break;
         }
-        _hover_stroke_color.alpha = round(f * 255.f);
-    }
-    else if(name == __button_style_sheet_pairs[10].second) {
-        float f;
-        verify(to_float(f, value));
-        if(f < 0.f || f > 1.f) {
-            assert(!"invalid opacity for button_style_sheet.");
-            return;
+    case 12:
+        {
+            float f;
+            verify(to_float(f, value));
+            if(f < 0.f || f > 1.f) {
+                assert(!"invalid opacity for button_style_sheet.");
+                return;
+            }
+            _press_fill_color.alpha = round(f * 255.f);
+            break;
         }
-        _press_fill_color.alpha = round(f * 255.f);
-    }
-    else if(name == __button_style_sheet_pairs[11].second) {
-        float f;
-        verify(to_float(f, value));
-        if(f < 0.f || f > 1.f) {
-            assert(!"invalid opacity for button_style_sheet.");
-            return;
+    case 13:
+        {
+            float f;
+            verify(to_float(f, value));
+            if(f < 0.f || f > 1.f) {
+                assert(!"invalid opacity for button_style_sheet.");
+                return;
+            }
+            _press_stroke_color.alpha = round(f * 255.f);
+            break;
         }
-        _press_stroke_color.alpha = round(f * 255.f);
-    }
-    else if(name == __button_style_sheet_pairs[12].second)
+    case 14:
+        {
+            float f;
+            verify(to_float(f, value));
+            if(f < 0.f || f > 1.f) {
+                assert(!"invalid opacity for button_style_sheet.");
+                return;
+            }
+            _disable_fill_color.alpha = round(f * 255.f);
+            break;
+        }
+    case 15:
+        {
+            float f;
+            verify(to_float(f, value));
+            if(f < 0.f || f > 1.f) {
+                assert(!"invalid opacity for button_style_sheet.");
+                return;
+            }
+            _disable_stroke_color.alpha = round(f * 255.f);
+            break;
+        }
+    case 16:
         _caption = value;
-    else if(name == __button_style_sheet_pairs[13].second)
+        break;
+    case 17:
         _caption_font_name = value;
-    else if(name == __button_style_sheet_pairs[14].second) {
-        int i;
-        verify(to_integer(i, value));
-        _caption_font_size = i;
-    }
-    else if(name == __button_style_sheet_pairs[15].second)
+        break;
+    case 18:
+        {
+            int i;
+            verify(to_integer(i, value));
+            _caption_font_size = i;
+            break;
+        }
+    case 19:
         verify(to_color(_caption_font_color, value));
-    else {
+        break;
+    default:
         assert(!"unexpected style sheet name.");
-        return;
+        break;
     }
 }
 
-int button_style_sheet::get_content_size() const
-{
-    return _countof(__button_style_sheet_pairs);
-}
-
-style_sheet_type button_style_sheet::get_content_type(int index) const
-{
-    if(index < 0 || index >= get_content_size()) {
-        assert(!"bad index for style sheet.");
-        return sst_unknown;
-    }
-    return __button_style_sheet_pairs[index].first;
-}
-
-const string& button_style_sheet::get_content_name(int index) const
-{
-    static const string err(_t("unknown name."));
-    if(index < 0 || index >= get_content_size()) {
-        assert(!"bad index for style sheet.");
-        return err;
-    }
-    return __button_style_sheet_pairs[index].second;
-}
-
-edit_line_style_sheet::edit_line_style_sheet()
+edit_line_style_sheet::edit_line_style_sheet():
+    ariel::style_sheet(__edit_line_style_sheet_defs, _countof(__edit_line_style_sheet_defs))
 {
     _normal_fill_color = color(255, 255, 255);
     _normal_stroke_color = color(23, 23, 23);
-    _focused_fill_color = color(255, 255, 255);
-    _focused_stroke_color = color(0, 120, 215);
+    _focus_fill_color = color(255, 255, 255);
+    _focus_stroke_color = color(0, 120, 215);
+    _disable_fill_color = color(127, 127, 127);
+    _disable_stroke_color = color(0, 0, 0);
     _text_font_name.assign(_t("simsun"));
     _text_font_size = 10;
     _text_font_color = color(0, 0, 0);
@@ -414,128 +623,174 @@ edit_line_style_sheet::edit_line_style_sheet()
 
 bool edit_line_style_sheet::get_value(const string& name, string& value)
 {
-    if(name == __edit_line_style_sheet_pairs[0].second)
+    int index = get_style_sheet_index(name);
+    switch(index)
+    {
+    case 0:
         return from_color(value, _normal_fill_color);
-    else if(name == __edit_line_style_sheet_pairs[1].second)
+    case 1:
         return from_color(value, _normal_stroke_color);
-    else if(name == __edit_line_style_sheet_pairs[2].second)
+    case 2:
         return from_float(value, (float)_normal_fill_color.alpha / 255.f);
-    else if(name == __edit_line_style_sheet_pairs[3].second)
+    case 3:
         return from_float(value, (float)_normal_stroke_color.alpha / 255.f);
-    else if(name == __edit_line_style_sheet_pairs[4].second)
-        return from_color(value, _focused_fill_color);
-    else if(name == __edit_line_style_sheet_pairs[5].second)
-        return from_color(value, _focused_stroke_color);
-    else if(name == __edit_line_style_sheet_pairs[6].second)
-        return from_float(value, (float)_focused_fill_color.alpha / 255.f);
-    else if(name == __edit_line_style_sheet_pairs[7].second)
-        return from_float(value, (float)_focused_stroke_color.alpha / 255.f);
-    else if(name == __edit_line_style_sheet_pairs[8].second) {
+    case 4:
+        return from_color(value, _focus_fill_color);
+    case 5:
+        return from_color(value, _focus_stroke_color);
+    case 6:
+        return from_float(value, (float)_focus_fill_color.alpha / 255.f);
+    case 7:
+        return from_float(value, (float)_focus_stroke_color.alpha / 255.f);
+    case 8:
+        return from_color(value, _disable_fill_color);
+    case 9:
+        return from_color(value, _disable_stroke_color);
+    case 10:
+        return from_float(value, (float)_disable_fill_color.alpha / 255.f);
+    case 11:
+        return from_float(value, (float)_disable_stroke_color.alpha / 255.f);
+    case 12:
         value = _text_font_name;
         return true;
-    }
-    else if(name == __edit_line_style_sheet_pairs[9].second)
+    case 13:
         return from_integer(value, _text_font_size);
-    else if(name == __edit_line_style_sheet_pairs[10].second)
+    case 14:
         return from_color(value, _text_font_color);
-    else if(name == __edit_line_style_sheet_pairs[11].second)
+    case 15:
         return from_float(value, (float)_text_font_color.alpha / 255.f);
-    return false;
+    default:
+        return false;
+    }
 }
 
 void edit_line_style_sheet::set_value(const string& name, const string& value)
 {
-    if(name == __edit_line_style_sheet_pairs[0].second)
+    int index = get_style_sheet_index(name);
+    switch(index)
+    {
+    case 0:
         verify(to_color(_normal_fill_color, value));
-    else if(name == __edit_line_style_sheet_pairs[1].second)
+        break;
+    case 1:
         verify(to_color(_normal_stroke_color, value));
-    else if(name == __edit_line_style_sheet_pairs[2].second) {
-        float f;
-        verify(to_float(f, value));
-        if(f < 0.f || f > 1.f) {
-            assert(!"invalid opacity for edit_style_sheet.");
-            return;
+        break;
+    case 2:
+        {
+            float f;
+            verify(to_float(f, value));
+            if(f < 0.f || f > 1.f) {
+                assert(!"invalid opacity for edit_style_sheet.");
+                return;
+            }
+            _normal_fill_color.alpha = round(f * 255.f);
+            break;
         }
-        _normal_fill_color.alpha = round(f * 255.f);
-    }
-    else if(name == __edit_line_style_sheet_pairs[3].second) {
-        float f;
-        verify(to_float(f, value));
-        if(f < 0.f || f > 1.f) {
-            assert(!"invalid opacity for edit_style_sheet.");
-            return;
+    case 3:
+        {
+            float f;
+            verify(to_float(f, value));
+            if(f < 0.f || f > 1.f) {
+                assert(!"invalid opacity for edit_style_sheet.");
+                return;
+            }
+            _normal_stroke_color.alpha = round(f * 255.f);
+            break;
         }
-        _normal_stroke_color.alpha = round(f * 255.f);
-    }
-    else if(name == __edit_line_style_sheet_pairs[4].second)
-        verify(to_color(_focused_fill_color, value));
-    else if(name == __edit_line_style_sheet_pairs[5].second)
-        verify(to_color(_focused_stroke_color, value));
-    else if(name == __edit_line_style_sheet_pairs[6].second) {
-        float f;
-        verify(to_float(f, value));
-        if(f < 0.f || f > 1.f) {
-            assert(!"invalid opacity for edit_style_sheet.");
-            return;
+    case 4:
+        verify(to_color(_focus_fill_color, value));
+        break;
+    case 5:
+        verify(to_color(_focus_stroke_color, value));
+        break;
+    case 6:
+        {
+            float f;
+            verify(to_float(f, value));
+            if(f < 0.f || f > 1.f) {
+                assert(!"invalid opacity for edit_style_sheet.");
+                return;
+            }
+            _focus_fill_color.alpha = round(f * 255.f);
+            break;
         }
-        _focused_fill_color.alpha = round(f * 255.f);
-    }
-    else if(name == __edit_line_style_sheet_pairs[7].second) {
-        float f;
-        verify(to_float(f, value));
-        if(f < 0.f || f > 1.f) {
-            assert(!"invalid opacity for edit_style_sheet.");
-            return;
+    case 7:
+        {
+            float f;
+            verify(to_float(f, value));
+            if(f < 0.f || f > 1.f) {
+                assert(!"invalid opacity for edit_style_sheet.");
+                return;
+            }
+            _focus_stroke_color.alpha = round(f * 255.f);
+            break;
         }
-        _focused_stroke_color.alpha = round(f * 255.f);
-    }
-    else if(name == __edit_line_style_sheet_pairs[8].second)
+    case 8:
+        verify(to_color(_disable_fill_color, value));
+        break;
+    case 9:
+        verify(to_color(_disable_stroke_color, value));
+        break;
+    case 10:
+        {
+            float f;
+            verify(to_float(f, value));
+            if(f < 0.f || f > 1.f) {
+                assert(!"invalid opacity for edit_style_sheet.");
+                return;
+            }
+            _disable_fill_color.alpha = round(f * 255.f);
+            break;
+        }
+    case 11:
+        {
+            float f;
+            verify(to_float(f, value));
+            if(f < 0.f || f > 1.f) {
+                assert(!"invalid opacity for edit_style_sheet.");
+                return;
+            }
+            _disable_stroke_color.alpha = round(f * 255.f);
+            break;
+        }
+    case 12:
         _text_font_name = value;
-    else if(name == __edit_line_style_sheet_pairs[9].second)
+        break;
+    case 13:
         verify(to_integer(_text_font_size, value));
-    else if(name == __edit_line_style_sheet_pairs[10].second)
+        break;
+    case 14:
         verify(to_color(_text_font_color, value));
-    else if(name == __edit_line_style_sheet_pairs[11].second) {
-        float f;
-        verify(to_float(f, value));
-        if(f < 0.f || f > 1.f) {
-            assert(!"invalid opacity for edit_style_sheet.");
-            return;
+        break;
+    case 15:
+        {
+            float f;
+            verify(to_float(f, value));
+            if(f < 0.f || f > 1.f) {
+                assert(!"invalid opacity for edit_style_sheet.");
+                return;
+            }
+            _text_font_color.alpha = round(f * 255.f);
+            break;
         }
-        _text_font_color.alpha = round(f * 255.f);
-    }
-    else {
+    default:
         assert(!"unexpected style sheet name.");
-        return;
+        break;
     }
 }
 
-int edit_line_style_sheet::get_content_size() const
+menu_style_sheet::menu_style_sheet():
+    ariel::style_sheet(__menu_style_sheet_defs, _countof(__menu_style_sheet_defs))
 {
-    return _countof(__edit_line_style_sheet_pairs);
-}
-
-style_sheet_type edit_line_style_sheet::get_content_type(int index) const
-{
-    if(index < 0 || index >= get_content_size()) {
-        assert(!"bad index for style sheet.");
-        return sst_unknown;
-    }
-    return __edit_line_style_sheet_pairs[index].first;
-}
-
-const string& edit_line_style_sheet::get_content_name(int index) const
-{
-    static const string err(_t("unknown name."));
-    if(index < 0 || index >= get_content_size()) {
-        assert(!"bad index for style sheet.");
-        return err;
-    }
-    return __edit_line_style_sheet_pairs[index].second;
-}
-
-menu_style_sheet::menu_style_sheet()
-{
+    _normal_fill_color = color(245, 246, 247);
+    _normal_stroke_color = color(245, 246, 247, 0);
+    _hover_fill_color = color(232, 239, 247);
+    _hover_stroke_color = color(164, 206, 249);
+    _press_fill_color = color(201, 224, 247);
+    _press_stroke_color = color(98, 162, 228);
+    _disable_fill_color = color(245, 246, 247);
+    _disable_stroke_color = color(0, 0, 0);
+    _caption_font_color = color(0, 0, 0);
     _border_color = color(53, 53, 53);
     _separator_color = color(190, 195, 203);
     _separator_space = 1;
@@ -552,82 +807,246 @@ menu_style_sheet::menu_style_sheet()
 
 bool menu_style_sheet::get_value(const string& name, string& value)
 {
-    if(name == __menu_style_sheet_pairs[0].second)
+    int index = get_style_sheet_index(name);
+    switch(index)
+    {
+    case 0:
+        return from_color(value, _normal_fill_color);
+    case 1:
+        return from_color(value, _normal_stroke_color);
+    case 2:
+        return from_color(value, _hover_fill_color);
+    case 3:
+        return from_color(value, _hover_stroke_color);
+    case 4:
+        return from_color(value, _press_fill_color);
+    case 5:
+        return from_color(value, _press_stroke_color);
+    case 6:
+        return from_color(value, _disable_fill_color);
+    case 7:
+        return from_color(value, _disable_stroke_color);
+    case 8:
+        return from_float(value, (float)_normal_fill_color.alpha / 255.f);
+    case 9:
+        return from_float(value, (float)_normal_stroke_color.alpha / 255.f);
+    case 10:
+        return from_float(value, (float)_hover_fill_color.alpha / 255.f);
+    case 11:
+        return from_float(value, (float)_hover_stroke_color.alpha / 255.f);
+    case 12:
+        return from_float(value, (float)_press_fill_color.alpha / 255.f);
+    case 13:
+        return from_float(value, (float)_press_stroke_color.alpha / 255.f);
+    case 14:
+        return from_float(value, (float)_disable_fill_color.alpha / 255.f);
+    case 15:
+        return from_float(value, (float)_disable_stroke_color.alpha / 255.f);
+    case 16:
+        value = _caption;
+        return true;
+    case 17:
+        value = _caption_font_name;
+        return true;
+    case 18:
+        return from_integer(value, _caption_font_size);
+    case 19:
+        return from_color(value, _caption_font_color);
+    case 20:
         return from_color(value, _border_color);
-    else if(name == __menu_style_sheet_pairs[1].second)
+    case 21:
         return from_color(value, _separator_color);
-    else if(name == __menu_style_sheet_pairs[2].second)
+    case 22:
         return from_integer(value, _separator_space);
-    else if(name == __menu_style_sheet_pairs[3].second)
+    case 23:
         return from_integer(value, _text_horizontal_margin);
-    else if(name == __menu_style_sheet_pairs[4].second)
+    case 24:
         return from_integer(value, _text_vertical_margin);
-    else if(name == __menu_style_sheet_pairs[5].second)
+    case 25:
         return from_integer(value, _caption_reserved_space);
-    else if(name == __menu_style_sheet_pairs[6].second)
+    case 26:
         return from_integer(value, _accel_reserved_space);
-    return button_style_sheet::get_value(name, value);
+    default:
+        return false;
+    }
 }
 
 void menu_style_sheet::set_value(const string& name, const string& value)
 {
-    if(name == __menu_style_sheet_pairs[0].second)
+    int index = get_style_sheet_index(name);
+    switch(index)
+    {
+    case 0:
+        verify(to_color(_normal_fill_color, value));
+        break;
+    case 1:
+        verify(to_color(_normal_stroke_color, value));
+        break;
+    case 2:
+        verify(to_color(_hover_fill_color, value));
+        break;
+    case 3:
+        verify(to_color(_hover_stroke_color, value));
+        break;
+    case 4:
+        verify(to_color(_press_fill_color, value));
+        break;
+    case 5:
+        verify(to_color(_press_stroke_color, value));
+        break;
+    case 6:
+        verify(to_color(_disable_fill_color, value));
+        break;
+    case 7:
+        verify(to_color(_disable_stroke_color, value));
+        break;
+    case 8:
+        {
+            float f;
+            verify(to_float(f, value));
+            if(f < 0.f || f > 1.f) {
+                assert(!"invalid opacity for button_style_sheet.");
+                return;
+            }
+            _normal_fill_color.alpha = round(f * 255.f);
+            break;
+        }
+    case 9:
+        {
+            float f;
+            verify(to_float(f, value));
+            if(f < 0.f || f > 1.f) {
+                assert(!"invalid opacity for button_style_sheet.");
+                return;
+            }
+            _normal_stroke_color.alpha = round(f * 255.f);
+            break;
+        }
+    case 10:
+        {
+            float f;
+            verify(to_float(f, value));
+            if(f < 0.f || f > 1.f) {
+                assert(!"invalid opacity for button_style_sheet.");
+                return;
+            }
+            _hover_fill_color.alpha = round(f * 255.f);
+            break;
+        }
+    case 11:
+        {
+            float f;
+            verify(to_float(f, value));
+            if(f < 0.f || f > 1.f) {
+                assert(!"invalid opacity for button_style_sheet.");
+                return;
+            }
+            _hover_stroke_color.alpha = round(f * 255.f);
+            break;
+        }
+    case 12:
+        {
+            float f;
+            verify(to_float(f, value));
+            if(f < 0.f || f > 1.f) {
+                assert(!"invalid opacity for button_style_sheet.");
+                return;
+            }
+            _press_fill_color.alpha = round(f * 255.f);
+            break;
+        }
+    case 13:
+        {
+            float f;
+            verify(to_float(f, value));
+            if(f < 0.f || f > 1.f) {
+                assert(!"invalid opacity for button_style_sheet.");
+                return;
+            }
+            _press_stroke_color.alpha = round(f * 255.f);
+            break;
+        }
+    case 14:
+        {
+            float f;
+            verify(to_float(f, value));
+            if(f < 0.f || f > 1.f) {
+                assert(!"invalid opacity for button_style_sheet.");
+                return;
+            }
+            _disable_fill_color.alpha = round(f * 255.f);
+            break;
+        }
+    case 15:
+        {
+            float f;
+            verify(to_float(f, value));
+            if(f < 0.f || f > 1.f) {
+                assert(!"invalid opacity for button_style_sheet.");
+                return;
+            }
+            _disable_stroke_color.alpha = round(f * 255.f);
+            break;
+        }
+    case 16:
+        _caption = value;
+        break;
+    case 17:
+        _caption_font_name = value;
+        break;
+    case 18:
+        {
+            int i;
+            verify(to_integer(i, value));
+            _caption_font_size = i;
+            break;
+        }
+    case 19:
+        verify(to_color(_caption_font_color, value));
+        break;
+    case 20:
         verify(to_color(_border_color, value));
-    else if(name == __menu_style_sheet_pairs[1].second)
+        break;
+    case 21:
         verify(to_color(_separator_color, value));
-    else if(name == __menu_style_sheet_pairs[2].second)
+        break;
+    case 22:
         verify(to_integer(_separator_space, value));
-    else if(name == __menu_style_sheet_pairs[3].second)
+        break;
+    case 23:
         verify(to_integer(_text_horizontal_margin, value));
-    else if(name == __menu_style_sheet_pairs[4].second)
+        break;
+    case 24:
         verify(to_integer(_text_vertical_margin, value));
-    else if(name == __menu_style_sheet_pairs[5].second)
+        break;
+    case 25:
         verify(to_integer(_caption_reserved_space, value));
-    else if(name == __menu_style_sheet_pairs[6].second)
+        break;
+    case 26:
         verify(to_integer(_accel_reserved_space, value));
-    else
-        button_style_sheet::set_value(name, value);
-}
-
-int menu_style_sheet::get_content_size() const
-{
-    return _countof(__button_style_sheet_pairs) + _countof(__menu_style_sheet_pairs);
-}
-
-style_sheet_type menu_style_sheet::get_content_type(int index) const
-{
-    if(index < 0 || index >= get_content_size()) {
-        assert(!"bad index for style sheet.");
-        return sst_unknown;
+        break;
+    default:
+        assert(!"unexpected style sheet name.");
+        break;
     }
-    return index < _countof(__menu_style_sheet_pairs) ? __menu_style_sheet_pairs[index].first :
-        __button_style_sheet_pairs[index - _countof(__menu_style_sheet_pairs)].first;
 }
 
-const string& menu_style_sheet::get_content_name(int index) const
-{
-    static const string err(_t("unknown name."));
-    if(index < 0 || index >= get_content_size()) {
-        assert(!"bad index for style sheet.");
-        return err;
-    }
-    return index < _countof(__menu_style_sheet_pairs) ? __menu_style_sheet_pairs[index].second :
-        __button_style_sheet_pairs[index - _countof(__menu_style_sheet_pairs)].second;
-}
-
-menu_cmd_style_sheet::menu_cmd_style_sheet()
+menu_cmd_style_sheet::menu_cmd_style_sheet():
+    ariel::style_sheet(__menu_cmd_style_sheet_defs, _countof(__menu_cmd_style_sheet_defs))
 {
 }
 
 bool menu_cmd_style_sheet::get_value(const string& name, string& value)
 {
-    if(name == __menu_cmd_style_sheet_pairs[0].second) {
+    int index = get_style_sheet_index(name);
+    switch(index)
+    {
+    case 0:
         value = _caption;
         return true;
-    }
-    else if(name == __menu_cmd_style_sheet_pairs[1].second)
+    case 1:
         return from_accel_key(value, _accel_key);
-    else {
+    default:
         assert(!"unexpected style sheet name.");
         return false;
     }
@@ -635,51 +1054,35 @@ bool menu_cmd_style_sheet::get_value(const string& name, string& value)
 
 void menu_cmd_style_sheet::set_value(const string& name, const string& value)
 {
-    if(name == __menu_cmd_style_sheet_pairs[0].second)
+    int index = get_style_sheet_index(name);
+    switch(index)
+    {
+    case 0:
         _caption = value;
-    else if(name == __menu_cmd_style_sheet_pairs[1].second)
+        break;
+    case 1:
         verify(to_accel_key(_accel_key, value));
-    else {
+        break;
+    default:
         assert(!"unexpected style sheet name.");
-        return;
+        break;
     }
 }
 
-int menu_cmd_style_sheet::get_content_size() const
-{
-    return _countof(__menu_cmd_style_sheet_pairs);
-}
-
-style_sheet_type menu_cmd_style_sheet::get_content_type(int index) const
-{
-    if(index < 0 || index >= get_content_size()) {
-        assert(!"bad index for style sheet.");
-        return sst_unknown;
-    }
-    return __menu_cmd_style_sheet_pairs[index].first;
-}
-
-const string& menu_cmd_style_sheet::get_content_name(int index) const
-{
-    static const string err(_t("unknown name."));
-    if(index < 0 || index >= get_content_size()) {
-        assert(!"bad index for style sheet.");
-        return err;
-    }
-    return __menu_cmd_style_sheet_pairs[index].second;
-}
-
-menu_sub_style_sheet::menu_sub_style_sheet()
+menu_sub_style_sheet::menu_sub_style_sheet():
+    ariel::style_sheet(__menu_sub_style_sheet_defs, _countof(__menu_sub_style_sheet_defs))
 {
 }
 
 bool menu_sub_style_sheet::get_value(const string& name, string& value)
 {
-    if(name == __menu_sub_style_sheet_pairs[0].second) {
+    int index = get_style_sheet_index(name);
+    switch(index)
+    {
+    case 0:
         value = _caption;
         return true;
-    }
-    else {
+    default:
         assert(!"unexpected style sheet name.");
         return false;
     }
@@ -687,36 +1090,16 @@ bool menu_sub_style_sheet::get_value(const string& name, string& value)
 
 void menu_sub_style_sheet::set_value(const string& name, const string& value)
 {
-    if(name == __menu_sub_style_sheet_pairs[0].second)
+    int index = get_style_sheet_index(name);
+    switch(index)
+    {
+    case 0:
         _caption = value;
-    else {
+        break;
+    default:
         assert(!"unexpected style sheet name.");
-        return;
+        break;
     }
-}
-
-int menu_sub_style_sheet::get_content_size() const
-{
-    return _countof(__menu_sub_style_sheet_pairs);
-}
-
-style_sheet_type menu_sub_style_sheet::get_content_type(int index) const
-{
-    if(index < 0 || index >= get_content_size()) {
-        assert(!"bad index for style sheet.");
-        return sst_unknown;
-    }
-    return __menu_sub_style_sheet_pairs[0].first;
-}
-
-const string& menu_sub_style_sheet::get_content_name(int index) const
-{
-    static const string err(_t("unknown name."));
-    if(index < 0 || index >= get_content_size()) {
-        assert(!"bad index for style sheet.");
-        return err;
-    }
-    return __menu_sub_style_sheet_pairs[0].second;
 }
 
 menubar_style_sheet::menubar_style_sheet()
@@ -724,17 +1107,20 @@ menubar_style_sheet::menubar_style_sheet()
     /* todo */
 }
 
-menubar_button_style_sheet::menubar_button_style_sheet()
+menubar_button_style_sheet::menubar_button_style_sheet():
+    ariel::style_sheet(__menubar_button_style_sheet_defs, _countof(__menubar_button_style_sheet_defs))
 {
 }
 
 bool menubar_button_style_sheet::get_value(const string& name, string& value)
 {
-    if(name == __menubar_button_style_sheet_pairs[0].second) {
+    int index = get_style_sheet_index(name);
+    switch(index)
+    {
+    case 0:
         value = _caption;
         return true;
-    }
-    else {
+    default:
         assert(!"unexpected style sheet name.");
         return false;
     }
@@ -742,36 +1128,98 @@ bool menubar_button_style_sheet::get_value(const string& name, string& value)
 
 void menubar_button_style_sheet::set_value(const string& name, const string& value)
 {
-    if(name == __menubar_button_style_sheet_pairs[0].second)
+    int index = get_style_sheet_index(name);
+    switch(index)
+    {
+    case 0:
         _caption = value;
-    else {
+        break;
+    default:
         assert(!"unexpected style sheet name.");
-        return;
+        break;
     }
 }
 
-int menubar_button_style_sheet::get_content_size() const
+tree_view_style_sheet::tree_view_style_sheet():
+    ariel::style_sheet(__tree_view_style_sheet_defs, _countof(__tree_view_style_sheet_defs))
 {
-    return _countof(__menubar_button_style_sheet_pairs);
+    _view_fill_color = color(255, 255, 255);
+    _view_stroke_color = color(23, 23, 23);
+    _item_indent = 14;
+    _item_spacing = 1;
+    _connect_line_color = color(127, 127, 127);
 }
 
-style_sheet_type menubar_button_style_sheet::get_content_type(int index) const
+bool tree_view_style_sheet::get_value(const string& name, string& value)
 {
-    if(index < 0 || index >= get_content_size()) {
-        assert(!"bad index for style sheet.");
-        return sst_unknown;
+    int index = get_style_sheet_index(name);
+    switch(index)
+    {
+    case 0:
+        return from_color(value, _view_fill_color);
+    case 1:
+        return from_color(value, _view_stroke_color);
+    case 2:
+        return from_float(value, (float)_view_fill_color.alpha / 255.f);
+    case 3:
+        return from_float(value, (float)_view_stroke_color.alpha / 255.f);
+    case 4:
+        return from_integer(value, _item_indent);
+    case 5:
+        return from_integer(value, _item_spacing);
+    case 6:
+        return from_color(value, _connect_line_color);
+    default:
+        return false;
     }
-    return __menubar_button_style_sheet_pairs[0].first;
 }
 
-const string& menubar_button_style_sheet::get_content_name(int index) const
+void tree_view_style_sheet::set_value(const string& name, const string& value)
 {
-    static const string err(_t("unknown name."));
-    if(index < 0 || index >= get_content_size()) {
-        assert(!"bad index for style sheet.");
-        return err;
+    int index = get_style_sheet_index(name);
+    switch(index)
+    {
+    case 0:
+        verify(to_color(_view_fill_color, value));
+        break;
+    case 1:
+        verify(to_color(_view_stroke_color, value));
+        break;
+    case 2:
+        {
+            float f;
+            verify(to_float(f, value));
+            if(f < 0.f || f > 1.f) {
+                assert(!"invalid opacity for tree_view_style_sheet.");
+                return;
+            }
+            _view_fill_color.alpha = round(f * 255.f);
+            break;
+        }
+    case 3:
+        {
+            float f;
+            verify(to_float(f, value));
+            if(f < 0.f || f > 1.f) {
+                assert(!"invalid opacity for tree_view_style_sheet.");
+                return;
+            }
+            _view_stroke_color.alpha = round(f * 255.f);
+            break;
+        }
+    case 4:
+        verify(to_integer(_item_indent, value));
+        break;
+    case 5:
+        verify(to_integer(_item_spacing, value));
+        break;
+    case 6:
+        verify(to_color(_connect_line_color, value));
+        break;
+    default:
+        assert(!"unexpected style sheet name.");
+        break;
     }
-    return __menubar_button_style_sheet_pairs[0].second;
 }
 
 void* widget::query_interface(const uuid& uid)
@@ -784,8 +1232,14 @@ void* widget::query_interface(const uuid& uid)
 void widget::draw(painter* paint)
 {
     assert(paint);
-    paint->set_brush(_normal_brush);
-    paint->set_pen(_normal_pen);
+    if(is_enabled()) {
+        paint->set_brush(_normal_brush);
+        paint->set_pen(_normal_pen);
+    }
+    else {
+        paint->set_brush(_disable_brush);
+        paint->set_pen(_disable_pen);
+    }
     paint->draw_rect(get_rectf());
 }
 
@@ -793,6 +1247,8 @@ void widget::flush_style()
 {
     setup_brush_by_color(_normal_brush, _fill_color);
     setup_pen_by_color(_normal_pen, _stroke_color);
+    setup_brush_by_color(_disable_brush, _disable_fill_color);
+    setup_pen_by_color(_disable_pen, _disable_stroke_color);
 }
 
 void* root_widget::query_interface(const uuid& uid)
@@ -821,11 +1277,45 @@ void root_widget::flush_style()
     }
 }
 
+void* placeholder::query_interface(const uuid& uid)
+{
+    if(uid == uuid_style_sheet)
+        return static_cast<style_sheet*>(this);
+    return __super::query_interface(uid);
+}
+
+void placeholder::draw(painter* paint)
+{
+    assert(paint);
+    paint->set_brush(_normal_brush);
+    paint->set_pen(_normal_pen);
+    paint->draw_rect(get_rectf());
+    paint->set_font(_remark_font);
+    if(!_remark.empty())
+        paint->draw_text(_remark.c_str(), 0, 0, _remark_font_color, _remark.length());
+}
+
+void placeholder::flush_style()
+{
+    setup_brush_by_color(_normal_brush, _fill_color);
+    setup_pen_by_color(_normal_pen, _stroke_color);
+    setup_font(_remark_font, _remark_font_name, _remark_font_size);
+}
+
 void* button::query_interface(const uuid& uid)
 {
     if(uid == uuid_style_sheet)
         return static_cast<style_sheet*>(this);
     return __super::query_interface(uid);
+}
+
+void button::enable(bool b)
+{
+    __super::enable(b);
+    if(!b) {
+        _current_brush = _disable_brush;
+        _current_pen = _disable_pen;
+    }
 }
 
 void button::draw(painter* paint)
@@ -854,8 +1344,10 @@ void button::flush_style()
     setup_pen_by_color(_hover_pen, _hover_stroke_color);
     setup_brush_by_color(_press_brush, _press_fill_color);
     setup_pen_by_color(_press_pen, _press_stroke_color);
+    setup_brush_by_color(_disable_brush, _disable_fill_color);
+    setup_pen_by_color(_disable_pen, _disable_stroke_color);
     setup_font(_caption_font, _caption_font_name, _caption_font_size);
-    is_enable() ? set_normal() : set_gray();
+    is_enabled() ? set_normal() : set_gray();
 }
 
 void button::set_press()
@@ -878,26 +1370,8 @@ void button::set_hover()
 
 void button::set_gray()
 {
-    if(_normal_brush.get_tag() != painter_brush::solid) {
-        assert(_normal_brush.get_tag() == painter_brush::none);
-        _current_brush = _normal_brush;
-    }
-    else {
-        const color& cr = _normal_brush.get_color();
-        int c = ((int)cr.red + cr.green + cr.blue) / 3;
-        _current_brush.set_tag(painter_brush::solid);
-        _current_brush.set_color(color(c, c, c, cr.alpha));
-    }
-    if(_normal_pen.get_tag() != painter_pen::solid) {
-        assert(_normal_pen.get_tag() == painter_pen::none);
-        _current_pen = _normal_pen;
-    }
-    else {
-        const color& cr = _normal_pen.get_color();
-        int c = ((int)cr.red + cr.green + cr.blue) / 3;
-        _current_pen.set_tag(painter_pen::solid);
-        _current_pen.set_color(color(c, c, c, cr.alpha));
-    }
+    _current_brush = _disable_brush;
+    _current_pen = _disable_pen;
 }
 
 void* edit_line::query_interface(const uuid& uid)
@@ -919,8 +1393,10 @@ void edit_line::flush_style()
 {
     setup_brush_by_color(_normal_brush, _normal_fill_color);
     setup_pen_by_color(_normal_pen, _normal_stroke_color);
-    setup_brush_by_color(_focused_brush, _focused_fill_color);
-    setup_pen_by_color(_focused_pen, _focused_stroke_color);
+    setup_brush_by_color(_focus_brush, _focus_fill_color);
+    setup_pen_by_color(_focus_pen, _focus_stroke_color);
+    setup_brush_by_color(_disable_brush, _disable_fill_color);
+    setup_pen_by_color(_disable_pen, _disable_stroke_color);
     setup_font(_text_font, _text_font_name, _text_font_size);
 }
 
@@ -928,9 +1404,13 @@ void edit_line::draw_background(painter* paint)
 {
     assert(paint);
     paint->save();
-    if(is_focused()) {
-        paint->set_brush(_focused_brush);
-        paint->set_pen(_focused_pen);
+    if(!is_enabled()) {
+        paint->set_brush(_disable_brush);
+        paint->set_pen(_disable_pen);
+    }
+    else if(is_focused()) {
+        paint->set_brush(_focus_brush);
+        paint->set_pen(_focus_pen);
     }
     else {
         paint->set_brush(_normal_brush);
@@ -938,6 +1418,639 @@ void edit_line::draw_background(painter* paint)
     }
     paint->draw_rect(get_rectf());
     paint->restore();
+}
+
+void horizontal_splitter::on_hover(uint um, const point& pt)
+{
+    __super::on_hover(um, pt);
+    assert(_manager);
+    _manager->set_cursor(cur_size_ns);
+}
+
+void horizontal_splitter::on_dragging(const point& pt)
+{
+    assert(_is_dragging);
+    int ofsy = pt.y - _init_drag_pt.y;
+    rect rc = get_rect();
+    int y = rc.top + ofsy;
+    y = gs_max(y, _min_range);
+    y = gs_min(y, _max_range);
+    rc.move_to(0, y);
+    move(rc);
+    if(_slider_notify)
+        _slider_notify->on_slider_moved(this);
+}
+
+void vertical_splitter::on_hover(uint um, const point& pt)
+{
+    __super::on_hover(um, pt);
+    assert(_manager);
+    _manager->set_cursor(cur_size_we);
+}
+
+void vertical_splitter::on_dragging(const point& pt)
+{
+    int ofsx = pt.x - _init_drag_pt.x;
+    rect rc = get_rect();
+    int x = rc.left + ofsx;
+    x = gs_max(x, _min_range);
+    x = gs_min(x, _max_range);
+    rc.move_to(x, 0);
+    move(rc);
+    if(_slider_notify)
+        _slider_notify->on_slider_moved(this);
+}
+
+void container::move(const rect& rc)
+{
+    bool size_changed = (get_width() != rc.width() || get_height() != rc.height());
+    __super::move(rc);
+    if(size_changed)
+        on_container_size_changed();
+}
+
+horizontal_layout_container::horizontal_layout_container(wsys_manager* m):
+    container(m)
+{
+    _left_sub_widget = nullptr;
+    _right_sub_widget = nullptr;
+    _splitter = nullptr;
+    _splitter_width = 5;
+    _split_percent = 0.2f;
+    _layout_width[0] = _layout_width[1] = 0;
+}
+
+void horizontal_layout_container::initialize_container()
+{
+    assert(!_splitter);
+    auto* wsys = get_manager();
+    assert(wsys);
+    _splitter = wsys->add_widget<vertical_splitter>(this, nullptr, rect(0, 0, _splitter_width, get_height()), sm_visible | sm_hitable);
+    assert(_splitter);
+    _splitter->set_slider_notify(this);
+    _splitter->set_range(0, get_width());
+    _splitter->flush_style();
+    split_by_percent(_split_percent);
+}
+
+void horizontal_layout_container::on_splitter_moved(splitter* sp)
+{
+    int p = _splitter->get_rect().left;
+    float t = (float)p / (float)get_width();
+    split_by_percent(t);
+}
+
+void horizontal_layout_container::on_container_size_changed()
+{
+    split_by_percent(_split_percent);
+}
+
+void horizontal_layout_container::set_split_percent(float t)
+{
+    if(t == _split_percent)
+        return;
+    split_by_percent(t);
+}
+
+rect horizontal_layout_container::get_left_sub_rect() const
+{
+    return rect(0, 0, _layout_width[0], get_height());
+}
+
+rect horizontal_layout_container::get_right_sub_rect() const
+{
+    return rect(_layout_width[0] + _splitter->get_width(), 0, _layout_width[1], get_height());
+}
+
+void horizontal_layout_container::split_by_percent(float sp)
+{
+    _split_percent = sp;
+    assert(_splitter);
+    int w = get_width();
+    int h = get_height();
+    int spw = _splitter->get_width();
+    int restw = gs_max(0, w - spw);
+    _layout_width[0] = round(_split_percent * restw);
+    _layout_width[1] = gs_max(0, restw - _layout_width[0]);
+    _splitter->move(rect(_layout_width[0], 0, spw, h));
+    if(_left_sub_widget)
+        _left_sub_widget->move(get_left_sub_rect());
+    if(_right_sub_widget)
+        _right_sub_widget->move(get_right_sub_rect());
+}
+
+vertical_layout_container::vertical_layout_container(wsys_manager* m):
+    container(m)
+{
+    _up_sub_widget = nullptr;
+    _down_sub_widget = nullptr;
+    _splitter = nullptr;
+    _splitter_width = 5;
+    _split_percent = 0.2f;
+    _layout_height[0] = _layout_height[1] = 0;
+}
+
+void vertical_layout_container::initialize_container()
+{
+    assert(!_splitter);
+    auto* wsys = get_manager();
+    assert(wsys);
+    _splitter = wsys->add_widget<horizontal_splitter>(this, nullptr, rect(0, 0, get_width(), _splitter_width), sm_visible | sm_hitable);
+    assert(_splitter);
+    _splitter->set_slider_notify(this);
+    _splitter->set_range(0, get_height());
+    _splitter->flush_style();
+    split_by_percent(_split_percent);
+}
+
+void vertical_layout_container::on_splitter_moved(splitter* sp)
+{
+    int p = _splitter->get_rect().top;
+    float t = (float)p / (float)get_height();
+    split_by_percent(t);
+}
+
+void vertical_layout_container::on_container_size_changed()
+{
+    split_by_percent(_split_percent);
+}
+
+void vertical_layout_container::set_split_percent(float t)
+{
+    if(t == _split_percent)
+        return;
+    split_by_percent(t);
+}
+
+rect vertical_layout_container::get_up_sub_rect() const
+{
+    return rect(0, 0, get_width(), _layout_height[0]);
+}
+
+rect vertical_layout_container::get_down_sub_rect() const
+{
+    return rect(0, _layout_height[0] + _splitter->get_height(), get_width(), _layout_height[1]);
+}
+
+void vertical_layout_container::split_by_percent(float sp)
+{
+    _split_percent = sp;
+    assert(_splitter);
+    int w = get_width();
+    int h = get_height();
+    int sph = _splitter->get_height();
+    int resth = gs_max(0, h - sph);
+    _layout_height[0] = round(_split_percent * resth);
+    _layout_height[1] = gs_max(0, resth - _layout_height[0]);
+    _splitter->move(rect(0, _layout_height[0], w, sph));
+    if(_up_sub_widget)
+        _up_sub_widget->move(get_up_sub_rect());
+    if(_down_sub_widget)
+        _down_sub_widget->move(get_down_sub_rect());
+}
+
+void horizontal_scroller::on_dragging(const point& pt)
+{
+    int ofsx = pt.x - _init_drag_pt.x;
+    rect rc = get_rect();
+    int x = rc.left + ofsx;
+    x = gs_max(x, _min_range);
+    x = gs_min(x, _max_range);
+    rc.move_to(x, rc.top);
+    move(rc);
+    if(_slider_notify)
+        _slider_notify->on_slider_moved(this);
+}
+
+void vertical_scroller::on_dragging(const point& pt)
+{
+    assert(_is_dragging);
+    int ofsy = pt.y - _init_drag_pt.y;
+    rect rc = get_rect();
+    int y = rc.top + ofsy;
+    y = gs_max(y, _min_range);
+    y = gs_min(y, _max_range);
+    rc.move_to(rc.left, y);
+    move(rc);
+    if(_slider_notify)
+        _slider_notify->on_slider_moved(this);
+}
+
+scroll_button::scroll_button(wsys_manager* m):
+    button(m)
+{
+    _btn_type = btn_up;
+    _arrow_fill.set_tag(painter_brush::solid);
+    _arrow_fill.set_color(color(0, 0, 0));
+}
+
+void scroll_button::enable(bool b)
+{
+    _arrow_fill.set_color(b ? color(0, 0, 0) : color(128, 128, 128));
+}
+
+void scroll_button::draw(painter* paint)
+{
+    __super::draw(paint);
+    float w = (float)get_width(), h = (float)get_height();
+    static const float d = 7.f;
+    paint->save();
+    paint->set_brush(_arrow_fill);
+    paint->set_pen(painter_pen(painter_pen::none));
+    switch(_btn_type)
+    {
+    case btn_up:
+        draw_up_arrow(paint, rectf((w - d) / 2.f, (h - d / 2.f) / 2.f, d, d / 2.f));
+        break;
+    case btn_down:
+        draw_down_arrow(paint, rectf((w - d) / 2.f, (h - d / 2.f) / 2.f, d, d / 2.f));
+        break;
+    case btn_left:
+        draw_left_arrow(paint, rectf((w - d / 2.f) / 2.f, (h - d) / 2.f, d / 2.f, d));
+        break;
+    case btn_right:
+        draw_right_arrow(paint, rectf((w - d / 2.f) / 2.f, (h - d) / 2.f, d / 2.f, d));
+        break;
+    }
+    paint->restore();
+}
+
+void scroll_button::draw_up_arrow(painter* paint, const rectf& rc)
+{
+    painter_path path;
+    pointf c;
+    c.add(rc.top_left(), rc.top_right());
+    c.scale(0.5f);
+    path.move_to(c);
+    path.line_to(rc.bottom_left());
+    path.line_to(rc.bottom_right());
+    path.close_path();
+    paint->draw_path(path);
+}
+
+void scroll_button::draw_down_arrow(painter* paint, const rectf& rc)
+{
+    painter_path path;
+    pointf c;
+    c.add(rc.bottom_left(), rc.bottom_right());
+    c.scale(0.5f);
+    path.move_to(rc.top_left());
+    path.line_to(c);
+    path.line_to(rc.top_right());
+    path.close_path();
+    paint->draw_path(path);
+}
+
+void scroll_button::draw_left_arrow(painter* paint, const rectf& rc)
+{
+    painter_path path;
+    pointf c;
+    c.add(rc.top_left(), rc.bottom_left());
+    c.scale(0.5f);
+    path.move_to(rc.top_right());
+    path.line_to(c);
+    path.line_to(rc.bottom_right());
+    path.close_path();
+    paint->draw_path(path);
+}
+
+void scroll_button::draw_right_arrow(painter* paint, const rectf& rc)
+{
+    painter_path path;
+    pointf c;
+    c.add(rc.top_right(), rc.bottom_right());
+    c.scale(0.5f);
+    path.move_to(rc.top_left());
+    path.line_to(rc.bottom_left());
+    path.line_to(c);
+    path.close_path();
+    paint->draw_path(path);
+}
+
+scrollbar::scrollbar(wsys_manager* m):
+    widget(m)
+{
+    _scroller = nullptr;
+    _inc_button = _dec_button = nullptr;
+    _scroll_pace = 2;
+    _canvas_range = 1;
+    _scroll_ratio = 0.f;
+    _min_width = _min_height = 0;
+    _hori_margin = _vert_margin = 1;
+    _fill_color = color(184, 191, 199);
+    _stroke_color = color(184, 191, 199, 0);
+}
+
+void scrollbar::move(const rect& rc)
+{
+    __super::move(
+        rect(rc.left,
+            rc.top,
+            gs_max(_min_width, rc.width()),
+            gs_max(_min_height, rc.height())
+            )
+        );
+    on_scrollbar_size_changed();
+}
+
+void scrollbar::enable(bool b)
+{
+    __super::enable(b);
+    assert(_scroller && _inc_button && _dec_button);
+    _scroller->enable(is_enabled());
+    _inc_button->enable(is_enabled());
+    _dec_button->enable(is_enabled());
+}
+
+void scrollbar::scroll_by(int by)
+{
+    float t = calc_scroll_ratio(by);
+    set_scroll_ratio(t);
+}
+
+void scrollbar::on_scrollbar_size_changed()
+{
+    layout_scrollbar();
+}
+
+void scrollbar::on_slider_moved(slider*)
+{
+    float t = calc_scroll_ratio(0);
+    set_scroll_ratio(t);
+}
+
+void scrollbar::on_inc_button_clicked(uint um, unikey uk, const point& pt)
+{
+    scroll_by(_scroll_pace);
+}
+
+void scrollbar::on_dec_button_clicked(uint um, unikey uk, const point& pt)
+{
+    scroll_by(-_scroll_pace);
+}
+
+void scrollbar::set_canvas_range(int range)
+{
+    if(_canvas_range != range) {
+        _canvas_range = range;
+        layout_scrollbar();
+    }
+}
+
+void scrollbar::set_scroll_ratio(float t)
+{
+    if(_scroll_ratio != t) {
+        _scroll_ratio = t;
+        adjust_scrollbar();
+    }
+}
+
+void scrollbar::connect_scrollbar_notifications()
+{
+    assert(_inc_button && _dec_button);
+    connect_notify(_inc_button, &scroll_button::on_click, this, &scrollbar::on_inc_button_clicked, 12);
+    connect_notify(_dec_button, &scroll_button::on_click, this, &scrollbar::on_dec_button_clicked, 12);
+    assert(_scroller);
+    _scroller->set_slider_notify(this);
+}
+
+horizontal_scrollbar::horizontal_scrollbar(wsys_manager* m):
+    scrollbar(m)
+{
+    _min_width = 36;
+    _min_height = 18;
+}
+
+void horizontal_scrollbar::initialize_scrollbar(int range)
+{
+    assert(!_scroller);
+    _scroller = _manager->add_widget<horizontal_scroller>(this, nullptr, rect(), sm_visible | sm_hitable);
+    _scroller->flush_style();
+    assert(!_dec_button);
+    _dec_button = _manager->add_widget<scroll_button>(this, nullptr, rect(), sm_visible | sm_hitable);
+    _dec_button->set_button_type(scroll_button::btn_left);
+    _dec_button->flush_style();
+    assert(!_inc_button);
+    _inc_button = _manager->add_widget<scroll_button>(this, nullptr, rect(), sm_visible | sm_hitable);
+    _inc_button->set_button_type(scroll_button::btn_right);
+    _inc_button->flush_style();
+    connect_scrollbar_notifications();
+    _canvas_range = range;
+    layout_scrollbar();
+}
+
+void horizontal_scrollbar::adjust_scrollbar()
+{
+    assert(_scroller && _dec_button && _inc_button);
+    _dec_button->enable(is_enabled());
+    _inc_button->enable(is_enabled());
+    float scroll_range = (float)calc_scroll_range();
+    assert(scroll_range >= 0.f);
+    float view_range = (float)get_width();
+    float scroller_width_ratio = gs_min(1.f, view_range / (float)_canvas_range);
+    int scroller_width = round(scroller_width_ratio * scroll_range) - _hori_margin * 2;
+    int scroller_height = calc_scroll_button_height();
+    _scroller->move(rect(_hori_margin, _vert_margin, scroller_width, scroller_height));
+    refresh_scroller_pos();
+}
+
+void horizontal_scrollbar::layout_scrollbar()
+{
+    assert(_scroller && _dec_button && _inc_button);
+    int w = get_width();
+    int h = get_height();
+    int btn_width = calc_scroll_button_width();
+    int btn_height = calc_scroll_button_height();
+    _dec_button->move(rect(_hori_margin, _vert_margin, btn_width, btn_height));
+    _inc_button->move(rect(w - btn_width - _hori_margin, _vert_margin, btn_width, btn_height));
+    adjust_scrollbar();
+    int start = calc_scroll_range_start();
+    int end = start + calc_scroll_range() - _scroller->get_width();
+    _scroller->set_range(start, end);
+}
+
+float horizontal_scrollbar::calc_scroll_ratio(int bias) const
+{
+    int sw = _scroller->get_width();
+    int sp = _scroller->get_rect().left;
+    int start = calc_scroll_range_start();
+    int range = calc_scroll_range() - sw;
+    int p = sp - start + bias;
+    p = gs_min(gs_max(p, 0), range);
+    float f = ((float)p) / ((float)range);
+    return f;
+}
+
+int horizontal_scrollbar::calc_scroll_range() const
+{
+    int w = get_width();
+    return w - (calc_scroll_button_width() + _hori_margin * 2) * 2;
+}
+
+int horizontal_scrollbar::calc_scroll_button_width() const
+{
+    return round(0.8f * calc_scroll_button_height());
+}
+
+int horizontal_scrollbar::calc_scroll_button_height() const
+{
+    int h = get_height();
+    return h - _vert_margin * 2;
+}
+
+int horizontal_scrollbar::calc_scroll_range_start() const
+{
+    assert(_dec_button);
+    int dock_pos = _dec_button->get_rect().right;
+    return dock_pos + _hori_margin;
+}
+
+void horizontal_scrollbar::refresh_scroller_pos()
+{
+    int scroller_width = _scroller->get_width();
+    int scroll_range = calc_scroll_range();
+    assert(scroller_width <= scroll_range);
+    int pos = round(_scroll_ratio * (float)(scroll_range - scroller_width));
+    int scroll_start = calc_scroll_range_start();
+    _scroller->move(point(scroll_start + pos, _vert_margin));
+}
+
+vertical_scrollbar::vertical_scrollbar(wsys_manager* m):
+    scrollbar(m)
+{
+    _min_width = 18;
+    _min_height = 36;
+}
+
+void vertical_scrollbar::initialize_scrollbar(int range)
+{
+    assert(!_scroller);
+    _scroller = _manager->add_widget<vertical_scroller>(this, nullptr, rect(), sm_visible | sm_hitable);
+    _scroller->flush_style();
+    assert(!_dec_button);
+    _dec_button = _manager->add_widget<scroll_button>(this, nullptr, rect(), sm_visible | sm_hitable);
+    _dec_button->set_button_type(scroll_button::btn_up);
+    _dec_button->flush_style();
+    assert(!_inc_button);
+    _inc_button = _manager->add_widget<scroll_button>(this, nullptr, rect(), sm_visible | sm_hitable);
+    _inc_button->set_button_type(scroll_button::btn_down);
+    _inc_button->flush_style();
+    connect_scrollbar_notifications();
+    _canvas_range = range;
+    layout_scrollbar();
+}
+
+void vertical_scrollbar::adjust_scrollbar()
+{
+    assert(_scroller && _dec_button && _inc_button);
+    _dec_button->enable(is_enabled());
+    _inc_button->enable(is_enabled());
+    float scroll_range = (float)calc_scroll_range();
+    assert(scroll_range >= 0.f);
+    float view_range = (float)get_height();
+    float scroller_height_ratio = gs_min(1.f, view_range / (float)_canvas_range);
+    int scroller_width = calc_scroll_button_width();
+    int scroller_height = round(scroller_height_ratio * scroll_range) - _vert_margin * 2;
+    _scroller->move(rect(_hori_margin, _vert_margin, scroller_width, scroller_height));
+    refresh_scroller_pos();
+}
+
+void vertical_scrollbar::layout_scrollbar()
+{
+    assert(_scroller && _dec_button && _inc_button);
+    int w = get_width();
+    int h = get_height();
+    int btn_width = calc_scroll_button_width();
+    int btn_height = calc_scroll_button_height();
+    _dec_button->move(rect(_hori_margin, _vert_margin, btn_width, btn_height));
+    _inc_button->move(rect(_hori_margin, h - btn_height - _vert_margin, btn_width, btn_height));
+    adjust_scrollbar();
+    int start = calc_scroll_range_start();
+    int end = start + calc_scroll_range() - _scroller->get_height();
+    _scroller->set_range(start, end);
+}
+
+float vertical_scrollbar::calc_scroll_ratio(int bias) const
+{
+    int sh = _scroller->get_height();
+    int sp = _scroller->get_rect().top;
+    int start = calc_scroll_range_start();
+    int range = calc_scroll_range() - sh;
+    int p = sp - start + bias;
+    p = gs_min(gs_max(p, 0), range);
+    float f = ((float)p) / ((float)range);
+    return f;
+}
+
+int vertical_scrollbar::calc_scroll_range() const
+{
+    int h = get_height();
+    return h - (calc_scroll_button_height() + _vert_margin * 2) * 2;
+}
+
+int vertical_scrollbar::calc_scroll_button_width() const
+{
+    int w = get_width();
+    return w - _hori_margin * 2;
+}
+
+int vertical_scrollbar::calc_scroll_button_height() const
+{
+    return round(0.8f * calc_scroll_button_width());
+}
+
+int vertical_scrollbar::calc_scroll_range_start() const
+{
+    assert(_dec_button);
+    int dock_pos = _dec_button->get_rect().bottom;
+    return dock_pos + _vert_margin;
+}
+
+void vertical_scrollbar::refresh_scroller_pos()
+{
+    int scroller_height = _scroller->get_height();
+    int scroll_range = calc_scroll_range();
+    assert(scroller_height <= scroll_range);
+    int pos = round(_scroll_ratio * (float)(scroll_range - scroller_height));
+    int scroll_start = calc_scroll_range_start();
+    _scroller->move(point(_hori_margin, scroll_start + pos));
+}
+
+class raw_tree_view
+{
+public:
+    raw_tree_view(tree_view* ptv)
+    {
+        _view = ptv;
+    }
+
+private:
+    tree_view*          _view;
+};
+
+tree_view::tree_view(wsys_manager* m):
+    ariel::widget(m)
+{
+    _raw_view = new raw_tree_view(this);
+}
+
+tree_view::~tree_view()
+{
+    if(_raw_view) {
+        delete _raw_view;
+        _raw_view = nullptr;
+    }
+}
+
+void* tree_view::query_interface(const uuid& uid)
+{
+    if(uid == uuid_style_sheet)
+        return static_cast<style_sheet*>(this);
+    return __super::query_interface(uid);
+}
+
+void tree_view::draw(painter* paint)
+{
 }
 
 void* menu_separator::query_interface(const uuid& uid)
@@ -1411,6 +2524,8 @@ void menu::flush_style()
     setup_pen_by_color(_menu_hover_pen, _hover_stroke_color);
     setup_brush_by_color(_menu_press_brush, _press_fill_color);
     setup_pen_by_color(_menu_press_pen, _press_stroke_color);
+    setup_brush_by_color(_menu_disable_brush, _disable_fill_color);
+    setup_pen_by_color(_menu_disable_pen, _disable_stroke_color);
     setup_font(_menu_font, _caption_font_name, _caption_font_size);
 }
 
@@ -1654,6 +2769,8 @@ void menubar::flush_style()
     setup_pen_by_color(_menubar_hover_pen, _hover_stroke_color);
     setup_brush_by_color(_menubar_press_brush, _press_fill_color);
     setup_pen_by_color(_menubar_press_pen, _press_stroke_color);
+    setup_brush_by_color(_menubar_disable_brush, _disable_fill_color);
+    setup_pen_by_color(_menubar_disable_pen, _disable_stroke_color);
     setup_font(_menubar_font, _caption_font_name, _caption_font_size);
 }
 

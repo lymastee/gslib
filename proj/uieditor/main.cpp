@@ -16,14 +16,6 @@ int gs_main()
     ui_editor::ui_editor_context uiectx;
     ui_editor::ui_convert_source_to_core(uiectx, uitree, src);
 
-    string cs;
-    ui_editor::ui_compile(cs, uiectx, uitree);
-
-    {
-        file ff(_t("ss.h"), _t("w,ccs=UTF-8"));
-        ff.write(cs.c_str());
-    }
-
     wsys_manager* wsys = scene::get_singleton_ptr()->get_ui_system();
     assert(wsys);
     painter* ptex = wsys->get_painter();

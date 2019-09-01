@@ -31,8 +31,9 @@ __ariel_begin__
 
 static const float dt_tolerance = 1e-10f;
 
-static float dt_area(const vec2& a, const vec2& b, const vec2& c) { return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x); }
-static bool dt_ccw(const vec2& a, const vec2& b, const vec2& c) { return dt_area(a, b, c) > 0.f; }
+static double dt_area(const vec2& a, const vec2& b, const vec2& c) { return (double)(b.x - a.x) * (double)(c.y - a.y) - (double)(b.y - a.y) * (double)(c.x - a.x); }
+static double dt_lengthsq(const vec2& q) { return (double)q.x * q.x + (double)q.y * q.y; }
+static bool dt_ccw(const vec2& a, const vec2& b, const vec2& c) { return dt_area(a, b, c) > 0.0; }
 static bool dt_left_of(const vec2& p, dt_edge* e) { return dt_ccw(p, e->get_org_point(), e->get_dest_point()); }
 static bool dt_right_of(const vec2& p, dt_edge* e) { return dt_ccw(p, e->get_dest_point(), e->get_org_point()); }
 static bool dt_valid(dt_edge* e, dt_edge* basel) { return dt_right_of(e->get_dest_point(), basel); }
@@ -41,10 +42,11 @@ static bool dt_in_circle(const vec2& a, const vec2& b, const vec2& c, const vec2
 {
     if(&d == &a || &d == &b || &d == &c)
         return false;
-    return vec2lengthsq(&a) * dt_area(b, c, d) -
-        vec2lengthsq(&b) * dt_area(a, c, d) +
-        vec2lengthsq(&c) * dt_area(a, b, d) -
-        vec2lengthsq(&d) * dt_area(a, b, c) > 0;
+    double f = dt_lengthsq(a) * dt_area(b, c, d) -
+        dt_lengthsq(b) * dt_area(a, c, d) +
+        dt_lengthsq(c) * dt_area(a, b, d) -
+        dt_lengthsq(d) * dt_area(a, b, c);
+    return f > 0.0;
 }
 
 static void dt_splice(dt_edge* e1, dt_edge* e2)
@@ -643,8 +645,8 @@ dt_edge_range delaunay_triangulation::delaunay(int begin, int end)
                 while(dt_in_circle(basel->get_dest_point(), basel->get_org_point(),
                     lcand->get_dest_point(), lcand->get_org_next()->get_dest_point()
                     )) {
-                    if(lcand == ldo)
-                        break;
+                    /* if(lcand == ldo)
+                        break; */
                     auto* t = lcand->get_org_next();
                     destroy_edge_pair(lcand);
                     lcand = t;
@@ -655,8 +657,8 @@ dt_edge_range delaunay_triangulation::delaunay(int begin, int end)
                 while(dt_in_circle(basel->get_dest_point(), basel->get_org_point(),
                     rcand->get_dest_point(), rcand->get_org_prev()->get_dest_point()
                     )) {
-                    if(rcand->get_symmetric() == rdo)
-                        break;
+                    /* if(rcand->get_symmetric() == rdo)
+                        break; */
                     auto* t = rcand->get_org_prev();
                     destroy_edge_pair(rcand);
                     rcand = t;

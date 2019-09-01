@@ -48,9 +48,8 @@ enum unimask
 
 enum stylemask
 {
-    declare_mask(sm_movable,    0),
-    declare_mask(sm_hitable,    1),
-    declare_mask(sm_visible,    2),
+    declare_mask(sm_hitable,    0),
+    declare_mask(sm_visible,    1),
 };
 
 /*

@@ -746,6 +746,49 @@ project "uieditor"
 		"proj/uieditor/io.h"
 	}
 	
+project "uic"
+	language "C++"
+	kind "ConsoleApp"
+	entrypoint ""
+	dependson {
+		"gslib",
+		"ariel"
+	}
+	includedirs {
+		todir,
+		"include",
+		"src",
+		"ext",
+		"framework",
+		"proj/uieditor"
+	}
+	libdirs {
+		"$(OutDir)"
+	}
+	links {
+		"dxgi.lib",
+		"d3d11.lib",
+		"zlib.lib",
+		"libjpeg.lib",
+		"libpng.lib",
+		"gslib.lib",
+		"ariel.lib",
+		"imm32.lib",
+		"snmpapi.lib",
+		"d3d10_1.lib",
+		"d2d1.lib",
+		"dwrite.lib"
+	}
+	files {
+		"proj/uieditor/uic/main.cpp",
+		"proj/uieditor/basis.cpp",
+		"proj/uieditor/uic.cpp",
+		"proj/uieditor/basis.h",
+		"proj/uieditor/uic.h",
+		"proj/uieditor/io.cpp",
+		"proj/uieditor/io.h"
+	}
+
 project "msomorph"
 	language "C++"
 	kind "WindowedApp"

@@ -320,6 +320,7 @@ int bat_line::clip_triangle(bat_line output[2], const bat_triangle* triangle) co
     bool inside1 = point_in_triangle(_points[0], triangle->get_reduced_point(0), triangle->get_reduced_point(1), triangle->get_reduced_point(2));
     bool inside2 = point_in_triangle(_points[1], triangle->get_reduced_point(0), triangle->get_reduced_point(1), triangle->get_reduced_point(2));
     auto clone_line_info = [this](bat_line& line) {
+        line.set_pen_tag(_tag);
         line.set_source_joint(0, get_source_joint(0));
         line.set_source_joint(1, get_source_joint(1));
         line.set_zorder(get_zorder());

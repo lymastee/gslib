@@ -41,8 +41,48 @@ const string& get_style_sheet_type_name(style_sheet_type sst)
     return sst_names[sst];
 }
 
-style_sheet::style_sheet()
+style_sheet::style_sheet(const style_sheet_def* ssp, int len)
 {
+    _ss_pairs = nullptr;
+    _ss_length = 0;
+    initialize_style_sheet(ssp, len);
+}
+
+style_sheet_type style_sheet::get_content_type(int index) const
+{
+    if(index < 0 || index >= get_content_size()) {
+        assert(!"bad index for style sheet.");
+        return sst_unknown;
+    }
+    assert(_ss_pairs);
+    return _ss_pairs[index].first;
+}
+
+const string& style_sheet::get_content_name(int index) const
+{
+    if(index < 0 || index >= get_content_size()) {
+        static const string err(_t("unknown name."));
+        assert(!"bad index for style sheet.");
+        return err;
+    }
+    assert(_ss_pairs);
+    return _ss_pairs[index].second;
+}
+
+void style_sheet::initialize_style_sheet(const style_sheet_def* ssp, int len)
+{
+    assert(ssp && len);
+    _ss_pairs = ssp;
+    _ss_length = len;
+    _ss_info.clear();
+    for(int i = 0; i < len; i ++)
+        _ss_info.emplace(ssp[i].second, i);
+}
+
+int style_sheet::get_style_sheet_index(const string& name) const
+{
+    auto f = _ss_info.find(name);
+    return f != _ss_info.end() ? f->second : npos;
 }
 
 bool style_sheet::from_color(string& str, const color& cr)

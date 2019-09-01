@@ -42,8 +42,8 @@ widget::widget(wsys_manager* m)
     _manager = m;
     _prev = _next = _child = _last_child = _parent = nullptr;
     _style = 0;
-    _show = false;
-    _enable = true;
+    _visible = false;
+    _enabled = true;
 }
 
 widget::~widget()
@@ -76,17 +76,16 @@ bool widget::create(widget* ptr, const gchar* name, const rect& rc, uint style)
     _name.assign(name);
     _pos = rc;
     _style = style;
-    _htpos.set_point(-1, -1);
     if(style & sm_visible)
-        _show = true;
+        _visible = true;
     refresh(false);
     return true;
 }
 
 void widget::close()
 {
-    _show = false;
-    _enable = false;
+    _visible = false;
+    _enabled = false;
     capture(false);
     assert(!_child);
     if(_parent && _parent->_child == this)
@@ -101,8 +100,8 @@ void widget::close()
 
 void widget::show(bool b)
 {
-    if(_show != b) {
-        _show = b;
+    if(_visible != b) {
+        _visible = b;
         refresh(false);
     }
     if(!b)
@@ -111,8 +110,8 @@ void widget::show(bool b)
 
 void widget::enable(bool b)
 {
-    if(_enable != b) {
-        _enable = b;
+    if(_enabled != b) {
+        _enabled = b;
         refresh(false);
     }
 }
@@ -174,16 +173,13 @@ void widget::lay(widget* ptr, laytag t)
 
 void widget::on_press(uint um, unikey uk, const point& pt)
 {
-    if(uk == mk_left) {
-        _htpos = pt;
+    if(uk == mk_left)
         capture(true);
-    }
 }
 
 void widget::on_click(uint um, unikey uk, const point& pt)
 {
-    if(uk == mk_left && _htpos.x >= 0 && _htpos.y >= 0) {
-        _htpos.set_point(-1, -1);
+    if(uk == mk_left) {
         capture(false);
         /* focus! */
         focus();
@@ -192,12 +188,6 @@ void widget::on_click(uint um, unikey uk, const point& pt)
 
 void widget::on_hover(uint um, const point& pt)
 {
-    if((_style & sm_movable) && _htpos.x >= 0 && _htpos.y >= 0) {
-        point mt = pt;
-        mt.offset(-_htpos.x, -_htpos.y);
-        mt.offset(_pos.left, _pos.top);
-        move(mt);
-    }
 }
 
 void widget::on_leave(uint um, const point& pt)
@@ -296,7 +286,7 @@ void button::draw(painter* paint)
 
 void button::enable(bool b)
 {
-    bool dif = _enable != b;
+    bool dif = _enabled != b;
     superref::enable(b);
     if(dif != false)
         b ? set_normal() : set_gray();
@@ -401,7 +391,7 @@ void button::set_image(texture2d* img, bool fs)
     auto* rsys = scene::get_singleton_ptr()->get_rendersys();
     assert(rsys);
     _bkground = rsys->create_texture2d(w, h, DXGI_FORMAT_R8G8B8A8_UNORM, 1, D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS, 0);
-    _enable ? set_normal() : set_gray();
+    _enabled ? set_normal() : set_gray();
 }
 
 edit_line::edit_line(wsys_manager* m): widget(m)
@@ -414,13 +404,6 @@ edit_line::edit_line(wsys_manager* m): widget(m)
     _selcolor = color(0, 125, 255);
     _crtcolor = color(0, 0, 0);
     _font = font(_t("simsun"), 10);
-}
-
-bool edit_line::create(widget* ptr, const gchar* name, const rect& rc, uint style)
-{
-    /* should not be movable */
-    style &= ~sm_movable;
-    return superref::create(ptr, name, rc, style);
 }
 
 void edit_line::draw(painter* paint)
@@ -983,73 +966,6 @@ int edit_line::trim_if_overrun(bool alarm)
     return alarm_count;
 }
 
-scroller::scroller(wsys_manager* m): button(m)
-{
-    _rangemin = 0;
-    _rangemax = 0;
-    _scrpos = 0;
-    _vtscroll = false;
-}
-
-void scroller::set_scroller(int r1, int r2, bool vts, texture2d* img, bool as)
-{
-    assert(r1 <= r2 && img);
-    set_image(img, as);
-    _vtscroll = vts;
-    r2 -= vts ? get_height() : get_width();
-    _rangemin = r1;
-    _rangemax = r2 < r1 ? r1 : r2;
-    point pt(_pos.left, _pos.top);
-    if(vts) {
-        if(pt.y < _rangemin) pt.y = _rangemin;
-        else if(pt.y > _rangemax) pt.y = _rangemax;
-    }
-    else {
-        if(pt.x < _rangemin) pt.x = _rangemin;
-        else if(pt.x > _rangemax) pt.y = _rangemax;
-    }
-    move(pt);
-}
-
-void scroller::set_scroll(real32 s)
-{
-    assert(s >= 0.f && s <= 1.f);
-    int n = (int)(s * (_rangemax - _rangemin));
-    n += _rangemin;
-    move(_vtscroll ? point(_pos.left, n) : point(n, _pos.top));
-}
-
-bool scroller::create(widget* ptr, const gchar* name, const rect& rc, uint style)
-{
-    style |= (sm_movable|sm_hitable);
-    return superref::create(ptr, name, rc, style);
-}
-
-void scroller::on_hover(uint um, const point& pt)
-{
-    if((_style & sm_movable) && _htpos.x >= 0 && _htpos.y >= 0) {
-        point mt = pt;
-        mt.offset(-_htpos.x, -_htpos.y);
-        mt.offset(_pos.left, _pos.top);
-        if(_vtscroll) {
-            mt.x = _pos.left;
-            if(mt.y < _rangemin) mt.y = _rangemin;
-            else if(mt.y > _rangemax) mt.y = _rangemax;
-            _scrpos = (real32)(mt.x - _rangemin);
-            _scrpos /= _rangemax - _rangemin;
-        }
-        else {
-            mt.y = _pos.top;
-            if(mt.x < _rangemin) mt.x = _rangemin;
-            else if(mt.x > _rangemax) mt.x = _rangemax;
-            _scrpos = (real32)(mt.y - _rangemin);
-            _scrpos /= _rangemax - _rangemin;
-        }
-        move(mt);
-        on_scroll(pt, _scrpos, _vtscroll);
-    }
-}
-
 timer::timer(wsys_manager* mgr)
 {
     if(mgr)
@@ -1386,7 +1302,7 @@ void wsys_manager::update(widget* w)
 
 widget* wsys_manager::hit_test(widget* ptr, point pt)
 {
-    if(!ptr || !ptr->is_visible() || !ptr->is_enable())
+    if(!ptr || !ptr->is_visible() || !ptr->is_enabled())
         return nullptr;
     const rect& rc = ptr->get_rect();
     if(!rc.in_rect(pt) || !ptr->hit_test(pt))
@@ -1437,7 +1353,7 @@ widget* wsys_manager::set_focus(widget* ptr)
 
 void wsys_manager::on_caret(uint)
 {
-    if(_focus && _focus->is_enable() && _focus->is_visible())
+    if(_focus && _focus->is_enabled() && _focus->is_visible())
         _focus->on_caret();
 }
 
@@ -1547,21 +1463,21 @@ bool wsys_manager::on_key_down(uint um, unikey uk)
 {
     if(try_proceed_accelerator(_accel_map, uk, um))
         return true;
-    if(_focus && _focus->is_enable() && _focus->is_visible())
+    if(_focus && _focus->is_enabled() && _focus->is_visible())
         _focus->on_keydown(um, uk);
     return true;
 }
 
 bool wsys_manager::on_key_up(uint um, unikey uk)
 {
-    if(_focus && _focus->is_enable() && _focus->is_visible())
+    if(_focus && _focus->is_enabled() && _focus->is_visible())
         _focus->on_keyup(um, uk);
     return true;
 }
 
 bool wsys_manager::on_char(uint um, uint ch)
 {
-    if(_focus && _focus->is_enable() && _focus->is_visible())
+    if(_focus && _focus->is_enabled() && _focus->is_visible())
         _focus->on_char(um, ch);
     return true;
 }

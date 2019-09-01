@@ -96,7 +96,6 @@ void ui_transparent_layer::install_reflection_widget(core_widget* refw)
 {
     assert(refw);
     _reflection_widget = refw;
-    install_dvt(refw, 2);
     connect_reflect(refw, &core_widget::close, this, &ui_transparent_layer::on_reflection_close);
     connect_reflect(refw, &core_widget::show, this, &ui_transparent_layer::on_reflection_show);
     connect_reflect(refw, &core_widget::enable, this, &ui_transparent_layer::on_reflection_enable);
@@ -423,7 +422,6 @@ void ui_editor_layer::initialize(ui_node& uinode)
 void ui_editor_layer::install_reflection_widget(core_widget* refw)
 {
     assert(refw);
-    install_dvt(refw, 2);
     connect_reflect(refw, &core_widget::on_press, this, &ui_editor_layer::on_reflection_press);
     connect_reflect(refw, &core_widget::on_click, this, &ui_editor_layer::on_reflection_click);
     connect_reflect(refw, &core_widget::on_hover, this, &ui_editor_layer::on_reflection_hover);

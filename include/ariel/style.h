@@ -45,21 +45,34 @@ enum style_sheet_type
 };
 
 extern const string& get_style_sheet_type_name(style_sheet_type sst);
-typedef std::pair<style_sheet_type, string> style_sheet_pair;
+typedef std::pair<style_sheet_type, string> style_sheet_def;
+typedef unordered_map<string, int> style_sheet_info_map;
 
 struct accel_key;
 
 class __gs_novtable style_sheet abstract
 {
 public:
-    style_sheet();
+    static const int npos = -1;
+
+public:
+    style_sheet(const style_sheet_def* ssp, int len);
     virtual ~style_sheet() {}
     virtual bool get_value(const string& name, string& value) = 0;
     virtual void set_value(const string& name, const string& value) = 0;
-    virtual int get_content_size() const = 0;
-    virtual style_sheet_type get_content_type(int index) const = 0;
-    virtual const string& get_content_name(int index) const = 0;
+    virtual int get_content_size() const { return _ss_length; }
+    virtual style_sheet_type get_content_type(int index) const;
+    virtual const string& get_content_name(int index) const;
     virtual void flush_style() = 0;
+
+protected:
+    const style_sheet_def*  _ss_pairs;
+    int                     _ss_length;
+    style_sheet_info_map    _ss_info;
+
+public:
+    void initialize_style_sheet(const style_sheet_def* ssp, int len);
+    int get_style_sheet_index(const string& name) const;
 
 protected:
     static bool from_color(string& str, const color& cr);

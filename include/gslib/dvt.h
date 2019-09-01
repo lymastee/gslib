@@ -92,17 +92,19 @@ public:
     {
         return get_virtual_method_index(method_address(myref::end_of_vtable));
     }
-    void* create_per_instance_vtable(_cls* p, int cascade_vt_layers = 1)
+    void* create_per_instance_vtable(_cls* p, dvt_bridge_code& bridges)
     {
         assert(p);
-        int size = size_of_vtable() * 4 * cascade_vt_layers;
+        int count = size_of_vtable();
         byte* ovt = *(byte**)p;
-        void* pvt = VirtualAlloc(nullptr, size, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+        void** pvt = (void**)VirtualAlloc(nullptr, count * 4, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
         assert(pvt);
-        memcpy(pvt, ovt, size);
+        bridges.install(ovt, count);
+        for(int i = 0; i < count; i ++)
+            pvt[i] = bridges.get_bridge(i);
         memcpy(p, &pvt, 4);
         DWORD oldpro;
-        VirtualProtect(pvt, size, PAGE_EXECUTE_READ, &oldpro);
+        VirtualProtect(pvt, count * 4, PAGE_EXECUTE_READ, &oldpro);
         return ovt;
     }
     void destroy_per_instance_vtable(_cls* p, void* ovt)
@@ -150,18 +152,6 @@ private:
 };
 
 /*
- * This installation step does not always have to be done before the connection steps.
- * Only if your class has complex derivations and you just happen to need call __super::func, etc.
- */
-#define install_typed_dvt(targettype, target, cascade_vt_layers) { \
-    auto& vo = vtable_ops<targettype>(nullptr); \
-    (target)->ensure_dvt_available<targettype>(cascade_vt_layers); \
-}
-
-#define install_dvt(target, cascade_vt_layers) \
-    install_typed_dvt(std::remove_reference_t<decltype(*target)>, target, cascade_vt_layers)
-
-/*
  * The two kind of DVT callings:
  * 1.notify:    the original function would be called first, and then the notify function will be called after, you MUST specify the size of the argument table.
  * 2.reflect:   the original function would NOT be called, simply jump to the reflect function, and the argument table of the reflect function SHOULD be exactly the same with the original function.
@@ -187,6 +177,25 @@ private:
 #define connect_reflect(target, trigger, host, action) \
     connect_typed_reflect(std::remove_reference_t<decltype(*target)>, target, trigger, host, action)
 
+/*
+ * Bridge to jump to the original vtable
+ * The reason why we can't simply copy the original vtable was that it's hard to determine how long the vtable actually was.
+ * If the target class had a complex derivations, missing a part of the vtable would make you unable to call __super::function.
+ */
+class dvt_bridge_code
+{
+public:
+    dvt_bridge_code();
+    ~dvt_bridge_code();
+    void install(void* vt, int count);
+    void* get_bridge(int index) const;
+
+protected:
+    byte*           _bridges;
+    int             _bridge_size;       /* in bytes */
+    int             _jt_stride;         /* jump table stride in bytes */
+};
+
 class dvt_holder
 {
 public:
@@ -202,16 +211,17 @@ private:
     void*           _switchvt;
     detour_list     _detours;
     bool            _delete_later;
+    dvt_bridge_code _bridges;
 
 public:
     template<class _cls>
-    void ensure_dvt_available(int cascade_vt_layers = 1)
+    void ensure_dvt_available()
     {
         if(_backvt)
             return;
         auto& vo = vtable_ops<_cls>(nullptr);
         _backvtsize = vo.size_of_vtable();
-        _backvt = vo.create_per_instance_vtable(static_cast<_cls*>(this), cascade_vt_layers);
+        _backvt = vo.create_per_instance_vtable(static_cast<_cls*>(this), _bridges);
     }
     dvt_detour_code* add_detour(dvt_detour_code::detour_type dty, int argsize);
     dvt_holder* switch_to_ovt();        /* switch to original vtable */

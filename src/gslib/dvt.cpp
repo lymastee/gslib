@@ -203,6 +203,44 @@ void dvt_detour_code::finalize(uint old_func, uint host, uint action)
     lock_exec_codebytes(_ptr, _len, _oldpro);
 }
 
+dvt_bridge_code::dvt_bridge_code()
+{
+    _bridges = nullptr;
+    _bridge_size = _jt_stride = 0;
+}
+
+dvt_bridge_code::~dvt_bridge_code()
+{
+    if(_bridges) {
+        unsigned long oldpro = 0;
+        unlock_exec_codebytes(_bridges, _bridge_size, oldpro);
+        dealloc_exec_codebytes(_bridges, _bridge_size);
+        _bridges = nullptr;
+    }
+}
+
+void dvt_bridge_code::install(void* vt, int count)
+{
+    assert(!_bridges);
+    uint* pvt = (uint*)vt;
+    _jt_stride = 8;
+    _bridge_size = count * _jt_stride;
+    _bridges = (byte*)alloc_writable_exec_codebytes(_bridge_size);
+    for(int i = 0; i < count; i ++) {
+        byte* bptr = (byte*)get_bridge(i);
+        bptr[0] = 0x8d, bptr[1] = 0x05;     /* lea eax, ??? */
+        *(uint*)(bptr + 2) = pvt[i];
+        bptr[6] = 0xff, bptr[7] = 0xe0;     /* jmp eax */
+    }
+    unsigned long oldpro = 0;
+    lock_exec_codebytes(_bridges, _bridge_size, oldpro);
+}
+
+void* dvt_bridge_code::get_bridge(int index) const
+{
+    return (void*)(_bridges + (index * _jt_stride));
+}
+
 dvt_holder::dvt_holder()
 {
     _backvt = nullptr;

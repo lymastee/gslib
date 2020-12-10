@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -47,7 +47,7 @@ render_texture2d* textureop::load(const string& path)
     if(!img.load(path))
         return nullptr;
     assert(_rsys);
-    return _rsys->create_texture2d(img, 1, D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0);
+    return _rsys->create_texture2d(img, 1, D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0, 0);
 }
 
 void textureop::copy_rect(render_texture2d* dest, render_texture2d* src, int x, int y)

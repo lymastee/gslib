@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -23,11 +23,12 @@
  * SOFTWARE.
  */
 
+#pragma once
+
 #ifndef bintree_cb1a3ccc_3e08_429b_bbeb_47e93ef74da1_h
 #define bintree_cb1a3ccc_3e08_429b_bbeb_47e93ef74da1_h
 
 #include <assert.h>
-#include <gslib/pool.h>
 #include <gslib/string.h>   /* test */
 
 __gslib_begin__

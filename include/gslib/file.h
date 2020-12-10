@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -22,6 +22,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+
+#pragma once
 
 #ifndef file_d50c3538_0c5e_49a3_bc6f_5d6bc6144520_h
 #define file_d50c3538_0c5e_49a3_bc6f_5d6bc6144520_h
@@ -105,6 +107,18 @@ public:
             _file = 0;
         }
     }
+    int read_fillup(gchar buf[], int len)
+    {
+        assert(buf && len > 0);
+        int acc = 0;
+        while(acc < len) {
+            int r = read(buf + acc, len - acc);
+            if(r <= 0)
+                break;
+            acc += r;
+        }
+        return acc;
+    }
     int read(string& buf, int start, int len)
     {
         int lento = start + len;
@@ -128,9 +142,9 @@ public:
     }
     int write(const string& buf) { return write(&buf.front()); }
     int get(byte buf[], int len) { return (int)fread_s(buf, len, 1, len, _file); }
-    int get(word buf[], int len) { return (int)fread_s(buf, len, 2, len, _file); }
-    int get(dword buf[], int len) { return (int)fread_s(buf, len, 4, len, _file); }
-    int get(qword buf[], int len) { return (int)fread_s(buf, len, 8, len, _file); }
+    int get(word buf[], int len) { return (int)fread_s(buf, len * 2, 2, len, _file); }
+    int get(dword buf[], int len) { return (int)fread_s(buf, len * 4, 4, len, _file); }
+    int get(qword buf[], int len) { return (int)fread_s(buf, len * 8, 8, len, _file); }
     int put(const byte buf[], int len) { return (int)fwrite(buf, 1, len, _file); }
     int put(const word buf[], int len) { return (int)fwrite(buf, 2, len, _file); }
     int put(const dword buf[], int len) { return (int)fwrite(buf, 4, len, _file); }
@@ -138,7 +152,7 @@ public:
 
 public:
     template<int _szelem>
-    int put_elem(const void* buf, int len) { !!error!! }
+    int put_elem(const void* buf, int len) {}
     template<>
     int put_elem<1>(const void* buf, int len) { return put((const byte*)buf, len); }
     template<>

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -24,8 +24,8 @@
  */
 
 #include <gslib/error.h>
+#include <gslib/utility.h>
 #include <ariel/raster.h>
-#include <ariel/utility.h>
 #include <ariel/clip.h>
 
 __ariel_begin__
@@ -101,6 +101,11 @@ void painter_path::duplicate(const painter_path& path)
 {
     painter_path cast;
     attach(cast);
+    add_path(path);
+}
+
+void painter_path::add_path(const painter_path& path)
+{
     std::for_each(path.begin(), path.end(), [this](const node* n) {
         switch(n->get_tag())
         {
@@ -112,7 +117,7 @@ void painter_path::duplicate(const painter_path& path)
             break;
         case pt_quadto:
             quad_to(
-                static_cast<const quad_to_node*>(n)->get_control(), 
+                static_cast<const quad_to_node*>(n)->get_control(),
                 n->get_point()
                 );
             break;
@@ -125,6 +130,15 @@ void painter_path::duplicate(const painter_path& path)
             break;
         }
     });
+}
+
+void painter_path::add_rect(const rectf& rc)
+{
+    move_to(rc.left, rc.top);
+    line_to(rc.left, rc.bottom);
+    line_to(rc.right, rc.bottom);
+    line_to(rc.right, rc.top);
+    line_to(rc.left, rc.top);
 }
 
 void painter_path::attach(painter_path& path)
@@ -735,14 +749,14 @@ void path_info::tracing() const
     trace(_t("@@\n"));
 }
 
-curve_spliter::curve_spliter()
+curve_splitter::curve_splitter()
 {
     ratio = 0.f;
     child[0] = child[1] = 0;
     parent = 0;
 }
 
-curve_spliter::~curve_spliter()
+curve_splitter::~curve_splitter()
 {
     if(child[0]) {
         delete child[0];
@@ -754,7 +768,7 @@ curve_spliter::~curve_spliter()
     }
 }
 
-bool curve_spliter::is_leaf() const
+bool curve_splitter::is_leaf() const
 {
     if(child[0]) {
         assert(child[1]);
@@ -764,14 +778,14 @@ bool curve_spliter::is_leaf() const
     return true;
 }
 
-curve_spliter_quad::curve_spliter_quad(const vec2 p[3])
+curve_splitter_quad::curve_splitter_quad(const vec2 p[3])
 {
     assert(p);
     memmove_s(cp, sizeof(cp), p, sizeof(cp));
     get_quad_parameter_equation(para, p[0], p[1], p[2]);
 }
 
-bool curve_spliter_quad::get_points(vec2 p[], int count) const
+bool curve_splitter_quad::get_points(vec2 p[], int count) const
 {
     assert(p);
     if(count < 3)
@@ -780,7 +794,7 @@ bool curve_spliter_quad::get_points(vec2 p[], int count) const
     return true;
 }
 
-void curve_spliter_quad::split(float t)
+void curve_splitter_quad::split(float t)
 {
     assert(is_leaf());
     assert(t > 0.f && t < 1.f);
@@ -788,23 +802,23 @@ void curve_spliter_quad::split(float t)
     vec2 c[5];
     split_quad_bezier(c, cp, t);
     fixedpt = c[2];
-    child[0] = new curve_spliter_quad(c);
-    child[1] = new curve_spliter_quad(c + 2);
+    child[0] = new curve_splitter_quad(c);
+    child[1] = new curve_splitter_quad(c + 2);
     child[0]->parent = this;
     child[1]->parent = this;
 }
 
-void curve_spliter_quad::interpolate(vec2& p, float t) const
+void curve_splitter_quad::interpolate(vec2& p, float t) const
 {
     eval_quad(p, para, t);
 }
 
-float curve_spliter_quad::reparameterize(const vec2& p) const
+float curve_splitter_quad::reparameterize(const vec2& p) const
 {
     return quad_reparameterize(para, p);
 }
 
-void curve_spliter_quad::tracing() const
+void curve_splitter_quad::tracing() const
 {
     trace(_t("@!\n"));
     trace(_t("@moveTo %f, %f;\n"), cp[0].x, cp[0].y);
@@ -812,14 +826,14 @@ void curve_spliter_quad::tracing() const
     trace(_t("@@\n"));
 }
 
-curve_spliter_cubic::curve_spliter_cubic(const vec2 p[4])
+curve_splitter_cubic::curve_splitter_cubic(const vec2 p[4])
 {
     assert(p);
     memmove_s(cp, sizeof(cp), p, sizeof(cp));
     get_cubic_parameter_equation(para, p[0], p[1], p[2], p[3]);
 }
 
-bool curve_spliter_cubic::get_points(vec2 p[], int count) const
+bool curve_splitter_cubic::get_points(vec2 p[], int count) const
 {
     assert(p);
     if(count < 4)
@@ -828,7 +842,7 @@ bool curve_spliter_cubic::get_points(vec2 p[], int count) const
     return true;
 }
 
-void curve_spliter_cubic::split(float t)
+void curve_splitter_cubic::split(float t)
 {
     assert(is_leaf());
     assert(t > 0.f && t < 1.f);
@@ -836,23 +850,23 @@ void curve_spliter_cubic::split(float t)
     vec2 c[7];
     split_cubic_bezier(c, cp, t);
     fixedpt = c[3];
-    child[0] = new curve_spliter_cubic(c);
-    child[1] = new curve_spliter_cubic(c + 3);
+    child[0] = new curve_splitter_cubic(c);
+    child[1] = new curve_splitter_cubic(c + 3);
     child[0]->parent = this;
     child[1]->parent = this;
 }
 
-void curve_spliter_cubic::interpolate(vec2& p, float t) const
+void curve_splitter_cubic::interpolate(vec2& p, float t) const
 {
     eval_cubic(p, para, t);
 }
 
-float curve_spliter_cubic::reparameterize(const vec2& p) const
+float curve_splitter_cubic::reparameterize(const vec2& p) const
 {
     return cubic_reparameterize(para, p);
 }
 
-void curve_spliter_cubic::tracing() const
+void curve_splitter_cubic::tracing() const
 {
     trace(_t("@!\n"));
     trace(_t("@moveTo %f, %f;\n"), cp[0].x, cp[0].y);
@@ -860,31 +874,31 @@ void curve_spliter_cubic::tracing() const
     trace(_t("@@\n"));
 }
 
-curve_spliter* curve_helper::create_spliter(const path_info* pnf)
+curve_splitter* curve_helper::create_splitter(const path_info* pnf)
 {
     assert(pnf);
     int order = pnf->get_order();
     if(order == 2) {
         vec2 p[3];
         pnf->get_points(p, 3);
-        return new curve_spliter_quad(p);
+        return new curve_splitter_quad(p);
     }
     else if(order == 3) {
         vec2 p[4];
         pnf->get_points(p, 4);
-        return new curve_spliter_cubic(p);
+        return new curve_splitter_cubic(p);
     }
     return 0;
 }
 
-curve_spliter* curve_helper::create_next_spliter(vec2& p, curve_spliter* cs, float t)
+curve_splitter* curve_helper::create_next_splitter(vec2& p, curve_splitter* cs, float t)
 {
     assert(cs);
     assert(t > 0.f && t < 1.f);
     vec2 v;
     cs->interpolate(v, t);
     p = v;
-    curve_spliter* qcs = query_spliter(cs, t);
+    curve_splitter* qcs = query_splitter(cs, t);
     assert(qcs);
     if(!qcs->is_leaf()) {
         vec2 cp[4];
@@ -902,26 +916,26 @@ curve_spliter* curve_helper::create_next_spliter(vec2& p, curve_spliter* cs, flo
     return qcs;
 }
 
-curve_spliter* curve_helper::query_spliter(curve_spliter* cs, float t)
+curve_splitter* curve_helper::query_splitter(curve_splitter* cs, float t)
 {
     assert(cs);
     vec2 p;
     cs->interpolate(p, t);
-    return query_spliter(cs, p);
+    return query_splitter(cs, p);
 }
 
-curve_spliter* curve_helper::query_spliter(curve_spliter* cs, const vec2& p)
+curve_splitter* curve_helper::query_splitter(curve_splitter* cs, const vec2& p)
 {
     assert(cs);
     if(cs->is_leaf())
         return cs;
     assert(cs->child[0] && cs->child[1]);
     float t = cs->reparameterize(p);
-    return t < cs->ratio ? query_spliter(cs->child[0], p) :
-        query_spliter(cs->child[1], p);
+    return t < cs->ratio ? query_splitter(cs->child[0], p) :
+        query_splitter(cs->child[1], p);
 }
 
-curve_spliter* curve_helper::query_spliter(curve_spliter* cs, const vec2& p1, const vec2& p2)
+curve_splitter* curve_helper::query_splitter(curve_splitter* cs, const vec2& p1, const vec2& p2)
 {
     assert(cs);
     if(cs->is_leaf())
@@ -929,13 +943,13 @@ curve_spliter* curve_helper::query_spliter(curve_spliter* cs, const vec2& p1, co
     assert(cs->child[0] && cs->child[1]);
     float t1 = cs->reparameterize(p1);
     if(abs(cs->ratio - t1) > 0.001f) {
-        return t1 < cs->ratio ? query_spliter(cs->child[0], p1, p2) :
-            query_spliter(cs->child[1], p1, p2);
+        return t1 < cs->ratio ? query_splitter(cs->child[0], p1, p2) :
+            query_splitter(cs->child[1], p1, p2);
     }
     float t2 = cs->reparameterize(p2);
     assert(abs(cs->ratio - t2) > 0.001f);
-    return t2 < cs->ratio ? query_spliter(cs->child[0], p1, p2) :
-        query_spliter(cs->child[1], p1, p2);
+    return t2 < cs->ratio ? query_splitter(cs->child[0], p1, p2) :
+        query_splitter(cs->child[1], p1, p2);
 }
 
 static void check_last_path_segment(painter_path& output, uint mask)
@@ -967,7 +981,7 @@ static void check_last_path_segment(painter_path& output, uint mask)
                 auto* lastnode3 = output.get_node(size - 3);
                 assert(lastnode2 && lastnode3);
                 if(lastnode2->get_tag() == painter_path::pt_lineto) {
-                    if(is_approx_line(lastnode3->get_point(), lastnode2->get_point(), lastnode->get_point(), 0.055f)) {
+                    if(is_approx_line(lastnode3->get_point(), lastnode2->get_point(), lastnode->get_point(), 0.5f)) {
                         output.resize(-- size);
                         lastnode = output.get_node(size - 1);
                     }
@@ -986,7 +1000,7 @@ static void transform_path_line(painter_path& output, const painter_path& path, 
             if(node1->get_tag() == painter_path::pt_lineto) {
                 const auto* node2 = path.get_node(i - 2);
                 assert(node2);
-                if(is_approx_line(node2->get_point(), node1->get_point(), node->get_point(), 0.055f)) {
+                if(is_approx_line(node2->get_point(), node1->get_point(), node->get_point(), 0.5f)) {
                     auto* modify = output.get_node(output.size() - 1);
                     assert(modify && modify->get_tag() == painter_path::pt_lineto);
                     modify->set_point(node->get_point());
@@ -1004,7 +1018,7 @@ static void transform_path_quad(painter_path& output, const painter_path& path, 
         assert(i > 0);
         auto* lastnode = path.get_node(i - 1);
         assert(lastnode);
-        if(is_approx_line(lastnode->get_point(), node->get_control(), node->get_point(), 0.055f)) {
+        if(is_approx_line(lastnode->get_point(), node->get_control(), node->get_point(), 0.5f)) {
             output.line_to(node->get_point());
             return;
         }

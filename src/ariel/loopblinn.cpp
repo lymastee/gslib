@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -24,7 +24,7 @@
  */
 
 #include <gslib/error.h>
-#include <ariel/utility.h>
+#include <gslib/utility.h>
 #include <ariel/loopblinn.h>
 
 __ariel_begin__

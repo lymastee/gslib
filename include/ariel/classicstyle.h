@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -22,6 +22,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+
+#pragma once
 
 #ifndef classicstyle_de3b7d7b_438c_4dee_a91e_89f0051dcf28_h
 #define classicstyle_de3b7d7b_438c_4dee_a91e_89f0051dcf28_h
@@ -206,6 +208,26 @@ public:
 
 protected:
     string              _caption;
+};
+
+class table_view_style_sheet:
+    public ariel::style_sheet
+{
+public:
+    table_view_style_sheet();
+    virtual bool get_value(const string& name, string& value) override;
+    virtual void set_value(const string& name, const string& value) override;
+
+protected:
+    color               _view_fill_color;
+    color               _view_stroke_color;
+    color               _disable_fill_color;
+    color               _disable_stroke_color;
+    color               _focus_fill_color;
+    color               _focus_stroke_color;
+    string              _text_font_name;
+    int                 _text_font_size;
+    color               _text_font_color;
 };
 
 class tree_view_style_sheet:

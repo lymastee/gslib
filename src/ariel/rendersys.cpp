@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -49,6 +49,22 @@ bool rendersys::is_full_screen(const configs& cfg)
     if(f == cfg.end())
         return false;
     return f->second == _t("true") || f->second == _t("1");
+}
+
+bool rendersys::is_MSAA_enabled(const configs& cfg)
+{
+    auto f = cfg.find(_t("msaa"));
+    if(f == cfg.end())
+        return false;
+    return f->second == _t("true") || f->second == _t("1");
+}
+
+uint rendersys::get_MSAA_sampler_count(const configs& cfg)
+{
+    auto f = cfg.find(_t("msaa_sampler_count"));
+    if(f == cfg.end())
+        return 0;
+    return (uint)f->second.to_int();
 }
 
 void rendersys::set_background_color(const color& cr)

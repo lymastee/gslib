@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -157,13 +157,13 @@ render_texture2d* tex_batcher::create_texture(rendersys* rsys) const
     image img;
     create_packed_image(img);
 #if use_rendersys_d3d_11
-    texture2d* p = rsys->create_texture2d(img, 1, D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0);
+    texture2d* p = rsys->create_texture2d(img, 1, D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0, 0);
 #endif
     assert(p);
     return p;
 #elif defined(_GS_BATCH_TEXTURE)
     float w = get_width(), h = get_height();
-    texture2d* tex = rsys->create_texture2d((int)ceil(w), (int)ceil(h), DXGI_FORMAT_R8G8B8A8_UNORM, 1, D3D11_USAGE_DEFAULT, D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE, 0);
+    texture2d* tex = rsys->create_texture2d((int)ceil(w), (int)ceil(h), DXGI_FORMAT_R8G8B8A8_UNORM, 1, D3D11_USAGE_DEFAULT, D3D11_BIND_UNORDERED_ACCESS | D3D11_BIND_SHADER_RESOURCE, 0, 0);
     assert(tex);
     com_ptr<unordered_access_view> spuav;
     auto* uav = rsys->create_unordered_access_view(tex);

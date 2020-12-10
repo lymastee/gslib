@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -25,9 +25,8 @@
 
 #include <assert.h>
 #include <gslib/error.h>
-#include <gslib/pool.h>
+#include <gslib/utility.h>
 #include <ariel/painter.h>
-#include <ariel/utility.h>
 #include <ariel/scene.h>
 #include <ariel/textureop.h>
 
@@ -224,15 +223,34 @@ void painter::draw_image(texture2d* img, float x, float y)
 {
     assert(img);
     save();
+    int w = 0, h = 0;
+    textureop::get_texture_dimension(img, w, h);
     painter_brush brush;
     painter_extra_data ext;
-    ext.reset(new painter_picture_data(img), [](painter_picture_data* p) { delete p; });
+    ext.reset(new painter_picture_data(img, rectf(0.f, 0.f, (float)w, (float)h)), [](painter_picture_data* p) { delete p; });
     brush.set_tag(painter_brush::picture);
     brush.set_extra(ext);
     set_brush(brush);
-    int w, h;
-    textureop::get_texture_dimension(img, w, h);
     draw_rect(rectf(x, y, (float)w, (float)h));
+    restore();
+}
+
+void painter::draw_image(texture2d* img, const rectf& dest, const rectf& src)
+{
+    assert(img);
+#if defined(DEBUG) || (_DEBUG)
+    int w = 0, h = 0;
+    textureop::get_texture_dimension(img, w, h);
+    assert(src.left < w && src.top < h && src.right < w && src.bottom < h);
+#endif
+    save();
+    painter_brush brush;
+    painter_extra_data ext;
+    ext.reset(new painter_picture_data(img, src), [](painter_picture_data* p) { delete p; });
+    brush.set_tag(painter_brush::picture);
+    brush.set_extra(ext);
+    set_brush(brush);
+    draw_rect(dest);
     restore();
 }
 
@@ -267,13 +285,19 @@ void painter::draw_text(const gchar* str, int x, int y, const color& cr, int len
     fontsys* fsys = scn->get_fontsys();
     assert(fsys);
     com_ptr<texture2d> tex;
-    if(!fsys->create_text_texture(&tex, str, 0, 0, cr, length)) {
+    int margin = 1;
+    if(!fsys->create_text_texture(&tex, str, margin, cr, length)) {
         assert(!"create text texture failed.");
         return;
     }
     assert(tex);
     _text_image_cache.push_back(tex.get());
-    draw_image(tex.detach(), (float)x, (float)y);
+    int w = 0, h = 0;
+    textureop::get_texture_dimension(tex.get(), w, h);
+    float cw = (float)w - 2.f * margin;
+    float ch = (float)h - 2.f * margin;
+    assert(cw >= 0.f && ch >= 0.f);
+    draw_image(tex.detach(), rectf((float)x, (float)y, cw, ch), rectf((float)margin, (float)margin, cw, ch));
 }
 
 void painter::destroy_text_image_cache()

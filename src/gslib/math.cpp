@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -43,15 +43,15 @@ static const float align16 crs0[] = { 0.f, 1.f, 0.f, 0.f };
 static const float align16 crs1[] = { -0.5f, 0.f, 0.5f, 0.f };
 static const float align16 crs2[] = { 1.f, -2.5f, 2.f, -0.5f };
 static const float align16 crs3[] = { -0.5f, 1.5f, -1.5f, 0.5f };
-static const int s0i0i[] = { 0, INT_MIN, 0, INT_MIN };
-static const int s0ii0[] = { 0, INT_MIN, INT_MIN, 0 };
-static const int s00ii[] = { 0, 0, INT_MIN, INT_MIN };
-static const int si00i[] = { INT_MIN, 0, 0, INT_MIN };
-static const int saaaa[] = { INT_MAX, INT_MAX, INT_MAX, INT_MAX };
-static const int siiii[] = { INT_MIN, INT_MIN, INT_MIN, INT_MIN };
-static const int s1111[] = { 1, 1, 1, 1 };
-static const int s2222[] = { 2, 2, 2, 2 };
-static const int srrr[] =
+static const int align16 s0i0i[] = { 0, INT_MIN, 0, INT_MIN };
+static const int align16 s0ii0[] = { 0, INT_MIN, INT_MIN, 0 };
+static const int align16 s00ii[] = { 0, 0, INT_MIN, INT_MIN };
+static const int align16 si00i[] = { INT_MIN, 0, 0, INT_MIN };
+static const int align16 saaaa[] = { INT_MAX, INT_MAX, INT_MAX, INT_MAX };
+static const int align16 siiii[] = { INT_MIN, INT_MIN, INT_MIN, INT_MIN };
+static const int align16 s1111[] = { 1, 1, 1, 1 };
+static const int align16 s2222[] = { 2, 2, 2, 2 };
+static const int align16 srrr[] =
 {
     INT_MIN, INT_MIN, INT_MIN, INT_MIN,
     0, -1, 0, 0,
@@ -64,12 +64,12 @@ static const float align16 drrr[] = { -2.f, -2.f, -2.f, 0 };
 static const float align16 rrrp[] = { -1.f, -1.f, -1.f, 1.f };
 static const float align16 shhhh[] = { 0.5f, 0.5f, 0.5f, 0.5f };
 static const float align16 stttt[] = { 3.f, 3.f, 3.f, 3.f };
-static const float sf1000[] = { 1.f, 0, 0, 0 };
-static const float sf0001[] = { 0, 0, 0, 1.f };
-static const float sf0010[] = { 0, 0, 1.f, 0 };
-static const float sf0100[] = { 0, 1.f, 0, 0 };
-static const float sf1111[] = { 1.f, 1.f, 1.f, 1.f };
-static const float sfqrh[] = { -0.5f, -0.5f, -0.5f, -0.5f };
+static const float align16 sf1000[] = { 1.f, 0, 0, 0 };
+static const float align16 sf0001[] = { 0, 0, 0, 1.f };
+static const float align16 sf0010[] = { 0, 0, 1.f, 0 };
+static const float align16 sf0100[] = { 0, 1.f, 0, 0 };
+static const float align16 sf1111[] = { 1.f, 1.f, 1.f, 1.f };
+static const float align16 sfqrh[] = { -0.5f, -0.5f, -0.5f, -0.5f };
 
 __gs_naked vec2* __stdcall sse2_vec2normalize(vec2* o, const vec2* v)
 {

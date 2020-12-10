@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -849,8 +849,8 @@ void clip_sweep_line_algorithm::output(clip_result& result)
 //             return;
 //         w->get_ptr()->tracing();
 //     });
-    assert(_spliters.empty());
-    create_spliters();
+    assert(_splitters.empty());
+    create_splitters();
     replace_curves(result);
     fix_clockwise_logics(result);
 }
@@ -1683,11 +1683,11 @@ void clip_sweep_line_algorithm::output_intersect(clip_result& result)
 {
 }
 
-void clip_sweep_line_algorithm::destroy_spliters()
+void clip_sweep_line_algorithm::destroy_splitters()
 {
-    for(auto& p : _spliters)
+    for(auto& p : _splitters)
         delete p.second;
-    _spliters.clear();
+    _splitters.clear();
 }
 
 void clip_sweep_line_algorithm::destroy_fixed_points()
@@ -1721,15 +1721,15 @@ static path_info* retrieve_path_info(clip_joint* joint1, clip_joint* joint2)
     return nullptr;
 }
 
-void clip_sweep_line_algorithm::create_spliters()
+void clip_sweep_line_algorithm::create_splitters()
 {
-    assert(_spliters.empty());
+    assert(_splitters.empty());
     for(auto* p : _intersections) {
         assert(p->get_type() == ct_intersect_joint);
         auto* ptr = static_cast<clip_intersect_joint*>(p);
         auto* pnf1 = retrieve_path_info(ptr->get_orient(0), ptr->get_orient(1));
         auto* pnf2 = retrieve_path_info(ptr->get_cut(0), ptr->get_cut(1));
-        create_spliter(ptr, pnf1, pnf2);
+        create_splitter(ptr, pnf1, pnf2);
     }
 }
 
@@ -1749,16 +1749,16 @@ static int select_map_point(vec2 pt[], int c, clip_intersect_joint* p)
     return r;
 }
 
-static curve_spliter* query_or_create_spliter(curve_spliter_map& csm, path_info* pnf)
+static curve_splitter* query_or_create_splitter(curve_splitter_map& csm, path_info* pnf)
 {
     assert(pnf);
-    auto*& spliter = csm[pnf];
-    if(!spliter)
-        spliter = curve_helper::create_spliter(pnf);
-    return spliter;
+    auto*& splitter = csm[pnf];
+    if(!splitter)
+        splitter = curve_helper::create_splitter(pnf);
+    return splitter;
 }
 
-static void create_spliter_curve_straight(curve_spliter_map& csm, clip_fixed_points& fps, clip_intersect_joint* p, path_info* pnf1, path_info* pnf2)
+static void create_splitter_curve_straight(curve_splitter_map& csm, clip_fixed_points& fps, clip_intersect_joint* p, path_info* pnf1, path_info* pnf2)
 {
     assert(p && pnf1 && pnf2);
     assert(p->get_path_info() == pnf1);
@@ -1797,14 +1797,14 @@ static void create_spliter_curve_straight(curve_spliter_map& csm, clip_fixed_poi
         return;
     }
     assert(sel >= 0);
-    auto* spliter1 = query_or_create_spliter(csm, pnf1);
-    assert(spliter1);
-    curve_helper::create_next_spliter(vec2(), spliter1, t[sel]);
+    auto* splitter1 = query_or_create_splitter(csm, pnf1);
+    assert(splitter1);
+    curve_helper::create_next_splitter(vec2(), splitter1, t[sel]);
     fps.insert(std::make_pair(static_cast<clip_joint*>(p), pt[sel]));
     fps.insert(std::make_pair(static_cast<clip_joint*>(p->get_symmetric()), pt[sel]));
 }
 
-static void create_spliter_quad_quad(curve_spliter_map& csm, clip_fixed_points& fps, clip_intersect_joint* p, path_info* pnf1, path_info* pnf2)
+static void create_splitter_quad_quad(curve_splitter_map& csm, clip_fixed_points& fps, clip_intersect_joint* p, path_info* pnf1, path_info* pnf2)
 {
     assert(p && pnf1 && pnf2);
     assert(pnf1->get_order() == 2 && pnf2->get_order() == 2);
@@ -1821,16 +1821,16 @@ static void create_spliter_quad_quad(curve_spliter_map& csm, clip_fixed_points& 
         eval_quad(pt[i], para1, ts[i][0]);
     int sel = select_map_point(pt, c, p);
     assert(sel >= 0);
-    auto* spliter1 = query_or_create_spliter(csm, pnf1);
-    auto* spliter2 = query_or_create_spliter(csm, pnf2);
-    assert(spliter1 && spliter2);
-    curve_helper::create_next_spliter(vec2(), spliter1, ts[sel][0]);
-    curve_helper::create_next_spliter(vec2(), spliter2, ts[sel][1]);
+    auto* splitter1 = query_or_create_splitter(csm, pnf1);
+    auto* splitter2 = query_or_create_splitter(csm, pnf2);
+    assert(splitter1 && splitter2);
+    curve_helper::create_next_splitter(vec2(), splitter1, ts[sel][0]);
+    curve_helper::create_next_splitter(vec2(), splitter2, ts[sel][1]);
     fps.insert(std::make_pair(static_cast<clip_joint*>(p), pt[sel]));
     fps.insert(std::make_pair(static_cast<clip_joint*>(p->get_symmetric()), pt[sel]));
 }
 
-static void create_spliter_cubic_cubic(curve_spliter_map& csm, clip_fixed_points& fps, clip_intersect_joint* p, path_info* pnf1, path_info* pnf2)
+static void create_splitter_cubic_cubic(curve_splitter_map& csm, clip_fixed_points& fps, clip_intersect_joint* p, path_info* pnf1, path_info* pnf2)
 {
     assert(p && pnf1 && pnf2);
     assert(pnf1->get_order() == 3 && pnf2->get_order() == 3);
@@ -1841,18 +1841,18 @@ static void create_spliter_cubic_cubic(curve_spliter_map& csm, clip_fixed_points
     int c = intersectp_cubic_cubic(pt, cubic1, cubic2, 0.2f);
     int sel = select_map_point(pt, c, p);
     assert(sel >= 0);
-    auto* spliter1 = query_or_create_spliter(csm, pnf1);
-    auto* spliter2 = query_or_create_spliter(csm, pnf2);
-    assert(spliter1 && spliter2);
-    float t = spliter1->reparameterize(pt[sel]);
-    float s = spliter2->reparameterize(pt[sel]);
-    curve_helper::create_next_spliter(vec2(), spliter1, t);
-    curve_helper::create_next_spliter(vec2(), spliter2, s);
+    auto* splitter1 = query_or_create_splitter(csm, pnf1);
+    auto* splitter2 = query_or_create_splitter(csm, pnf2);
+    assert(splitter1 && splitter2);
+    float t = splitter1->reparameterize(pt[sel]);
+    float s = splitter2->reparameterize(pt[sel]);
+    curve_helper::create_next_splitter(vec2(), splitter1, t);
+    curve_helper::create_next_splitter(vec2(), splitter2, s);
     fps.insert(std::make_pair(static_cast<clip_joint*>(p), pt[sel]));
     fps.insert(std::make_pair(static_cast<clip_joint*>(p->get_symmetric()), pt[sel]));
 }
 
-static void create_spliter_quad_cubic(curve_spliter_map& csm, clip_fixed_points& fps, clip_intersect_joint* p, path_info* pnf1, path_info* pnf2)
+static void create_splitter_quad_cubic(curve_splitter_map& csm, clip_fixed_points& fps, clip_intersect_joint* p, path_info* pnf1, path_info* pnf2)
 {
     assert(p && pnf1 && pnf2);
     assert(pnf1->get_order() == 2 && pnf2->get_order() == 3);
@@ -1863,18 +1863,18 @@ static void create_spliter_quad_cubic(curve_spliter_map& csm, clip_fixed_points&
     int c = intersectp_cubic_quad(pt, cubic, quad, 0.2f);
     int sel = select_map_point(pt, c, p);
     assert(sel >= 0);
-    auto* spliter1 = query_or_create_spliter(csm, pnf1);
-    auto* spliter2 = query_or_create_spliter(csm, pnf2);
-    assert(spliter1 && spliter2);
-    float t = spliter1->reparameterize(pt[sel]);
-    float s = spliter2->reparameterize(pt[sel]);
-    curve_helper::create_next_spliter(vec2(), spliter1, t);
-    curve_helper::create_next_spliter(vec2(), spliter2, s);
+    auto* splitter1 = query_or_create_splitter(csm, pnf1);
+    auto* splitter2 = query_or_create_splitter(csm, pnf2);
+    assert(splitter1 && splitter2);
+    float t = splitter1->reparameterize(pt[sel]);
+    float s = splitter2->reparameterize(pt[sel]);
+    curve_helper::create_next_splitter(vec2(), splitter1, t);
+    curve_helper::create_next_splitter(vec2(), splitter2, s);
     fps.insert(std::make_pair(static_cast<clip_joint*>(p), pt[sel]));
     fps.insert(std::make_pair(static_cast<clip_joint*>(p->get_symmetric()), pt[sel]));
 }
 
-static void create_spliter_curve_curve(curve_spliter_map& csm, clip_fixed_points& fps, clip_intersect_joint* p, path_info* pnf1, path_info* pnf2)
+static void create_splitter_curve_curve(curve_splitter_map& csm, clip_fixed_points& fps, clip_intersect_joint* p, path_info* pnf1, path_info* pnf2)
 {
     assert(p && pnf1 && pnf2);
     assert(p->get_path_info() == pnf1);
@@ -1884,17 +1884,17 @@ static void create_spliter_curve_curve(curve_spliter_map& csm, clip_fixed_points
     int o2 = pnf2->get_order();
     assert(o1 > 1 && o2 > 1);
     if(o1 == 2) {
-        return o2 == 2 ? create_spliter_quad_quad(csm, fps, p, pnf1, pnf2) :
-            create_spliter_quad_cubic(csm, fps, p, pnf1, pnf2);
+        return o2 == 2 ? create_splitter_quad_quad(csm, fps, p, pnf1, pnf2) :
+            create_splitter_quad_cubic(csm, fps, p, pnf1, pnf2);
     }
     else {
         assert(o1 == 3);
-        return o2 == 2 ? create_spliter_quad_cubic(csm, fps, s, pnf2, pnf1) :
-            create_spliter_cubic_cubic(csm, fps, p, pnf1, pnf2);
+        return o2 == 2 ? create_splitter_quad_cubic(csm, fps, s, pnf2, pnf1) :
+            create_splitter_cubic_cubic(csm, fps, p, pnf1, pnf2);
     }
 }
 
-void clip_sweep_line_algorithm::create_spliter(clip_intersect_joint* p, path_info* pnf1, path_info* pnf2)
+void clip_sweep_line_algorithm::create_splitter(clip_intersect_joint* p, path_info* pnf1, path_info* pnf2)
 {
     assert(p && pnf1 && pnf2);
     int o1 = pnf1->get_order();
@@ -1904,10 +1904,10 @@ void clip_sweep_line_algorithm::create_spliter(clip_intersect_joint* p, path_inf
     if(!p1_is_curve && !p2_is_curve)
         return;
     else if(p1_is_curve && !p2_is_curve)
-        return create_spliter_curve_straight(_spliters, _fixed_points, p, pnf1, pnf2);
+        return create_splitter_curve_straight(_splitters, _fixed_points, p, pnf1, pnf2);
     else if(!p1_is_curve && p2_is_curve)
-        return create_spliter_curve_straight(_spliters, _fixed_points, p->get_symmetric(), pnf2, pnf1);
-    return create_spliter_curve_curve(_spliters, _fixed_points, p, pnf1, pnf2);
+        return create_splitter_curve_straight(_splitters, _fixed_points, p->get_symmetric(), pnf2, pnf1);
+    return create_splitter_curve_curve(_splitters, _fixed_points, p, pnf1, pnf2);
 }
 
 void clip_sweep_line_algorithm::replace_curves(clip_result& result)
@@ -2044,7 +2044,7 @@ void clip_sweep_line_algorithm::replace_curve(clip_polygon& poly, clip_joint*& s
         clip_connect(fj1, joint1->get_next_line(), fj2);
         clip_connect(fj2, joint2->get_next_line());
     };
-    curve_spliter* csp = nullptr;
+    curve_splitter* csp = nullptr;
     const vec2* p1 = nullptr;
     const vec2* p2 = nullptr;
     if(mt1 == ct_end_joint && mt2 == ct_end_joint) {
@@ -2123,7 +2123,7 @@ void clip_sweep_line_algorithm::replace_curve(clip_polygon& poly, clip_joint*& s
         assert(pnf);
         if(pnf->get_order() == 1)
             return replace_line();
-        csp = _spliters.find(pnf)->second;
+        csp = _splitters.find(pnf)->second;
         p1 = &_fixed_points.find(m1)->second;
         p2 = &m2->get_point();
     }
@@ -2138,7 +2138,7 @@ void clip_sweep_line_algorithm::replace_curve(clip_polygon& poly, clip_joint*& s
         assert(pnf);
         if(pnf->get_order() == 1)
             return replace_line();
-        csp = _spliters.find(pnf)->second;
+        csp = _splitters.find(pnf)->second;
         p1 = &_fixed_points.find(m2)->second;
         p2 = &m1->get_point();
     }
@@ -2154,12 +2154,12 @@ void clip_sweep_line_algorithm::replace_curve(clip_polygon& poly, clip_joint*& s
         assert(pnf);
         if(pnf->get_order() == 1)
             return replace_line();
-        csp = _spliters.find(pnf)->second;
+        csp = _splitters.find(pnf)->second;
         p1 = &_fixed_points.find(m1)->second;
         p2 = &_fixed_points.find(m2)->second;
     }
     assert(csp && p1 && p2);
-    auto* fsp = curve_helper::query_spliter(csp, *p1, *p2);
+    auto* fsp = curve_helper::query_splitter(csp, *p1, *p2);
     assert(fsp && fsp->is_leaf());
     clip_connect(joint1->get_prev_line(), fj1);
     clip_connect(fj2, joint2->get_next_line());

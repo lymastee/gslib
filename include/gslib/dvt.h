@@ -1,19 +1,19 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
- *
+ * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- *
+ * 
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- *
+ * 
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -22,6 +22,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+
+#pragma once
 
 #ifndef dvt_31727ef2_2dfa_4e64_b93d_deab9c280036_h
 #define dvt_31727ef2_2dfa_4e64_b93d_deab9c280036_h
@@ -32,26 +34,18 @@
 
 __gslib_begin__
 
-#define method_address(method) \
-    []()->uint { __asm { mov eax, method } } ()
+template<class _targetfn>
+inline uint method_address(_targetfn fn)
+{
+    uint r;
+    memcpy(&r, &fn, sizeof(r));
+    return r;
+}
 
 extern uint dsm_get_address(uint addr, uint pthis);
 extern void dvt_recover_vtable(void* pthis, void* ovt, int vtsize);
 
-/* get dest address from a jump table */
-inline uint __gs_naked dsm_final_address(uint addr)
-{
-    __asm {
-        push    ebp;
-        mov     ebp, esp;
-        push    ecx;                /* this */
-        push    dword ptr[addr];
-        call    dsm_get_address;
-        add     esp, 8;
-        pop     ebp;
-        ret;
-    }
-}
+class dvt_bridge_code;
 
 template<class _cls>
 class vtable_ops:
@@ -74,7 +68,7 @@ public:
     int get_virtual_method_index(uint m) const
     {
         uint mv = dsm_final_address(m);
-        uint eov = dsm_final_address(method_address(myref::end_of_vtable));
+        uint eov = dsm_final_address(method_address(&myref::end_of_vtable));
         uint* ovt = *(uint**)this;
         int i = 0;
         for(;; ++ i) {
@@ -90,7 +84,9 @@ public:
     }
     int size_of_vtable() const
     {
-        return get_virtual_method_index(method_address(myref::end_of_vtable));
+        return get_virtual_method_index(
+            dsm_final_address(method_address(&myref::end_of_vtable))
+            );
     }
     void* create_per_instance_vtable(_cls* p, dvt_bridge_code& bridges)
     {
@@ -123,6 +119,14 @@ public:
         *vt = (uint)func;
         VirtualProtect(vt, 4, oldpro, &oldpro);
         return r;
+    }
+
+private:
+    uint dsm_final_address(uint addr) const
+    {
+        return dsm_get_address(
+            addr, (uint)((void*)this)
+        );
     }
 };
 

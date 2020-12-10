@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -23,6 +23,8 @@
  * SOFTWARE.
  */
 
+#pragma once
+
 #ifndef std_9154454e_8e1d_4505_9034_5c7a71b77dd0_h
 #define std_9154454e_8e1d_4505_9034_5c7a71b77dd0_h
 
@@ -41,7 +43,6 @@
 #include <comip.h>
 
 #include <gslib/type.h>
-#include <gslib/pool.h>
 #include <gslib/string.h>
 
 __gslib_begin__
@@ -84,9 +85,12 @@ inline size_t hash_bytes(const byte str[], int size)
         val = 16777619U * val ^ (size_t)str[first];
     return val;
 }
-#else
+#elif defined(_MSC_VER) && (_MSC_VER < 1916)
 inline size_t hash_bytes(const byte str[], int size)
 { return std::_Hash_bytes(str, size); }
+#else
+inline size_t hash_bytes(const byte str[], int size)
+{ return std::_Fnv1a_append_bytes(std::_FNV_offset_basis, str, size); }
 #endif
 
 #ifdef _UNICODE
@@ -95,6 +99,26 @@ inline size_t string_hash(const string& str) { return hash_bytes((const byte*)st
 inline size_t string_hash(const string& str) { return hash_bytes((const byte*)str.c_str(), str.size()); }
 #endif
 
+#if defined(_MSC_VER) && (_MSC_VER <= 1600)
+class hasher
+{
+public:
+    hasher() { _val = 2166136261u; }
+    size_t add_bytes(const byte* str, int len)
+    {
+        size_t first = 0u;
+        size_t last = (size_t)len;
+        size_t stride = 1 + last / 10;
+        for(; first < last; first += stride)
+            _val = 16777619u * _val ^ (size_t)str[first];
+        return _val;
+    }
+    size_t get_value() const { return _val; }
+
+private:
+    size_t          _val;
+};
+#elif defined(_MSC_VER) && (_MSC_VER < 1916)
 class hasher:
     public std::_Fnv1a_hasher
 {
@@ -102,6 +126,18 @@ public:
     size_t add_bytes(const byte* first, int len) { return _Add_bytes(first, first + len); }
     size_t get_value() const { return _Val; }
 };
+#else
+class hasher
+{
+public:
+    hasher() { _val = std::_FNV_offset_basis; }
+    size_t add_bytes(const byte* first, int len) { return std::_Fnv1a_append_bytes(_val, first, len); }
+    size_t get_value() const { return _val; }
+
+private:
+    size_t          _val;
+};
+#endif
 
 /* switch to namespace tr1 and replace the hash for string */
 __gslib_end__
@@ -146,9 +182,10 @@ template<class _ty, class _pr = std::less<_ty> >
 using multiset = std::multiset<_ty, _pr>;
 
 template<class _kty, class _ty,
-    class _hs = std::hash<_kty>
+    class _hs = std::hash<_kty>,
+    class _eq = std::equal_to<_kty>
     >
-using unordered_map = std::unordered_map<_kty, _ty, _hs>;
+using unordered_map = std::unordered_map<_kty, _ty, _hs, _eq>;
 
 template<class _kty,
     class _hs = std::hash<_kty>,

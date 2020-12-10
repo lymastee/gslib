@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -22,6 +22,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+
+#pragma once
 
 #ifndef rendersys_5fadb7a4_2c63_4b3a_8029_14043d2405e6_h
 #define rendersys_5fadb7a4_2c63_4b3a_8029_14043d2405e6_h
@@ -90,10 +92,12 @@ public:
     virtual index_buffer* create_index_buffer(uint count, bool read, bool write, uint usage, const void* ptr = 0) = 0;
     virtual constant_buffer* create_constant_buffer(uint stride, bool read, bool write, const void* ptr = 0) = 0;
     virtual shader_resource_view* create_shader_resource_view(render_resource* res) = 0;    /* texture view in GL */
+    virtual depth_stencil_view* create_depth_stencil_view(render_resource* res) = 0;
     virtual unordered_access_view* create_unordered_access_view(render_resource* res) = 0;
     virtual sampler_state* create_sampler_state(sampler_state_filter filter) = 0;
-    virtual texture2d* create_texture2d(const image& img, uint mips, uint usage, uint bindflags, uint cpuflags) = 0;
-    virtual texture2d* create_texture2d(int width, int height, uint format, uint mips, uint usage, uint bindflags, uint cpuflags) = 0;
+    virtual texture2d* create_texture2d(const image& img, uint mips, uint usage, uint bindflags, uint cpuflags, uint miscflags) = 0;
+    virtual texture2d* create_texture2d(int width, int height, uint format, uint mips, uint usage, uint bindflags, uint cpuflags, uint miscflags) = 0;
+    virtual void load_with_mips(texture2d* tex, const image& img) = 0;
     virtual void update_buffer(void* buf, int size, const void* ptr) = 0;
     virtual void set_vertex_format(vertex_format* vfmt) = 0;
     virtual void set_vertex_buffer(vertex_buffer* vb, uint stride, uint offset) = 0;
@@ -111,10 +115,14 @@ public:
     virtual void draw(uint count, uint start) = 0;
     virtual void draw_indexed(uint count, uint start, int base = 0) = 0;
     virtual void capture_screen(image& img, const rectf& rc, int buff_id) = 0;      /* before present, buff_id = 0; after present, buff_id = 1 */
+    virtual void enable_alpha_blend(bool b) = 0;
+    virtual void enable_depth(bool b) = 0;
 
 public:
     static bool is_vsync_enabled(const configs& cfg);
     static bool is_full_screen(const configs& cfg);
+    static bool is_MSAA_enabled(const configs& cfg);
+    static uint get_MSAA_sampler_count(const configs& cfg);
     static void register_dev_index_service(void* dev, rendersys* rsys);
     static void unregister_dev_index_service(void* dev);
     static rendersys* find_by_dev(void* dev);           /* we could usually find the rendersys by its device ptr */

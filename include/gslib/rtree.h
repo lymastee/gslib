@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -23,15 +23,57 @@
  * SOFTWARE.
  */
 
+#pragma once
+
 #ifndef rtree_77e9ff20_6040_46f3_b87d_ab64a4ac506a_h
 #define rtree_77e9ff20_6040_46f3_b87d_ab64a4ac506a_h
 
 #include <gslib/error.h>
 #include <gslib/tree.h>
-#include <gslib/std.h>
-#include <gslib/type.h>
+#include <gslib/utility.h>
 
 __gslib_begin__
+
+class __gs_novtable rtree_spec abstract
+{
+public:
+    enum type
+    {
+        spec_line,
+        /* more... */
+    };
+
+    virtual ~rtree_spec() {}
+    virtual type get_type() const = 0;
+    virtual bool query_overlap(const rectf& rc) const = 0;
+    virtual bool query_overlap(const pointf& p1, const pointf& p2) const = 0;
+};
+
+class rtree_spec_line:
+    public rtree_spec
+{
+public:
+    rtree_spec_line(const pointf& p1, const pointf& p2): _p1(p1), _p2(p2) {}
+    virtual type get_type() const override { return spec_line; }
+    virtual bool query_overlap(const rectf& rc) const override { return is_line_rect_overlapped(_p1, _p2, rc); }
+    virtual bool query_overlap(const pointf& p1, const pointf& p2) const override
+    {
+        vec2 intsp, d1, d2;
+        d1.sub(_p2, _p1);
+        d2.sub(p2, p1);
+        if(is_parallel(d1, d2))
+            return false;
+        intersectp_linear_linear(intsp, _p1, p1, d1, d2);
+        float t1 = linear_reparameterize(_p1, _p2, intsp);
+        if(t1 < 0.f || t1 > 1.f)
+            return false;
+        float t2 = linear_reparameterize(p1, p2, intsp);
+        return t2 >= 0.f && t2 <= 1.f;
+    }
+
+private:
+    pointf          _p1, _p2;
+};
 
 template<class _bind, int _bsize = sizeof(_bind)>
 class rtree_entity
@@ -44,15 +86,30 @@ public:
 protected:
     rectf           _rect;
     bind_type       _bind_arg;
+    rtree_spec*     _spec = nullptr;
 
 public:
     rtree_entity() {}
     rtree_entity(bind_arg ba, const rectf& rc): _rect(rc), _bind_arg(ba) {}
+    ~rtree_entity() { set_spec(nullptr); }
     const rectf& const_rect() const { return _rect; }
     rectf& get_rect() { return _rect; }
     bind_arg get_bind_arg() const { return _bind_arg; }
+    rtree_spec* get_spec() const { return _spec; }
     void set_rect(const rectf& rc) { _rect = rc; }
     void set_bind_arg(bind_arg ba) { _bind_arg = ba; }
+    void set_spec(rtree_spec* spec)
+    {
+        if(_spec)
+            delete _spec;
+        _spec = spec;
+    }
+    rtree_spec* detach_spec()
+    {
+        auto* spec = _spec;
+        _spec = nullptr;
+        return spec;
+    }
 };
 
 template<class _bind>
@@ -65,16 +122,31 @@ public:
 
 protected:
     rectf           _rect;
-    bind_type       _bind_arg;
+    bind_type       _bind_arg = 0;
+    rtree_spec*     _spec = nullptr;
 
 public:
-    rtree_entity() { _bind_arg = 0; }
+    rtree_entity() {}
     rtree_entity(bind_arg ba, const rectf& rc): _rect(rc), _bind_arg(ba) {}
+    ~rtree_entity() { set_spec(nullptr); }
     const rectf& const_rect() const { return _rect; }
     rectf& get_rect() { return _rect; }
     bind_arg get_bind_arg() const { return _bind_arg; }
+    rtree_spec* get_spec() const { return _spec; }
     void set_rect(const rectf& rc) { _rect = rc; }
     void set_bind_arg(bind_arg ba) { _bind_arg = ba; }
+    void set_spec(rtree_spec* spec)
+    {
+        if(_spec)
+            delete _spec;
+        _spec = spec;
+    }
+    rtree_spec* detach_spec()
+    {
+        auto* spec = _spec;
+        _spec = nullptr;
+        return spec;
+    }
 };
 
 template<class _entity>
@@ -159,15 +231,15 @@ protected:
     {
         assert(p.is_valid());
         if(!is_rect_intersected(rc, p->const_rect()))
-            return iterator(0);
+            return iterator(nullptr);
         if(p.is_leaf())
-            return (p->get_bind_arg() == ba) ? p : iterator(0);
+            return (p->get_bind_arg() == ba) ? p : iterator(nullptr);
         for(auto i = p.child(); i.is_valid(); i.to_next()) {
             auto f = find(i, ba, rc);
             if(f.is_valid())
                 return f;
         }
-        return iterator(0);
+        return iterator(nullptr);
     }
 };
 
@@ -188,7 +260,6 @@ public:
     typedef typename _tree::const_iterator const_iterator;
     typedef typename _tree::value value;
     typedef typename value::bind_arg bind_arg;
-    typedef rtree_finder<mytree> finder;
     typedef list<value> value_list;
     static const int max_record = _max_record;
     static const int min_record = _min_record;
@@ -209,7 +280,7 @@ public:
             auto& rc = v.const_rect();
             center.x = 0.5f * (rc.left + rc.right);
             center.y = 0.5f * (rc.top + rc.bottom);
-            assoc_wrapper = 0;
+            assoc_wrapper = nullptr;
         }
         bulk_node(wrapper* w):
             value(w->get_ref())
@@ -234,6 +305,7 @@ public:
             auto& v = w->get_ref();
             v.set_bind_arg(p.get_bind_arg());
             v.set_rect(p.const_rect());
+            v.set_spec(p.detach_spec());
             in.push_back(w);
         }
         for(;;) {
@@ -381,7 +453,7 @@ protected:
 };
 
 template<int _max_record, int _min_record, class _tree>
-class rtree_alg_framework
+class rtree_alg_base
 {
 public:
     typedef _tree mytree;
@@ -397,7 +469,7 @@ public:
     static const int min_record = _min_record;
 
 public:
-    rtree_alg_framework(mytree& tr): _mytree(tr) {}
+    rtree_alg_base(mytree& tr): _mytree(tr) {}
 
 protected:
     mytree&         _mytree;
@@ -467,7 +539,7 @@ protected:
             q = _mytree.insert_after(p);
         else {
             mytree mt;
-            auto r = mt.insert(iterator(0));
+            auto r = mt.insert(iterator(nullptr));
             r->set_rect(p->const_rect());
             auto p1 = mt.birth(r);
             auto p2 = mt.birth_tail(r);
@@ -530,23 +602,23 @@ protected:
  */
 template<int _max_record, int _min_record, class _tree>
 class linear_split_alg:
-    public rtree_alg_framework<_max_record, _min_record, _tree>
+    public rtree_alg_base<_max_record, _min_record, _tree>
 {
 public:
     linear_split_alg(mytree& tr):
-        rtree_alg_framework<_max_record, _min_record, _tree>(tr)
+        rtree_alg_base<_max_record, _min_record, _tree>(tr)
     {
         /* better be static_assert! */
         assert((min_record * 2 <= max_record) &&
             "min_record should be less than half max_record."
             );
     }
-    void insert(bind_arg ba, const rectf& rc)
+    iterator insert(bind_arg ba, const rectf& rc)
     {
         if(!_mytree.is_valid()) {
-            auto i = _mytree.insert(iterator(0));
+            auto i = _mytree.insert(iterator(nullptr));
             *i = value(ba, rc);
-            return;
+            return i;
         }
         auto i = find_insert_position(_mytree.get_root());
         if(i.is_valid()) {
@@ -554,7 +626,7 @@ public:
             auto j = _mytree.birth_tail(i);
             *j = value(ba, rc);
             update_rect_recursively(i, j);
-            return;
+            return j;
         }
         i = find_first_leaf(_mytree.get_root());
         assert(i.is_valid() && i.is_leaf());
@@ -569,7 +641,7 @@ public:
             union_rect(new_rc, i->const_rect(), rc);
             i->set_bind_arg(0);
             i->set_rect(new_rc);
-            return;
+            return k;
         }
         assert(p.childs() == max_record);
         /* temporarily insert into p, then split */
@@ -578,6 +650,7 @@ public:
         update_rect_recursively(p, j);
         do { p = adjust_tree(p); }
         while(p.is_valid());
+        return j;
     }
     void remove(bind_arg ba, const rectf& rc)
     {
@@ -607,16 +680,16 @@ protected:
     {
         assert(i.is_valid());
         if(i.is_leaf())
-            return iterator(0);
+            return iterator(nullptr);
         auto j = i.child();
         if(j.is_leaf())
-            return (i.childs() < max_record) ? i : iterator(0);
+            return (i.childs() < max_record) ? i : iterator(nullptr);
         for(; j.is_valid(); j.to_next()) {
             auto r = find_insert_position(j);
             if(r.is_valid())
                 return r;
         }
-        return iterator(0);
+        return iterator(nullptr);
     }
     iterator find_first_leaf(iterator i)
     {
@@ -667,8 +740,8 @@ protected:
         auto p = i.parent();
         split(i);
         if(!p.is_valid())
-            return iterator(0);
-        return (p.childs() <= max_record) ? iterator(0) : p;
+            return iterator(nullptr);
+        return (p.childs() <= max_record) ? iterator(nullptr) : p;
     }
     iterator condense_tree(value_list& candidates, iterator i)
     {
@@ -681,7 +754,7 @@ protected:
                 _mytree.detach(t, i.child());
                 _mytree.swap(t);
             }
-            return iterator(0);
+            return iterator(nullptr);
         }
         collect_leaves(candidates, i);
         auto p = i.parent();
@@ -689,7 +762,7 @@ protected:
         _mytree.erase(i);
         if(p.childs() >= min_record) {
             update_subtree_rect(p);
-            return iterator(0);
+            return iterator(nullptr);
         }
         return p;
     }
@@ -705,23 +778,23 @@ protected:
 
 template<int _max_record, int _min_record, class _tree>
 class quadratic_split_alg:
-    public rtree_alg_framework<_max_record, _min_record, _tree>
+    public rtree_alg_base<_max_record, _min_record, _tree>
 {
 public:
     quadratic_split_alg(mytree& tr):
-        rtree_alg_framework<_max_record, _min_record, _tree>(tr)
+        rtree_alg_base<_max_record, _min_record, _tree>(tr)
     {
         /* better be static_assert! */
         assert((min_record * 2 <= max_record) &&
             "min_record should be less than half max_record."
             );
     }
-    void insert(bind_arg ba, const rectf& rc)
+    iterator insert(bind_arg ba, const rectf& rc)
     {
         if(!_mytree.is_valid()) {
-            auto i = _mytree.insert(iterator(0));
+            auto i = _mytree.insert(iterator(nullptr));
             *i = value(ba, rc);
-            return;
+            return i;
         }
         auto i = find_insert_position(_mytree.get_root(), rc);
         assert(i.is_valid());
@@ -736,13 +809,13 @@ public:
             union_rect(new_rc, i->const_rect(), rc);
             i->set_bind_arg(0);
             i->set_rect(new_rc);
-            return;
+            return k;
         }
         if(p.childs() < max_record) {
             auto j = _mytree.birth_tail(p);
             *j = value(ba, rc);
             update_rect_recursively(p, j);
-            return;
+            return j;
         }
         /* temporarily insert into p, then split */
         auto j = _mytree.birth_tail(p);
@@ -750,6 +823,7 @@ public:
         update_rect_recursively(p, j);
         do { p = adjust_tree(p); }
         while(p.is_valid());
+        return j;
     }
     void remove(bind_arg ba, const rectf& rc)
     {
@@ -854,8 +928,8 @@ protected:
         auto p = i.parent();
         split(i);
         if(!p.is_valid())
-            return iterator(0);
-        return (p.childs() <= max_record) ? iterator(0) : p;
+            return iterator(nullptr);
+        return (p.childs() <= max_record) ? iterator(nullptr) : p;
     }
     iterator condense_tree(value_list& candidates, iterator i)
     {
@@ -868,7 +942,7 @@ protected:
                 _mytree.detach(t, i.child());
                 _mytree.swap(t);
             }
-            return iterator(0);
+            return iterator(nullptr);
         }
         collect_leaves(candidates, i);
         auto p = i.parent();
@@ -876,7 +950,7 @@ protected:
         _mytree.erase(i);
         if(p.childs() >= min_record) {
             update_subtree_rect(p);
-            return iterator(0);
+            return iterator(nullptr);
         }
         return p;
     }
@@ -920,17 +994,29 @@ public:
         auto i = get_root();
         return query_overlapped(i, q, lookups, out);
     }
-    void insert(bind_arg ba, const rectf& rc) { alg(*this).insert(ba, rc); }
-    void remove(bind_arg ba, const rectf& rc) { alg(*this).remove(ba, rc); }
-    void tracing() const
+    template<class _cont>
+    int query(const pointf& p1, const pointf& p2, _cont& out) const
     {
         if(!is_valid())
-            return;
-        auto r = get_root();
-        trace_subtree(r);
-        trace_layer(r);
+            return 0;
+        lookup_table lookups;
+        rectf rc;
+        rc.set_by_pts(p1, p2);
+        auto i = get_root();
+        return query_overlapped(i, p1, p2, rc, lookups, out);
     }
+    iterator insert(bind_arg ba, const rectf& rc) { return alg(*this).insert(ba, rc); }
+    void remove(bind_arg ba, const rectf& rc) { alg(*this).remove(ba, rc); }
     bool empty() const { return !is_valid(); }
+    iterator insert_line(bind_arg ba, const pointf& p1, const pointf& p2)
+    {
+        rectf rc;
+        rc.set_by_pts(p1, p2);
+        iterator i = insert(ba, rc);
+        assert(i);
+        i->set_spec(new rtree_spec_line(p1, p2));
+        return i;
+    }
     template<class _vsl>
     void insert(const _vsl& input)
     {
@@ -940,6 +1026,14 @@ public:
             return;
         }
         rtree_str_load<alg::max_record, alg::min_record, alg::mytree>(*this).load(input);
+    }
+    void tracing() const
+    {
+        if(!is_valid())
+            return;
+        auto r = get_root();
+        trace_subtree(r);
+        trace_layer(r);
     }
 
 protected:
@@ -979,6 +1073,27 @@ protected:
         int c = 0;
         for(auto j = i.child(); j.is_valid(); j = j.next())
             c += query_overlapped(j, q, lookups, out);
+        return c;
+    }
+    template<class _cont>
+    int query_overlapped(const_iterator i, const pointf& p1, const pointf& p2, const rectf& rc, lookup_table& lookups, _cont& out) const
+    {
+        assert(i.is_valid());
+        if(i.is_leaf()) {
+            auto* spec = i->get_spec();
+            bool isovl = spec ? spec->query_overlap(p1, p2) : is_rect_intersected(i->const_rect(), rc);
+            if(isovl && lookups.find(i->get_bind_arg()) == lookups.end()) {
+                lookups.insert(i->get_bind_arg());
+                out.push_back(i->get_bind_arg());
+                return 1;
+            }
+            return 0;
+        }
+        if(!is_rect_intersected(i->const_rect(), rc))
+            return 0;
+        int c = 0;
+        for(auto j = i.child(); j.is_valid(); j = j.next())
+            c += query_overlapped(j, p1, p2, rc, lookups, out);
         return c;
     }
     void trace_layer(const_iterator i) const

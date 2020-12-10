@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -22,6 +22,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+
+#pragma once
 
 #ifndef math_56c94d7e_d5fd_4744_9a4c_fe98b3b977d8_inl
 #define math_56c94d7e_d5fd_4744_9a4c_fe98b3b977d8_inl
@@ -68,38 +70,38 @@ inline vec2::vec2(float fx, float fy)
     y = fy;
 }
 
-inline vec2::operator float* ()
+inline vec2::operator float*()
 {
     return (float*)&x;
 }
 
-inline vec2::operator const float* () const
+inline vec2::operator const float*() const
 {
     return (const float*)&x;
 }
 
-inline vec2& vec2::operator += (const vec2& v)
+inline vec2& vec2::operator+=(const vec2& v)
 {
     x += v.x;
     y += v.y;
     return *this;
 }
 
-inline vec2& vec2::operator -= (const vec2& v)
+inline vec2& vec2::operator-=(const vec2& v)
 {
     x -= v.x;
     y -= v.y;
     return *this;
 }
 
-inline vec2& vec2::operator *= (float f)
+inline vec2& vec2::operator*=(float f)
 {
     x *= f;
     y *= f;
     return *this;
 }
 
-inline vec2& vec2::operator /= (float f)
+inline vec2& vec2::operator/=(float f)
 {
     float finv = 1.f / f;
     x *= finv;
@@ -107,48 +109,48 @@ inline vec2& vec2::operator /= (float f)
     return *this;
 }
 
-inline vec2 vec2::operator + () const
+inline vec2 vec2::operator+() const
 {
     return *this;
 }
 
-inline vec2 vec2::operator - () const
+inline vec2 vec2::operator-() const
 {
     return vec2(-x, -y);
 }
 
-inline vec2 vec2::operator + (const vec2& v) const
+inline vec2 vec2::operator+(const vec2& v) const
 {
     return vec2(x + v.x, y + v.y);
 }
 
-inline vec2 vec2::operator - (const vec2& v) const
+inline vec2 vec2::operator-(const vec2& v) const
 {
     return vec2(x - v.x, y - v.y);
 }
 
-inline vec2 vec2::operator * (float f) const
+inline vec2 vec2::operator*(float f) const
 {
     return vec2(x * f, y * f);
 }
 
-inline vec2 vec2::operator / (float f) const
+inline vec2 vec2::operator/(float f) const
 {
     float finv = 1.f / f;
     return vec2(x * finv, y * finv);
 }
 
-inline vec2 operator * (float f, const vec2& v)
+inline vec2 operator*(float f, const vec2& v)
 {
-    return vec2(f * v.x, f* v.y);
+    return vec2(f * v.x, f * v.y);
 }
 
-inline bool vec2::operator == (const vec2& v) const
+inline bool vec2::operator==(const vec2& v) const
 {
     return x == v.x && y == v.y;
 }
 
-inline bool vec2::operator != (const vec2& v) const
+inline bool vec2::operator!=(const vec2& v) const
 {
     return x != v.x || y != v.y;
 }
@@ -178,7 +180,7 @@ inline vec3::operator const float* () const
     return (const float*)&x;
 }
 
-inline vec3& vec3::operator += (const vec3& v)
+inline vec3& vec3::operator+=(const vec3& v)
 {
     x += v.x;
     y += v.y;
@@ -186,7 +188,7 @@ inline vec3& vec3::operator += (const vec3& v)
     return *this;
 }
 
-inline vec3& vec3::operator -= (const vec3& v)
+inline vec3& vec3::operator-=(const vec3& v)
 {
     x -= v.x;
     y -= v.y;
@@ -194,7 +196,7 @@ inline vec3& vec3::operator -= (const vec3& v)
     return *this;
 }
 
-inline vec3& vec3::operator *= (float f)
+inline vec3& vec3::operator*=(float f)
 {
     x *= f;
     y *= f;
@@ -202,7 +204,7 @@ inline vec3& vec3::operator *= (float f)
     return *this;
 }
 
-inline vec3& vec3::operator /= (float f)
+inline vec3& vec3::operator/=(float f)
 {
     float finv = 1.f / f;
     x *= finv;
@@ -211,48 +213,48 @@ inline vec3& vec3::operator /= (float f)
     return *this;
 }
 
-inline vec3 vec3::operator + () const
+inline vec3 vec3::operator+() const
 {
     return *this;
 }
 
-inline vec3 vec3::operator - () const
+inline vec3 vec3::operator-() const
 {
     return vec3(-x, -y, -z);
 }
 
-inline vec3 vec3::operator + (const vec3& v) const
+inline vec3 vec3::operator+(const vec3& v) const
 {
     return vec3(x + v.x, y + v.y, z + v.z);
 }
 
-inline vec3 vec3::operator - (const vec3& v) const
+inline vec3 vec3::operator-(const vec3& v) const
 {
     return vec3(x - v.x, y - v.y, z - v.z);
 }
 
-inline vec3 vec3::operator * (float f) const
+inline vec3 vec3::operator*(float f) const
 {
     return vec3(x * f, y * f, z * f);
 }
 
-inline vec3 vec3::operator / (float f) const
+inline vec3 vec3::operator/(float f) const
 {
     float finv = 1.f / f;
     return vec3(x * finv, y * finv, z * finv);
 }
 
-inline vec3 operator * (float f, const vec3& v)
+inline vec3 operator*(float f, const vec3& v)
 {
     return vec3(f * v.x, f * v.y, f * v.z);
 }
 
-inline bool vec3::operator == (const vec3& v) const
+inline bool vec3::operator==(const vec3& v) const
 {
     return x == v.x && y == v.y && z == v.z;
 }
 
-inline bool vec3::operator != (const vec3& v) const
+inline bool vec3::operator!=(const vec3& v) const
 {
     return x != v.x || y != v.y || z != v.z;
 }
@@ -292,7 +294,7 @@ inline vec4::operator const float* () const
     return (const float*)&x;
 }
 
-inline vec4& vec4::operator += (const vec4& v)
+inline vec4& vec4::operator+=(const vec4& v)
 {
     x += v.x;
     y += v.y;
@@ -301,7 +303,7 @@ inline vec4& vec4::operator += (const vec4& v)
     return *this;
 }
 
-inline vec4& vec4::operator -= (const vec4& v)
+inline vec4& vec4::operator-=(const vec4& v)
 {
     x -= v.x;
     y -= v.y;
@@ -310,7 +312,7 @@ inline vec4& vec4::operator -= (const vec4& v)
     return *this;
 }
 
-inline vec4& vec4::operator *= (float f)
+inline vec4& vec4::operator*=(float f)
 {
     x *= f;
     y *= f;
@@ -319,7 +321,7 @@ inline vec4& vec4::operator *= (float f)
     return *this;
 }
 
-inline vec4& vec4::operator /= (float f)
+inline vec4& vec4::operator/=(float f)
 {
     float finv = 1.f / f;
     x *= finv;
@@ -329,48 +331,48 @@ inline vec4& vec4::operator /= (float f)
     return *this;
 }
 
-inline vec4 vec4::operator + () const
+inline vec4 vec4::operator+() const
 {
     return *this;
 }
 
-inline vec4 vec4::operator - () const
+inline vec4 vec4::operator-() const
 {
     return vec4(-x, -y, -z, -w);
 }
 
-inline vec4 vec4::operator + (const vec4& v) const
+inline vec4 vec4::operator+(const vec4& v) const
 {
     return vec4(x + v.x, y + v.y, z + v.z, w + v.w);
 }
 
-inline vec4 vec4::operator - (const vec4& v) const
+inline vec4 vec4::operator-(const vec4& v) const
 {
     return vec4(x - v.x, y - v.y, z - v.z, w - v.w);
 }
 
-inline vec4 vec4::operator * (float f) const
+inline vec4 vec4::operator*(float f) const
 {
     return vec4(x * f, y * f, z * f, w * f);
 }
 
-inline vec4 vec4::operator / (float f) const
+inline vec4 vec4::operator/(float f) const
 {
     float finv = 1.f / f;
     return vec4(x * finv, y * finv, z * finv, w * finv);
 }
 
-inline vec4 operator * (float f, const vec4& v)
+inline vec4 operator*(float f, const vec4& v)
 {
     return vec4(f * v.x, f * v.y, f * v.z, f * v.w);
 }
 
-inline bool vec4::operator == (const vec4& v) const
+inline bool vec4::operator==(const vec4& v) const
 {
     return x == v.x && y == v.y && z == v.z && w == v.w;
 }
 
-inline bool vec4::operator != (const vec4& v) const
+inline bool vec4::operator!=(const vec4& v) const
 {
     return x != v.x || y != v.y || z != v.z || w != v.w;
 }
@@ -395,12 +397,12 @@ inline mat3::mat3(float f11, float f12, float f13,
     _31 = f31, _32 = f32, _33 = f33;
 }
 
-inline float& mat3::operator () (uint row, uint col)
+inline float& mat3::operator()(uint row, uint col)
 {
     return m[row][col];
 }
 
-inline float mat3::operator () (uint row, uint col) const
+inline float mat3::operator()(uint row, uint col) const
 {
     return m[row][col];
 }
@@ -415,13 +417,13 @@ inline mat3::operator const float* () const
     return (const float*)&_11;
 }
 
-inline mat3& mat3::operator *= (const mat3& mat)
+inline mat3& mat3::operator*=(const mat3& mat)
 {
     mat3multiply(this, this, &mat);
     return *this;
 }
 
-inline mat3& mat3::operator += (const mat3& mat)
+inline mat3& mat3::operator+=(const mat3& mat)
 {
     _11 += mat._11, _12 += mat._12, _13 += mat._13;
     _21 += mat._21, _22 += mat._22, _23 += mat._23;
@@ -429,7 +431,7 @@ inline mat3& mat3::operator += (const mat3& mat)
     return *this;
 }
 
-inline mat3& mat3::operator -= (const mat3& mat)
+inline mat3& mat3::operator-=(const mat3& mat)
 {
     _11 -= mat._11, _12 -= mat._12, _13 -= mat._13;
     _21 -= mat._21, _22 -= mat._22, _23 -= mat._23;
@@ -437,7 +439,7 @@ inline mat3& mat3::operator -= (const mat3& mat)
     return *this;
 }
 
-inline mat3& mat3::operator *= (float f)
+inline mat3& mat3::operator*=(float f)
 {
     _11 *= f, _12 *= f, _13 *= f;
     _21 *= f, _22 *= f, _23 *= f;
@@ -445,7 +447,7 @@ inline mat3& mat3::operator *= (float f)
     return *this;
 }
 
-inline mat3& mat3::operator /= (float f)
+inline mat3& mat3::operator/=(float f)
 {
     float finv = 1.f / f;
     _11 *= finv, _12 *= finv, _13 *= finv;
@@ -454,12 +456,12 @@ inline mat3& mat3::operator /= (float f)
     return *this;
 }
 
-inline mat3 mat3::operator + () const
+inline mat3 mat3::operator+() const
 {
     return *this;
 }
 
-inline mat3 mat3::operator - () const
+inline mat3 mat3::operator-() const
 {
     return mat3(
         -_11, -_12, -_13,
@@ -468,14 +470,14 @@ inline mat3 mat3::operator - () const
         );
 }
 
-inline mat3 mat3::operator * (const mat3& mat) const
+inline mat3 mat3::operator*(const mat3& mat) const
 {
     mat3 t;
     mat3multiply(&t, this, &mat);
     return t;
 }
 
-inline mat3 mat3::operator + (const mat3& mat) const
+inline mat3 mat3::operator+(const mat3& mat) const
 {
     return mat3(
         _11 + mat._11, _12 + mat._12, _13 + mat._13,
@@ -484,7 +486,7 @@ inline mat3 mat3::operator + (const mat3& mat) const
         );
 }
 
-inline mat3 mat3::operator - (const mat3& mat) const
+inline mat3 mat3::operator-(const mat3& mat) const
 {
     return mat3(
         _11 - mat._11, _12 - mat._12, _13 - mat._13,
@@ -493,7 +495,7 @@ inline mat3 mat3::operator - (const mat3& mat) const
         );
 }
 
-inline mat3 mat3::operator * (float f) const
+inline mat3 mat3::operator*(float f) const
 {
     return mat3(
         _11 * f, _12 * f, _13 * f,
@@ -502,7 +504,7 @@ inline mat3 mat3::operator * (float f) const
         );
 }
 
-inline mat3 mat3::operator / (float f) const
+inline mat3 mat3::operator/(float f) const
 {
     float finv = 1.f / f;
     return mat3(
@@ -512,7 +514,7 @@ inline mat3 mat3::operator / (float f) const
         );
 }
 
-inline mat3 operator * (float f, const mat3& mat)
+inline mat3 operator*(float f, const mat3& mat)
 {
     return mat3(
         f * mat._11, f * mat._12, f * mat._13,
@@ -521,12 +523,12 @@ inline mat3 operator * (float f, const mat3& mat)
         );
 }
 
-inline bool mat3::operator == (const mat3& mat) const
+inline bool mat3::operator==(const mat3& mat) const
 {
     return memcmp(this, &mat, sizeof(mat3)) == 0;
 }
 
-inline bool mat3::operator != (const mat3& mat) const
+inline bool mat3::operator!=(const mat3& mat) const
 {
     return memcmp(this, &mat, sizeof(mat3)) != 0;
 }
@@ -553,12 +555,12 @@ inline mat4::mat4(float f11, float f12, float f13, float f14,
     _41 = f41, _42 = f42, _43 = f43, _44 = f44;
 }
 
-inline float& mat4::operator () (uint row, uint col)
+inline float& mat4::operator()(uint row, uint col)
 {
     return m[row][col];
 }
 
-inline float mat4::operator () (uint row, uint col) const
+inline float mat4::operator()(uint row, uint col) const
 {
     return m[row][col];
 }
@@ -573,13 +575,13 @@ inline mat4::operator const float* () const
     return (const float*)&_11;
 }
 
-inline mat4& mat4::operator *= (const mat4& mat)
+inline mat4& mat4::operator*=(const mat4& mat)
 {
     matmultiply(this, this, &mat);
     return *this;
 }
 
-inline mat4& mat4::operator += (const mat4& mat)
+inline mat4& mat4::operator+=(const mat4& mat)
 {
     _11 += mat._11, _12 += mat._12, _13 += mat._13, _14 += mat._14;
     _21 += mat._21, _22 += mat._22, _23 += mat._23, _24 += mat._24;
@@ -588,7 +590,7 @@ inline mat4& mat4::operator += (const mat4& mat)
     return *this;
 }
 
-inline mat4& mat4::operator -= (const mat4& mat)
+inline mat4& mat4::operator-=(const mat4& mat)
 {
     _11 -= mat._11, _12 -= mat._12, _13 -= mat._13, _14 -= mat._14;
     _21 -= mat._21, _22 -= mat._22, _23 -= mat._23, _24 -= mat._24;
@@ -597,7 +599,7 @@ inline mat4& mat4::operator -= (const mat4& mat)
     return *this;
 }
 
-inline mat4& mat4::operator *= (float f)
+inline mat4& mat4::operator*=(float f)
 {
     _11 *= f, _12 *= f, _13 *= f, _14 *= f;
     _21 *= f, _22 *= f, _23 *= f, _24 *= f;
@@ -606,7 +608,7 @@ inline mat4& mat4::operator *= (float f)
     return *this;
 }
 
-inline mat4& mat4::operator /= (float f)
+inline mat4& mat4::operator/=(float f)
 {
     float finv = 1.f / f;
     _11 *= finv, _12 *= finv, _13 *= finv, _14 *= finv;
@@ -616,12 +618,12 @@ inline mat4& mat4::operator /= (float f)
     return *this;
 }
 
-inline mat4 mat4::operator + () const
+inline mat4 mat4::operator+() const
 {
     return *this;
 }
 
-inline mat4 mat4::operator - () const
+inline mat4 mat4::operator-() const
 {
     return mat4(
         -_11, -_12, -_13, -_14,
@@ -631,14 +633,14 @@ inline mat4 mat4::operator - () const
         );
 }
 
-inline mat4 mat4::operator * (const mat4& mat) const
+inline mat4 mat4::operator*(const mat4& mat) const
 {
     mat4 t;
     matmultiply(&t, this, &mat);
     return t;
 }
 
-inline mat4 mat4::operator + (const mat4& mat) const
+inline mat4 mat4::operator+(const mat4& mat) const
 {
     return mat4(
         _11 + mat._11, _12 + mat._12, _13 + mat._13, _14 + mat._14,
@@ -648,7 +650,7 @@ inline mat4 mat4::operator + (const mat4& mat) const
         );
 }
 
-inline mat4 mat4::operator - (const mat4& mat) const
+inline mat4 mat4::operator-(const mat4& mat) const
 {
     return mat4(
         _11 - mat._11, _12 - mat._12, _13 - mat._13, _14 - mat._14,
@@ -658,7 +660,7 @@ inline mat4 mat4::operator - (const mat4& mat) const
         );
 }
 
-inline mat4 mat4::operator * (float f) const
+inline mat4 mat4::operator*(float f) const
 {
     return mat4(
         _11 * f, _12 * f, _13 * f, _14 * f,
@@ -668,7 +670,7 @@ inline mat4 mat4::operator * (float f) const
         );
 }
 
-inline mat4 mat4::operator / (float f) const
+inline mat4 mat4::operator/(float f) const
 {
     float finv = 1.f / f;
     return mat4(
@@ -679,7 +681,7 @@ inline mat4 mat4::operator / (float f) const
         );
 }
 
-inline mat4 operator * (float f, const mat4& mat)
+inline mat4 operator*(float f, const mat4& mat)
 {
     return mat4(
         f * mat._11, f * mat._12, f * mat._13, f * mat._14,
@@ -689,12 +691,12 @@ inline mat4 operator * (float f, const mat4& mat)
         );
 }
 
-inline bool mat4::operator == (const mat4& mat) const
+inline bool mat4::operator==(const mat4& mat) const
 {
     return memcmp(this, &mat, sizeof(mat4)) == 0;
 }
 
-inline bool mat4::operator != (const mat4& mat) const
+inline bool mat4::operator!=(const mat4& mat) const
 {
     return memcmp(this, &mat, sizeof(mat4)) != 0;
 }
@@ -726,7 +728,7 @@ inline quat::operator const float* () const
     return (const float*)&x;
 }
 
-inline quat& quat::operator += (const quat& q)
+inline quat& quat::operator+=(const quat& q)
 {
     x += q.x;
     y += q.y;
@@ -735,7 +737,7 @@ inline quat& quat::operator += (const quat& q)
     return *this;
 }
 
-inline quat& quat::operator -= (const quat& q)
+inline quat& quat::operator-=(const quat& q)
 {
     x -= q.x;
     y -= q.y;
@@ -744,13 +746,13 @@ inline quat& quat::operator -= (const quat& q)
     return *this;
 }
 
-inline quat& quat::operator *= (const quat& q)
+inline quat& quat::operator*=(const quat& q)
 {
     quatmultiply(this, this, &q);
     return *this;
 }
 
-inline quat& quat::operator *= (float f)
+inline quat& quat::operator*=(float f)
 {
     x *= f;
     y *= f;
@@ -759,7 +761,7 @@ inline quat& quat::operator *= (float f)
     return *this;
 }
 
-inline quat& quat::operator /= (float f)
+inline quat& quat::operator/=(float f)
 {
     float finv = 1.f / f;
     x *= finv;
@@ -769,55 +771,55 @@ inline quat& quat::operator /= (float f)
     return *this;
 }
 
-inline quat quat::operator + () const
+inline quat quat::operator+() const
 {
     return *this;
 }
 
-inline quat quat::operator - () const
+inline quat quat::operator-() const
 {
     return quat(-x, -y, -z, -w);
 }
 
-inline quat quat::operator + (const quat& q) const
+inline quat quat::operator+(const quat& q) const
 {
     return quat(x + q.x, y + q.y, z + q.z, w + q.w);
 }
 
-inline quat quat::operator - (const quat& q) const
+inline quat quat::operator-(const quat& q) const
 {
     return quat(x - q.x, y - q.y, z - q.z, w - q.w);
 }
 
-inline quat quat::operator * (const quat& q) const
+inline quat quat::operator*(const quat& q) const
 {
     quat t;
     quatmultiply(&t, this, &q);
     return t;
 }
 
-inline quat quat::operator * (float f) const
+inline quat quat::operator*(float f) const
 {
     return quat(x * f, y * f, z * f, w * f);
 }
 
-inline quat quat::operator / (float f) const
+inline quat quat::operator/(float f) const
 {
     float finv = 1.f / f;
     return quat(x * finv, y * finv, z * finv, w * finv);
 }
 
-inline quat operator * (float f, const quat& q)
+inline quat operator*(float f, const quat& q)
 {
     return quat(f * q.x, f * q.y, f * q.z, f * q.w);
 }
 
-inline bool quat::operator == (const quat& q) const
+inline bool quat::operator==(const quat& q) const
 {
     return x == q.x && y == q.y && z == q.z && w == q.w;
 }
 
-inline bool quat::operator != (const quat& q) const
+inline bool quat::operator!=(const quat& q) const
 {
     return x != q.x || y != q.y || z != q.z || w != q.w;
 }
@@ -849,7 +851,7 @@ inline plane::operator const float* () const
     return (const float*)&a;
 }
 
-inline plane& plane::operator *= (float f)
+inline plane& plane::operator*=(float f)
 {
     a *= f;
     b *= f;
@@ -858,7 +860,7 @@ inline plane& plane::operator *= (float f)
     return *this;
 }
 
-inline plane& plane::operator /= (float f)
+inline plane& plane::operator/=(float f)
 {
     float finv = 1.f / f;
     a *= finv;
@@ -868,38 +870,38 @@ inline plane& plane::operator /= (float f)
     return *this;
 }
 
-inline plane plane::operator + () const
+inline plane plane::operator+() const
 {
     return *this;
 }
 
-inline plane plane::operator - () const
+inline plane plane::operator-() const
 {
     return plane(-a, -b, -c, -d);
 }
 
-inline plane plane::operator * (float f) const
+inline plane plane::operator*(float f) const
 {
     return plane(a * f, b * f, c * f, d * f);
 }
 
-inline plane plane::operator / (float f) const
+inline plane plane::operator/(float f) const
 {
     float finv = 1.f / f;
     return plane(a * finv, b * finv, c * finv, d * finv);
 }
 
-inline plane operator * (float f, const plane& p)
+inline plane operator*(float f, const plane& p)
 {
     return plane(f * p.a, f * p.b, f * p.c, f * p.d);
 }
 
-inline bool plane::operator == (const plane& p) const
+inline bool plane::operator==(const plane& p) const
 {
     return a == p.a && b == p.b && c == p.c && d == p.d;
 }
 
-inline bool plane::operator != (const plane& p) const
+inline bool plane::operator!=(const plane& p) const
 {
     return a != p.a || b != p.b || c != p.c || d != p.d;
 }

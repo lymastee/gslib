@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -27,6 +27,7 @@
 #include <gslib/std.h>
 #include <gslib/string.h>
 #include <gslib/error.h>
+#include <gslib/pool.h>
 
 __gslib_begin__
 
@@ -211,7 +212,7 @@ void trace(const gchar* fmt, ...)
 {
     va_list ptr;
     va_start(ptr, fmt);
-    static string str;
+    string str;
     str.formatv(fmt, ptr);
     OutputDebugString(str.c_str());
 }

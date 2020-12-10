@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -22,6 +22,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+
+#pragma once
 
 #ifndef painter_0e5e866a_20d2_4fb1_93c0_1785588121f2_h
 #define painter_0e5e866a_20d2_4fb1_93c0_1785588121f2_h
@@ -100,12 +102,16 @@ struct painter_picture_data:
 {
 protected:
     texture2d*          _image;
+    rectf               _src_rect;
 
 public:
     painter_picture_data() { _image = nullptr; }
-    painter_picture_data(texture2d* p) { _image = p; }
+    painter_picture_data(texture2d* p);
+    painter_picture_data(texture2d* p, const rectf& rc);
     void set_image(texture2d* p) { _image = p; }
     texture2d* get_image() const { return _image; }
+    void set_src_rect(const rectf& rc) { _src_rect = rc; }
+    const rectf& get_src_rect() const { return _src_rect; }
 };
 
 typedef std::shared_ptr<painter_data> painter_extra_data;
@@ -220,6 +226,7 @@ public:
     virtual void on_draw_begin();
     virtual void on_draw_end();
     virtual void draw_image(texture2d* img, float x, float y);
+    virtual void draw_image(texture2d* img, const rectf& dest, const rectf& src);
     virtual void draw_line(const vec2& p1, const vec2& p2, const color& cr);
     virtual void draw_rect(const rectf& rc, const color& cr);
     virtual void draw_text(const gchar* str, int x, int y, const color& cr, int length = -1);

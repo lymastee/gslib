@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -22,6 +22,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+
+#pragma once
 
 #ifndef scene_048bb735_09b4_43d2_9ff5_5e40441c230b_h
 #define scene_048bb735_09b4_43d2_9ff5_5e40441c230b_h
@@ -97,6 +99,9 @@ public:
 protected:
     rose*               _rose;
     wsys_manager        _wsys_manager;
+
+private:
+    void setup_draw();
 };
 
 class scene:

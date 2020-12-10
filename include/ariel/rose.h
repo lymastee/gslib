@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -23,13 +23,15 @@
  * SOFTWARE.
  */
 
+#pragma once
+
 #ifndef rose_fbed1fbf_2ba3_46bc_97da_b1df11752358_h
 #define rose_fbed1fbf_2ba3_46bc_97da_b1df11752358_h
 
+#include <gslib/utility.h>
 #include <ariel/config.h>
 #include <ariel/rendersys.h>
 #include <ariel/raster.h>
-#include <ariel/utility.h>
 #include <ariel/batch.h>
 #include <ariel/texbatch.h>
 
@@ -109,7 +111,7 @@ public:
     typedef rendersys::index_buffer index_buffer;
 
 public:
-    rose_batch();
+    rose_batch(int index);
     virtual ~rose_batch();
     virtual rose_batch_tag get_tag() const = 0;
     virtual void create(bat_batch* bat) = 0;
@@ -118,12 +120,14 @@ public:
     virtual void tracing() const = 0;
 
 protected:
+    int                 _bat_index;
     vertex_shader*      _vertex_shader;
     pixel_shader*       _pixel_shader;
     vertex_format*      _vertex_format;
     vertex_buffer*      _vertex_buffer;
 
 public:
+    int get_batch_index() const { return _bat_index; }
     void set_vertex_shader(vertex_shader* p) { _vertex_shader = p; }
     void set_pixel_shader(pixel_shader* p) { _pixel_shader = p; }
     void set_vertex_format(vertex_format* p) { _vertex_format = p; }
@@ -139,6 +143,7 @@ class rose_fill_batch_cr:
     public rose_batch
 {
 public:
+    rose_fill_batch_cr(int index): rose_batch(index) {}
     rose_batch_tag get_tag() const override { return bf_cr; }
     void create(bat_batch* bat) override;
     int buffering(rendersys* rsys) override;
@@ -157,6 +162,7 @@ class rose_fill_batch_klm_cr:
     public rose_batch
 {
 public:
+    rose_fill_batch_klm_cr(int index) : rose_batch(index) {}
     rose_batch_tag get_tag() const override { return bf_klm_cr; }
     void create(bat_batch* bat) override;
     int buffering(rendersys* rsys) override;
@@ -173,7 +179,7 @@ class rose_fill_batch_klm_tex:
     friend class rose_stroke_batch_assoc_with_klm_tex;
 
 public:
-    rose_fill_batch_klm_tex(render_sampler_state* ss);
+    rose_fill_batch_klm_tex(int index, render_sampler_state* ss);
     ~rose_fill_batch_klm_tex() { destroy(); }
     rose_batch_tag get_tag() const override { return bf_klm_tex; }
     void create(bat_batch* bat) override;
@@ -198,6 +204,7 @@ class rose_stroke_batch_coef_cr:
     public rose_batch
 {
 public:
+    rose_stroke_batch_coef_cr(int index) : rose_batch(index) {}
     rose_batch_tag get_tag() const override { return bs_coef_cr; }
     void create(bat_batch* bat) override;
     int buffering(rendersys* rsys) override;
@@ -212,7 +219,7 @@ class rose_stroke_batch_coef_tex:
     public rose_batch
 {
 public:
-    rose_stroke_batch_coef_tex(render_sampler_state* ss);
+    rose_stroke_batch_coef_tex(int index, render_sampler_state* ss);
     ~rose_stroke_batch_coef_tex() { destroy(); }
     rose_batch_tag get_tag() const override { return bs_coef_tex; }
     void create(bat_batch* bat) override;
@@ -237,13 +244,16 @@ class rose_stroke_batch_assoc_with_klm_tex:
     public rose_stroke_batch_coef_tex
 {
 public:
-    rose_stroke_batch_assoc_with_klm_tex(rose_fill_batch_klm_tex* assoc);
+    rose_stroke_batch_assoc_with_klm_tex(int index, rose_fill_batch_klm_tex* assoc);
     ~rose_stroke_batch_assoc_with_klm_tex();
     void create(bat_batch* bat) override;
     int buffering(rendersys* rsys) override;
 
 protected:
     rose_fill_batch_klm_tex* _assoc;
+
+protected:
+    void create_vertices(bat_batch* bat);
 };
 
 class rose_bindings
@@ -313,6 +323,7 @@ public:
 
 public:
     void setup(rendersys* rsys);
+    rendersys* get_rendersys() const { return _rsys; }
     void fill_non_picture_graphics_obj(graphics_obj& gfx, uint brush_tag);
     bat_batch* fill_picture_graphics_obj(graphics_obj& gfx);
     void stroke_graphics_obj(graphics_obj& gfx, uint pen_tag);
@@ -335,12 +346,12 @@ protected:
     void prepare_fill(const painter_path& path, const painter_brush& brush);
     void prepare_picture_fill(const painter_path& path, const painter_brush& brush);
     void prepare_stroke(const painter_path& path, const painter_pen& pen);
-    rose_batch* create_fill_batch_cr();
-    rose_batch* create_fill_batch_klm_cr();
-    rose_batch* create_fill_batch_klm_tex();
-    rose_batch* create_stroke_batch_cr();
-    rose_batch* create_stroke_batch_tex();
-    rose_batch* create_stroke_batch_assoc(rose_fill_batch_klm_tex* assoc);
+    rose_batch* create_fill_batch_cr(int index);
+    rose_batch* create_fill_batch_klm_cr(int index);
+    rose_batch* create_fill_batch_klm_tex(int index);
+    rose_batch* create_stroke_batch_cr(int index);
+    rose_batch* create_stroke_batch_tex(int index);
+    rose_batch* create_stroke_batch_assoc(int index, rose_fill_batch_klm_tex* assoc);
     void clear_batches();
     void prepare_batches();
     void draw_batches();

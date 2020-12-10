@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -212,8 +212,9 @@ static void rose_filling_tex_coords(lb_joint* p, const tex_batcher& batch, _vf& 
     pt.tex = rose_calc_tex_coords(binding->img, binding->tex, batch);
 }
 
-rose_batch::rose_batch()
+rose_batch::rose_batch(int index)
 {
+    _bat_index = index;
     _vertex_shader = nullptr;
     _pixel_shader = nullptr;
     _vertex_format = nullptr;
@@ -386,7 +387,8 @@ void rose_fill_batch_klm_cr::tracing() const
     trace(_t("@@\n"));
 }
 
-rose_fill_batch_klm_tex::rose_fill_batch_klm_tex(render_sampler_state* ss)
+rose_fill_batch_klm_tex::rose_fill_batch_klm_tex(int index, render_sampler_state* ss):
+    rose_batch(index)
 {
     _sstate = ss;
     _srv = nullptr;
@@ -410,6 +412,7 @@ void rose_fill_batch_klm_tex::create(bat_batch* bat)
 
 void rose_fill_batch_klm_tex::tracing() const
 {
+    trace(_t("#start tracing fill batch klm tex:\n"));
 }
 
 void rose_fill_batch_klm_tex::create_from_fill(bat_fill_batch* bat)
@@ -575,7 +578,8 @@ void rose_stroke_batch_coef_cr::tracing() const
 {
 }
 
-rose_stroke_batch_coef_tex::rose_stroke_batch_coef_tex(render_sampler_state* ss)
+rose_stroke_batch_coef_tex::rose_stroke_batch_coef_tex(int index, render_sampler_state* ss):
+    rose_batch(index)
 {
     _sstate = ss;
     _srv = nullptr;
@@ -659,8 +663,8 @@ void rose_stroke_batch_coef_tex::tracing() const
 {
 }
 
-rose_stroke_batch_assoc_with_klm_tex::rose_stroke_batch_assoc_with_klm_tex(rose_fill_batch_klm_tex* assoc)
-    : rose_stroke_batch_coef_tex(nullptr)
+rose_stroke_batch_assoc_with_klm_tex::rose_stroke_batch_assoc_with_klm_tex(int index, rose_fill_batch_klm_tex* assoc):
+    rose_stroke_batch_coef_tex(index, nullptr)
 {
     assert(assoc);
     _assoc = assoc;
@@ -1070,9 +1074,9 @@ void rose::prepare_stroke(const painter_path& path, const painter_pen& pen)
     _gocache.push_back(gfx);
 }
 
-rose_batch* rose::create_fill_batch_cr()
+rose_batch* rose::create_fill_batch_cr(int index)
 {
-    auto* ptr = new rose_fill_batch_cr;
+    auto* ptr = new rose_fill_batch_cr(index);
     ptr->set_vertex_shader(_vsf_cr);
     ptr->set_pixel_shader(_psf_cr);
     ptr->set_vertex_format(_vf_cr);
@@ -1080,9 +1084,9 @@ rose_batch* rose::create_fill_batch_cr()
     return ptr;
 }
 
-rose_batch* rose::create_fill_batch_klm_cr()
+rose_batch* rose::create_fill_batch_klm_cr(int index)
 {
-    auto* ptr = new rose_fill_batch_klm_cr;
+    auto* ptr = new rose_fill_batch_klm_cr(index);
     ptr->set_vertex_shader(_vsf_klm_cr);
     ptr->set_pixel_shader(_psf_klm_cr);
     ptr->set_vertex_format(_vf_klm_cr);
@@ -1090,10 +1094,10 @@ rose_batch* rose::create_fill_batch_klm_cr()
     return ptr;
 }
 
-rose_batch* rose::create_fill_batch_klm_tex()
+rose_batch* rose::create_fill_batch_klm_tex(int index)
 {
     auto* sstate = acquire_default_sampler_state();
-    auto* ptr = new rose_fill_batch_klm_tex(sstate);
+    auto* ptr = new rose_fill_batch_klm_tex(index, sstate);
     ptr->set_vertex_shader(_vsf_klm_tex);
     ptr->set_pixel_shader(_psf_klm_tex);
     ptr->set_vertex_format(_vf_klm_tex);
@@ -1101,11 +1105,11 @@ rose_batch* rose::create_fill_batch_klm_tex()
     return ptr;
 }
 
-rose_batch* rose::create_stroke_batch_cr()
+rose_batch* rose::create_stroke_batch_cr(int index)
 {
     if(!query_antialias())
-        return create_fill_batch_cr();
-    auto* ptr = new rose_stroke_batch_coef_cr;
+        return create_fill_batch_cr(index);
+    auto* ptr = new rose_stroke_batch_coef_cr(index);
     ptr->set_vertex_shader(_vss_coef_cr);
     ptr->set_pixel_shader(_pss_coef_cr);
     ptr->set_vertex_format(_vf_coef_cr);
@@ -1113,12 +1117,12 @@ rose_batch* rose::create_stroke_batch_cr()
     return ptr;
 }
 
-rose_batch* rose::create_stroke_batch_tex()
+rose_batch* rose::create_stroke_batch_tex(int index)
 {
     if(!query_antialias())
-        return create_fill_batch_klm_tex();
+        return create_fill_batch_klm_tex(index);
     auto* sstate = acquire_default_sampler_state();
-    auto* ptr = new rose_stroke_batch_coef_tex(sstate);
+    auto* ptr = new rose_stroke_batch_coef_tex(index, sstate);
     ptr->set_vertex_shader(_vss_coef_tex);
     ptr->set_pixel_shader(_pss_coef_tex);
     ptr->set_vertex_format(_vf_coef_tex);
@@ -1126,10 +1130,10 @@ rose_batch* rose::create_stroke_batch_tex()
     return ptr;
 }
 
-rose_batch* rose::create_stroke_batch_assoc(rose_fill_batch_klm_tex* assoc)
+rose_batch* rose::create_stroke_batch_assoc(int index, rose_fill_batch_klm_tex* assoc)
 {
     assert(assoc);
-    auto* ptr = new rose_stroke_batch_assoc_with_klm_tex(assoc);
+    auto* ptr = new rose_stroke_batch_assoc_with_klm_tex(index, assoc);
     ptr->set_vertex_shader(_vss_coef_tex);
     ptr->set_pixel_shader(_pss_coef_tex);
     ptr->set_vertex_format(_vf_coef_tex);
@@ -1146,36 +1150,37 @@ void rose::clear_batches()
 void rose::prepare_batches()
 {
     auto& batches = _bp.get_batches();
-    for(auto i = batches.begin(); i != batches.end(); ++ i) {
-        auto* p = *i;
+    int size = (int)batches.size();
+    for(int i = 0; i < size; i ++) {
+        auto* p = batches.at(i);
         auto t = p->get_type();
         rose_batch* bat = nullptr;
         switch(t)
         {
         case bf_cr:
-            bat = create_fill_batch_cr();
+            bat = create_fill_batch_cr(i);
             break;
         case bf_klm_cr:
-            bat = create_fill_batch_klm_cr();
+            bat = create_fill_batch_klm_cr(i);
             break;
         case bf_klm_tex:
-            bat = create_fill_batch_klm_tex();
+            bat = create_fill_batch_klm_tex(i);
             if(query_antialias()) {
                 assert(bat);
                 bat->create(p);
                 bat->buffering(_rsys);
                 /* should have an associated stroke batch after. */
-                p = *++ i;
-                assert(i != batches.end());
+                p = batches.at(++ i);
+                assert(i < size);
                 assert(p->get_type() == bs_coef_tex);
-                bat = create_stroke_batch_assoc(static_cast<rose_fill_batch_klm_tex*>(bat));
+                bat = create_stroke_batch_assoc(i, static_cast<rose_fill_batch_klm_tex*>(bat));
             }
             break;
         case bs_coef_cr:
-            bat = create_stroke_batch_cr();
+            bat = create_stroke_batch_cr(i);
             break;
         case bs_coef_tex:
-            bat = create_stroke_batch_tex();
+            bat = create_stroke_batch_tex(i);
             break;
         }
         assert(bat);
@@ -1239,15 +1244,14 @@ void rose_paint_picture_brush(graphics_obj& gfx, const rectf& bound, rose_bind_l
 {
     assert(brush.get_tag() == painter_brush::picture);
     auto& ext = brush.get_extra();
-    auto* img = static_cast<const painter_picture_data*>(ext.get())->get_image();
+    const auto* pd = static_cast<const painter_picture_data*>(ext.get());
+    auto* img = pd->get_image();
     assert(img);
-    /* map the bound to image size */
-    int w, h;
-    textureop::get_texture_dimension(img, w, h);
-    mat3 mt, ms, m;
-    mt.translation(-bound.left, -bound.top);
-    ms.scaling((float)w / bound.width(), (float)h / bound.height());
-    m.multiply(mt, ms);
+    const rectf& rc = pd->get_src_rect();
+    mat3 m;
+    m.translation(-bound.left, -bound.top);
+    m.multiply(mat3().scaling(rc.width() / bound.width(), rc.height() / bound.height()));
+    m.multiply(mat3().translation(rc.left, rc.top));
     auto& joints = gfx->get_joints();
     for(auto* p : joints) {
         assert(p);
@@ -1292,15 +1296,14 @@ void rose_paint_picture_pen(graphics_obj& gfx, const rectf& bound, rose_bind_lis
 {
     assert(pen.get_tag() == painter_pen::picture);
     auto& ext = pen.get_extra();
-    auto* img = static_cast<const painter_picture_data*>(ext.get())->get_image();
+    const auto* pd = static_cast<const painter_picture_data*>(ext.get());
+    auto* img = pd->get_image();
     assert(img);
-    /* map the bound to image size */
-    int w, h;
-    textureop::get_texture_dimension(img, w, h);
-    mat3 mt, ms, m;
-    mt.translation(bound.left, bound.top);
-    ms.scaling((float)w / bound.width(), (float)h / bound.height());
-    m.multiply(mt, ms);
+    const rectf& rc = pd->get_src_rect();
+    mat3 m;
+    m.translation(-bound.left, -bound.top);
+    m.multiply(mat3().scaling(rc.width() / bound.width(), rc.height() / bound.height()));
+    m.multiply(mat3().translation(rc.left, rc.top));
     auto& joints = gfx->get_joints();
     for(auto* p : joints) {
         assert(p);

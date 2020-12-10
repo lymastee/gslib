@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -22,6 +22,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+
+#pragma once
 
 #ifndef raster_08d5e09d_ab61_4fc0_a471_389a3bd240f4_h
 #define raster_08d5e09d_ab61_4fc0_a471_389a3bd240f4_h
@@ -134,6 +136,8 @@ public:
     void resize(int len);
     void destroy();
     void duplicate(const painter_path& path);
+    void add_path(const painter_path& path);
+    void add_rect(const rectf& rc);
     void attach(painter_path& path);
     iterator begin() { return _nodelist.begin(); }
     iterator end() { return _nodelist.end(); }
@@ -189,16 +193,16 @@ enum curve_type
     ct_cubic,
 };
 
-struct __gs_novtable curve_spliter abstract
+struct __gs_novtable curve_splitter abstract
 {
     vec2                fixedpt;
     float               ratio;
-    curve_spliter*      child[2];
-    curve_spliter*      parent;
+    curve_splitter*     child[2];
+    curve_splitter*     parent;
 
 public:
-    curve_spliter();
-    virtual ~curve_spliter();
+    curve_splitter();
+    virtual ~curve_splitter();
     virtual curve_type get_type() const = 0;
     virtual int get_point_count() const = 0;
     virtual bool get_points(vec2 p[], int count) const = 0;
@@ -209,14 +213,14 @@ public:
     bool is_leaf() const;
 };
 
-struct curve_spliter_quad:
-    public curve_spliter
+struct curve_splitter_quad:
+    public curve_splitter
 {
     vec2                cp[3];
     vec3                para[2];
 
 public:
-    curve_spliter_quad(const vec2 p[3]);
+    curve_splitter_quad(const vec2 p[3]);
     curve_type get_type() const override { return ct_quad; }
     int get_point_count() const override { return 3; }
     bool get_points(vec2 p[], int count) const override;
@@ -226,14 +230,14 @@ public:
     void tracing() const override;
 };
 
-struct curve_spliter_cubic:
-    public curve_spliter
+struct curve_splitter_cubic:
+    public curve_splitter
 {
     vec2                cp[4];
     vec4                para[2];
 
 public:
-    curve_spliter_cubic(const vec2 p[4]);
+    curve_splitter_cubic(const vec2 p[4]);
     curve_type get_type() const override { return ct_cubic; }
     int get_point_count() const override { return 4; }
     bool get_points(vec2 p[], int count) const override;
@@ -245,11 +249,11 @@ public:
 
 struct curve_helper
 {
-    static curve_spliter* create_spliter(const path_info* pnf);
-    static curve_spliter* create_next_spliter(vec2& p, curve_spliter* cs, float t);
-    static curve_spliter* query_spliter(curve_spliter* cs, float t);
-    static curve_spliter* query_spliter(curve_spliter* cs, const vec2& p);
-    static curve_spliter* query_spliter(curve_spliter* cs, const vec2& p1, const vec2& p2);
+    static curve_splitter* create_splitter(const path_info* pnf);
+    static curve_splitter* create_next_splitter(vec2& p, curve_splitter* cs, float t);
+    static curve_splitter* query_splitter(curve_splitter* cs, float t);
+    static curve_splitter* query_splitter(curve_splitter* cs, const vec2& p);
+    static curve_splitter* query_splitter(curve_splitter* cs, const vec2& p1, const vec2& p2);
 };
 
 struct painter_helper

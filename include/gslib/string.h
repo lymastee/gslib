@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -22,6 +22,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+
+#pragma once
 
 #ifndef string_81448b68_30d7_4d64_a67a_cecef7c90139_h
 #define string_81448b68_30d7_4d64_a67a_cecef7c90139_h
@@ -196,44 +198,44 @@ public:
 
 protected:
 #ifdef _MSC_VER
-    void _stl_tidy(bool built, int newsize) { _Tidy(built, newsize); }
+    void _stl_tidy(bool built, int newsize) { this->_Tidy(built, newsize); }
 #if (_MSC_VER >= 1914)
-    bool _stl_grow(int newsize) { resize(newsize); return true; }
+    bool _stl_grow(int newsize) { this->resize(newsize); return true; }
 #elif (_MSC_VER >= 1910)
-    bool _stl_grow(int newsize, bool trim = false) { return _Grow(newsize); }
+    bool _stl_grow(int newsize, bool trim = false) { return this->_Grow(newsize); }
 #else
-    bool _stl_grow(int newsize, bool trim = false) { return _Grow(newsize, trim); }
+    bool _stl_grow(int newsize, bool trim = false) { return this->_Grow(newsize, trim); }
 #endif
 #if (_MSC_VER >= 1920)
     element* _stl_rawstr() { return const_cast<element*>(c_str()); }
     const element* _stl_rawstr() const { return c_str(); }
 #elif (_MSC_VER >= 1914)
-    element* _stl_rawstr() { return _Get_data()._Myptr(); }
-    const element* _stl_rawstr() const { return _Get_data()._Myptr(); }
+    element* _stl_rawstr() { return this->_Get_data()._Myptr(); }
+    const element* _stl_rawstr() const { return this->_Get_data()._Myptr(); }
 #else
-    element* _stl_rawstr() { return _Myptr(); }
-    const element* _stl_rawstr() const { return _Myptr(); }
+    element* _stl_rawstr() { return this->_Myptr(); }
+    const element* _stl_rawstr() const { return this->_Myptr(); }
 #endif
 #if (_MSC_VER >= 1920)
     int _stl_cap() const { return (int)capacity(); }
     void _stl_fix() { resize(_strtool::length(c_str())); }
 #elif (_MSC_VER >= 1914)
-    int& _stl_cap() { return (int&)_Get_data()._Myres; }
-    int& _stl_size() { return (int&)_Get_data()._Mysize; }
-    void _stl_fix() { _stl_size() = _strtool::length(c_str()); }
+    int& _stl_cap() { return (int&)this->_Get_data()._Myres; }
+    int& _stl_size() { return (int&)this->_Get_data()._Mysize; }
+    void _stl_fix() { this->_stl_size() = _strtool::length(this->c_str()); }
 #elif ((_MSC_VER >= 1900) && (_MSC_VER < 1910))
-    int& _stl_cap() { return (int&)_Myres(); }
-    int& _stl_size() { return (int&)_Mysize(); }
-    void _stl_fix() { _Mysize() = (size_t)_strtool::length(c_str()); }
+    int& _stl_cap() { return (int&)this->_Myres(); }
+    int& _stl_size() { return (int&)this->_Mysize(); }
+    void _stl_fix() { this->_Mysize() = (size_t)_strtool::length(this->c_str()); }
 #else
-    int& _stl_cap() { return (int&)_Myres; }
-    int& _stl_size() { return (int&)_Mysize; }
-    void _stl_fix() { _Mysize = (size_t)_strtool::length(c_str()); }
+    int& _stl_cap() { return (int&)this->_Myres; }
+    int& _stl_size() { return (int&)this->_Mysize; }
+    void _stl_fix() { this->_Mysize = (size_t)_strtool::length(this->c_str()); }
 #endif
 #if (_MSC_VER >= 1920)
-    void _stl_eos(int pos) { resize(pos); }
+    void _stl_eos(int pos) { this->resize(pos); }
 #else
-    void _stl_eos(int pos) { _Eos(pos); }
+    void _stl_eos(int pos) { this->_Eos(pos); }
 #endif
 #endif      /* endif _MSC_VER */
 
@@ -289,35 +291,35 @@ private:
 
 public:
     _string() {}
-    _string(const element* str) { if(str) assign(str); }
-    _string(const element* str, int len) { if(str) assign(str, len); }
-    _string(element c, int ctr) { assign(ctr, c); }
+    _string(const element* str) { if(str) this->assign(str); }
+    _string(const element* str, int len) { if(str) this->assign(str, len); }
+    _string(element c, int ctr) { this->assign(ctr, c); }
     void destroy() { _stl_tidy(true, 0); }
-    int length() const { return (int)size(); }
-    element& front() { return at(0); }
-    const element& front() const { return at(0); }
-    element& back() { return at(size()-1); }
-    const element& back() const { return at(size()-1); }
+    int length() const { return (int)this->size(); }
+    element& front() { return this->at(0); }
+    const element& front() const { return this->at(0); }
+    element& back() { return this->at(this->size() - 1); }
+    const element& back() const { return this->at(this->size() - 1); }
     element pop_back()
     {
         element e = back();
-        resize(size()-1);
+        resize(this->size() - 1);
         return e;
     }
     int test(const element* cpset) const
     {
-        if(empty())
-            return (int)npos;
-        int pos = _strtool::test(c_str(), cpset);
+        if(this->empty())
+            return (int)this->npos;
+        int pos = _strtool::test(this->c_str(), cpset);
         if(pos == length())
-            return (int)npos;
+            return (int)this->npos;
         return pos;
     }
     const element* _test(const element* cpset) const
     {
-        if(empty())
+        if(this->empty())
             return 0;
-        return _strtool::_test(c_str(), cpset);
+        return _strtool::_test(this->c_str(), cpset);
     }
     void format(const element* fmt, ...)
     {
@@ -340,14 +342,14 @@ public:
     */
     _string& to_lower()
     {
-        if(empty())
+        if(this->empty())
             return *this;
         _strtool::to_lower(_stl_rawstr(), _stl_cap());
         return *this;
     }
     _string& to_upper()
     {
-        if(empty())
+        if(this->empty())
             return *this;
         _strtool::to_upper(_stl_rawstr(), _stl_cap());
         return *this;

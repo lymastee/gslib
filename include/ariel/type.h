@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -22,6 +22,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+
+#pragma once
 
 #ifndef type_f33c5e03_70f2_4879_9504_332323832a40_h
 #define type_f33c5e03_70f2_4879_9504_332323832a40_h
@@ -52,6 +54,16 @@ public:
     void set_color(int r, int g, int b, int a) { red = r, green = g, blue = b, alpha = a; }
     bool operator !=(const color& cr) const { return blue != cr.blue || green != cr.green || red != cr.red || alpha != cr.alpha; }
     bool operator ==(const color& cr) const { return blue == cr.blue && green == cr.green && red == cr.red && alpha == cr.alpha; }
+    color& lerp(const color& c1, const color& c2, float s)
+    {
+        assert(s >= 0.f && s <= 1.f);
+        float t = 1.f - s;
+        red = (int)(s * c1.red + t * c2.red);
+        green = (int)(s * c1.green + t * c2.green);
+        blue = (int)(s * c1.blue + t * c2.blue);
+        alpha = (int)(s * c1.alpha + t * c2.alpha);
+        return *this;
+    }
 };
 
 struct font
@@ -162,12 +174,32 @@ public:
 
 struct viewport
 {
-    float       left;
-    float       top;
-    float       width;
-    float       height;
-    float       min_depth;
-    float       max_depth;
+    float           left;
+    float           top;
+    float           width;
+    float           height;
+    float           min_depth;
+    float           max_depth;
+};
+
+enum res_type
+{
+    res_mesh,
+};
+
+class __gs_novtable res_node abstract
+{
+public:
+    virtual ~res_node() {}
+    virtual res_type get_type() const = 0;
+    virtual const string& get_name() const { return _name; }
+    virtual bool has_name() const { return !_name.empty(); }
+
+protected:
+    string          _name;
+
+public:
+    void set_name(const string& name) { _name = name; }
 };
 
 __ariel_end__

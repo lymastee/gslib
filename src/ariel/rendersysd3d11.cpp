@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -39,6 +39,29 @@ inline void SafeRelease(Interface*& pInterface)
     }
 }
 
+static UINT convert_msaa_x(UINT x)
+{
+    if(x >= 16)
+        return 16;
+    DWORD i = 0;
+    _BitScanReverse(&i, x);
+    switch(i)       /* pow faster or slower? */
+    {
+    case 3:
+        return 8;
+    case 2:
+        return 4;
+    case 1:
+        return 2;
+    }
+    return 1;
+}
+
+static UINT next_msaa_x(UINT x)
+{
+    return x >> 1;
+}
+
 __ariel_begin__
 
 static void setup_device_info(render_device_info& info, IDXGIAdapter* adapter)
@@ -52,15 +75,6 @@ static void setup_device_info(render_device_info& info, IDXGIAdapter* adapter)
 
 rendersys_d3d11::rendersys_d3d11()
 {
-    _drvtype = D3D_DRIVER_TYPE_NULL;
-    _level = D3D_FEATURE_LEVEL_11_0;
-    _device = nullptr;
-    _context = nullptr;
-    _swapchain = nullptr;
-    _rtview = nullptr;
-    _blendstate = nullptr;
-    _vsync = false;
-    _fullscreen = false;
 }
 
 rendersys_d3d11::~rendersys_d3d11()
@@ -126,6 +140,36 @@ bool rendersys_d3d11::setup(uint hwnd, const configs& cfg)
     delete [] display_modes;
     /* setup device info */
     setup_device_info(_device_info, adapter);
+    /* create device */
+    for(uint i = 0; i < cdrvtypes; i ++) {
+        _drvtype = drvtypes[i];
+        if(SUCCEEDED(D3D11CreateDevice(nullptr, _drvtype, 0, flags, levels, clevels, D3D11_SDK_VERSION, &_device, &_level, &_context)))
+            break;
+    }
+    if(!_device || !_context)
+        return false;
+    /* query MSAA support */
+    uint sampler_count = _msaa_x, sampler_quality = 0;
+    if(_msaa) {
+        for(; sampler_count >= 1; sampler_count = next_msaa_x(sampler_count)) {
+            _device->CheckMultisampleQualityLevels(DXGI_FORMAT_R8G8B8A8_UNORM, sampler_count, &sampler_quality);
+            if(sampler_quality != 0)
+                break;
+        }
+        if(sampler_count > 1)
+            -- sampler_quality;
+        else {
+            sampler_count = 1;
+            sampler_quality = 0;
+            _msaa_x = 1;
+            _msaa = false;      /* unsupported */
+        }
+    }
+    else {
+        _msaa_x = 1;
+        sampler_count = 1;
+        sampler_quality = 0;
+    }
     /* create swap chain */
     DXGI_SWAP_CHAIN_DESC sd;
     memset(&sd, 0, sizeof(sd));
@@ -143,20 +187,16 @@ bool rendersys_d3d11::setup(uint hwnd, const configs& cfg)
     }
     sd.BufferUsage          = DXGI_USAGE_RENDER_TARGET_OUTPUT;
     sd.OutputWindow         = (HWND)hwnd;
-    sd.SampleDesc.Count     = 1;
-    sd.SampleDesc.Quality   = 0;
+    sd.SampleDesc.Count     = sampler_count;
+    sd.SampleDesc.Quality   = sampler_quality;
     sd.Windowed             = TRUE;
     sd.SwapEffect           = DXGI_SWAP_EFFECT_FLIP_SEQUENTIAL;
+    if(_msaa)
+        sd.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
     if(_fullscreen)
         sd.Windowed = FALSE;
-    for(uint i = 0; i < cdrvtypes; i ++) {
-        _drvtype = drvtypes[i];
-        if(SUCCEEDED(D3D11CreateDeviceAndSwapChain(0, _drvtype, 0, flags, levels, clevels, 
-                D3D11_SDK_VERSION, &sd, &_swapchain, &_device, &_level, &_context))
-            )
-            break;
-    }
-    if(!_device || !_swapchain)
+    assert(factory);
+    if(FAILED(factory->CreateSwapChain(_device, &sd, &_swapchain)) || !_swapchain)
         return false;
     com_ptr<ID3D11Texture2D> buffer;
     if(FAILED(_swapchain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&buffer)))
@@ -180,6 +220,58 @@ bool rendersys_d3d11::setup(uint hwnd, const configs& cfg)
     if(fail)
         return false;
     _blendstate = blendstate.detach();
+    /* create depth stencil buffer */
+    D3D11_TEXTURE2D_DESC dsbd;
+    memset(&dsbd, 0, sizeof(dsbd));
+    dsbd.Width              = width;
+    dsbd.Height             = height;
+    dsbd.MipLevels          = 1;
+    dsbd.ArraySize          = 1;
+    dsbd.Format             = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    dsbd.SampleDesc.Count   = sampler_count;
+    dsbd.SampleDesc.Quality = sampler_quality;
+    dsbd.Usage              = D3D11_USAGE_DEFAULT;
+    dsbd.BindFlags          = D3D11_BIND_DEPTH_STENCIL;
+    dsbd.CPUAccessFlags     = 0;
+    dsbd.MiscFlags          = 0;
+    com_ptr<ID3D11Texture2D> dsbuffer;
+    if(FAILED(_device->CreateTexture2D(&dsbd, nullptr, &dsbuffer)))
+        return false;
+    /* create depth stencil view */
+    _dsview = create_depth_stencil_view(dsbuffer.get());
+    if(!_dsview)
+        return false;
+    /* create depth stencil state */
+    com_ptr<ID3D11DepthStencilState> dsoffstate;
+    D3D11_DEPTH_STENCIL_DESC dsoffd;
+    memset(&dsoffd, 0, sizeof(dsoffd));
+    dsoffd.DepthEnable = FALSE;
+    dsoffd.DepthWriteMask = D3D11_DEPTH_WRITE_MASK_ZERO;
+    dsoffd.DepthFunc = D3D11_COMPARISON_NEVER;
+    dsoffd.StencilEnable = FALSE;
+    if(FAILED(_device->CreateDepthStencilState(&dsoffd, &dsoffstate)))
+        return false;
+    _depthstate = dsoffstate.detach();
+    /* enable MSAA */
+    if(_msaa) {
+        D3D11_RASTERIZER_DESC rd;
+        memset(&rd, 0, sizeof(rd));
+        rd.AntialiasedLineEnable    = true;
+        rd.CullMode                 = D3D11_CULL_BACK;
+        rd.DepthBias                = 0;
+        rd.DepthBiasClamp           = 0.f;
+        rd.DepthClipEnable          = true;
+        rd.FillMode                 = D3D11_FILL_SOLID;
+        rd.FrontCounterClockwise    = false;
+        rd.MultisampleEnable        = true;
+        rd.ScissorEnable            = false;
+        rd.SlopeScaledDepthBias     = 0.0f;
+        com_ptr<ID3D11RasterizerState>  rasterstate;
+        fail = FAILED(_device->CreateRasterizerState(&rd, &rasterstate));
+        if(fail)
+            return false;
+        _rasterstate = rasterstate.detach();
+    }
     register_dev_index_service(_device, this);
     return true;
 }
@@ -190,7 +282,10 @@ void rendersys_d3d11::destroy()
     if(_context)
         _context->ClearState();
     SafeRelease(_blendstate);
+    SafeRelease(_rasterstate);
+    SafeRelease(_depthstate);
     SafeRelease(_rtview);
+    SafeRelease(_dsview);
     SafeRelease(_swapchain);
     SafeRelease(_context);
 #if defined(DEBUG) || defined(_DEBUG)
@@ -205,8 +300,8 @@ void rendersys_d3d11::destroy()
 
 void rendersys_d3d11::setup_pipeline_state()
 {
-    assert(_context && _rtview);
-    _context->OMSetRenderTargets(1, &_rtview, 0);
+    assert(_context && _rtview && _dsview);
+    _context->OMSetRenderTargets(1, &_rtview, _dsview);
     assert(_swapchain);
     DXGI_SWAP_CHAIN_DESC sd;
     memset(&sd, 0, sizeof(sd));
@@ -219,7 +314,10 @@ void rendersys_d3d11::setup_pipeline_state()
     vp.TopLeftX = 0;
     vp.TopLeftY = 0;
     _context->RSSetViewports(1, &vp);
-    _context->OMSetBlendState(_blendstate, 0, 0xffffffff);
+    enable_alpha_blend(false);
+    enable_depth(true);
+    if(_msaa)
+        _context->RSSetState(_rasterstate);
 }
 
 render_blob* rendersys_d3d11::compile_shader_from_file(const gchar* file, const gchar* entry, const gchar* sm, render_include* inc)
@@ -432,6 +530,16 @@ shader_resource_view* rendersys_d3d11::create_shader_resource_view(render_resour
     return p;
 }
 
+depth_stencil_view* rendersys_d3d11::create_depth_stencil_view(render_resource* res)
+{
+    assert(res);
+    depth_stencil_view* p = nullptr;
+    HRESULT hr = _device->CreateDepthStencilView(res, nullptr, &p);
+    if(FAILED(hr) || !p)
+        return nullptr;
+    return p;
+}
+
 unordered_access_view* rendersys_d3d11::create_unordered_access_view(render_resource* res)
 {
     assert(res);
@@ -479,7 +587,7 @@ render_sampler_state* rendersys_d3d11::create_sampler_state(sampler_state_filter
     return sstate;
 }
 
-render_texture2d* rendersys_d3d11::create_texture2d(const image& img, uint mips, uint usage, uint bindflags, uint cpuflags)
+render_texture2d* rendersys_d3d11::create_texture2d(const image& img, uint mips, uint usage, uint bindflags, uint cpuflags, uint miscflags)
 {
     D3D11_TEXTURE2D_DESC desc;
     desc.Width = img.get_width();
@@ -500,11 +608,7 @@ render_texture2d* rendersys_d3d11::create_texture2d(const image& img, uint mips,
     desc.Usage = (D3D11_USAGE)usage;
     desc.BindFlags = bindflags;
     desc.CPUAccessFlags = cpuflags;
-    desc.MiscFlags = 0;
-    if(mips > 1) {
-        desc.MiscFlags |= D3D11_RESOURCE_MISC_GENERATE_MIPS;
-        desc.BindFlags |= D3D11_BIND_RENDER_TARGET;
-    }
+    desc.MiscFlags = miscflags;
     D3D11_SUBRESOURCE_DATA subdata;
     subdata.pSysMem = img.get_data(0, 0);
     subdata.SysMemPitch = img.get_bytes_per_line();
@@ -513,15 +617,10 @@ render_texture2d* rendersys_d3d11::create_texture2d(const image& img, uint mips,
     if(FAILED(_device->CreateTexture2D(&desc, &subdata, &tex)))
         return nullptr;
     assert(tex);
-    if(mips > 1) {
-        com_ptr<ID3D11ShaderResourceView> spsrv;
-        _device->CreateShaderResourceView(tex, nullptr, &spsrv);
-        _context->GenerateMips(spsrv.get());
-    }
     return tex;
 }
 
-render_texture2d* rendersys_d3d11::create_texture2d(int width, int height, uint format, uint mips, uint usage, uint bindflags, uint cpuflags)
+render_texture2d* rendersys_d3d11::create_texture2d(int width, int height, uint format, uint mips, uint usage, uint bindflags, uint cpuflags, uint miscflags)
 {
     D3D11_TEXTURE2D_DESC desc;
     desc.Width = (uint)width;
@@ -534,21 +633,24 @@ render_texture2d* rendersys_d3d11::create_texture2d(int width, int height, uint 
     desc.Usage = (D3D11_USAGE)usage;
     desc.BindFlags = bindflags;
     desc.CPUAccessFlags = cpuflags;
-    desc.MiscFlags = 0;
-    if(mips > 1) {
-        desc.MiscFlags |= D3D11_RESOURCE_MISC_GENERATE_MIPS;
-        desc.BindFlags |= D3D11_BIND_RENDER_TARGET;
-    }
+    desc.MiscFlags = miscflags;
     ID3D11Texture2D* tex = nullptr;
     if(FAILED(_device->CreateTexture2D(&desc, nullptr, &tex)))
         return nullptr;
     assert(tex);
-    if(mips > 1) {
-        com_ptr<ID3D11ShaderResourceView> spsrv;
-        _device->CreateShaderResourceView(tex, nullptr, &spsrv);
-        _context->GenerateMips(spsrv.get());
-    }
     return tex;
+}
+
+void rendersys_d3d11::load_with_mips(texture2d* tex, const image& img)
+{
+    assert(tex);
+    com_ptr<ID3D11ShaderResourceView> cpsrv;
+    if(FAILED(_device->CreateShaderResourceView(tex, nullptr, &cpsrv)))
+        return;
+    UINT row_pitch = (UINT)img.get_bytes_per_line();
+    UINT img_size = row_pitch * (UINT)img.get_height();
+    _context->UpdateSubresource(tex, 0, nullptr, img.get_data(0, 0), row_pitch, img_size);
+    _context->GenerateMips(cpsrv.get());
 }
 
 void rendersys_d3d11::update_buffer(void* buf, int size, const void* ptr)
@@ -582,6 +684,7 @@ void rendersys_d3d11::begin_render()
 {
     assert(_context);
     _context->ClearRenderTargetView(_rtview, _bkcr);
+    _context->ClearDepthStencilView(_dsview, D3D11_CLEAR_DEPTH, 1.f, 0);
 }
 
 void rendersys_d3d11::end_render()
@@ -693,21 +796,53 @@ void rendersys_d3d11::draw_indexed(uint count, uint start, int base)
 
 void rendersys_d3d11::capture_screen(image& img, const rectf& rc, int buff_id)
 {
-    texture2d* tex = create_texture2d((int)ceil(rc.width()), (int)ceil(rc.height()), DXGI_FORMAT_R8G8B8A8_UNORM, 1, D3D11_USAGE_DEFAULT, D3D11_BIND_UNORDERED_ACCESS, 0);
+    texture2d* tex = create_texture2d((int)ceil(rc.width()), (int)ceil(rc.height()), DXGI_FORMAT_R8G8B8A8_UNORM, 1, D3D11_USAGE_DEFAULT, D3D11_BIND_UNORDERED_ACCESS, 0, 0);
     assert(tex);
     com_ptr<ID3D11Texture2D> buffer;
     assert(_swapchain);
     _swapchain->GetBuffer(buff_id, __uuidof(ID3D11Texture2D), (void**)&buffer);
+    if(!buffer.get()) {
+        assert(!"get swap chain buffer failed.");
+        return;
+    }
     textureop texop(this);
-    texop.copy_rect(tex, buffer.get(), 0, 0, (int)floorf(rc.left), (int)floorf(rc.top), (int)ceilf(rc.width()), (int)ceilf(rc.height()));
+    D3D11_TEXTURE2D_DESC desc;
+    buffer->GetDesc(&desc);
+    if(desc.SampleDesc.Count <= 1)
+        texop.copy_rect(tex, buffer.get(), 0, 0, (int)floorf(rc.left), (int)floorf(rc.top), (int)ceilf(rc.width()), (int)ceilf(rc.height()));
+    else {      /* need resolve */
+        desc.Usage = D3D11_USAGE_DEFAULT;
+        desc.CPUAccessFlags = 0;
+        desc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
+        desc.SampleDesc.Count = 1;
+        desc.SampleDesc.Quality = 0;
+        com_ptr<ID3D11Texture2D> tmp;
+        _device->CreateTexture2D(&desc, nullptr, &tmp);
+        assert(tmp.get());
+        _context->ResolveSubresource(tmp.get(), 0, buffer.get(), 0, DXGI_FORMAT_R8G8B8A8_UNORM);
+        texop.copy_rect(tex, tmp.get(), 0, 0, (int)floorf(rc.left), (int)floorf(rc.top), (int)ceilf(rc.width()), (int)ceilf(rc.height()));
+    }
     texop.convert_to_image(img, tex);
     tex->Release();
+}
+
+void rendersys_d3d11::enable_alpha_blend(bool b)
+{
+    _context->OMSetBlendState(b ? _blendstate : nullptr, 0, 0xffffffff);
+}
+
+void rendersys_d3d11::enable_depth(bool b)
+{
+    _context->OMSetDepthStencilState(!b ? _depthstate : nullptr, 0);
 }
 
 void rendersys_d3d11::install_configs(const configs& cfg)
 {
     _vsync = is_vsync_enabled(cfg);
     _fullscreen = is_full_screen(cfg);
+    _msaa = is_MSAA_enabled(cfg);
+    if(_msaa)
+        _msaa_x = convert_msaa_x(get_MSAA_sampler_count(cfg));
 }
 
 void release_vertex_buffer(render_vertex_buffer* buf) { if(buf) buf->Release(); }

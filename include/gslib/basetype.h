@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -23,31 +23,34 @@
  * SOFTWARE.
  */
 
+#pragma once
+
 #ifndef base_type_2aa01495_7feb_4c5e_ae38_9c775c29c9f1_h
 #define base_type_2aa01495_7feb_4c5e_ae38_9c775c29c9f1_h
 
 #include <assert.h>
+#include <stdint.h>
 #include <gslib/config.h>
 
 __gslib_begin__
 
 #ifdef _GS_X86
 
-typedef char int8;
-typedef short int16;
-typedef int int32;
-typedef long long int64;
+typedef int8_t int8;
+typedef int16_t int16;
+typedef int32_t int32;
+typedef int64_t int64;
 typedef wchar_t wchar;
 typedef float real32;
 typedef double real;
-typedef unsigned char byte;
-typedef unsigned short word;
-typedef unsigned int dword;
-typedef unsigned long long qword;
-typedef dword uint;
-typedef word uint16;
-typedef dword uint32;
-typedef qword uint64;
+typedef uint8_t byte;
+typedef uint16_t word;
+typedef uint32_t dword;
+typedef uint64_t qword;
+typedef uint32_t uint;
+typedef uint16_t uint16;
+typedef uint32_t uint32;
+typedef uint64_t uint64;
 typedef void* addrptr;
 
 #ifdef _UNICODE

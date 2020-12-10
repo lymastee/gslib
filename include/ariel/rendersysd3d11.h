@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -22,6 +22,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+
+#pragma once
 
 #ifndef rendersysd3d11_8555fd57_19e9_4747_97b5_8d3bfb0fb50f_h
 #define rendersysd3d11_8555fd57_19e9_4747_97b5_8d3bfb0fb50f_h
@@ -53,10 +55,12 @@ public:
     virtual index_buffer* create_index_buffer(uint count, bool read, bool write, uint usage, const void* ptr) override;
     virtual constant_buffer* create_constant_buffer(uint stride, bool read, bool write, const void* ptr) override;
     virtual shader_resource_view* create_shader_resource_view(render_resource* res) override;
+    virtual depth_stencil_view* create_depth_stencil_view(render_resource* res) override;
     virtual unordered_access_view* create_unordered_access_view(render_resource* res) override;
     virtual sampler_state* create_sampler_state(sampler_state_filter filter) override;
-    virtual texture2d* create_texture2d(const image& img, uint mips, uint usage, uint bindflags, uint cpuflags) override;
-    virtual texture2d* create_texture2d(int width, int height, uint format, uint mips, uint usage, uint bindflags, uint cpuflags) override;
+    virtual texture2d* create_texture2d(const image& img, uint mips, uint usage, uint bindflags, uint cpuflags, uint miscflags) override;
+    virtual texture2d* create_texture2d(int width, int height, uint format, uint mips, uint usage, uint bindflags, uint cpuflags, uint miscflags) override;
+    virtual void load_with_mips(texture2d* tex, const image& img) override;
     virtual void update_buffer(void* buf, int size, const void* ptr) override;
     virtual void set_vertex_format(vertex_format* vfmt) override;
     virtual void set_vertex_buffer(vertex_buffer* vb, uint stride, uint offset) override;
@@ -74,17 +78,24 @@ public:
     virtual void draw(uint count, uint start) override;
     virtual void draw_indexed(uint count, uint start, int base) override;
     virtual void capture_screen(image& img, const rectf& rc, int buff_id) override;
+    virtual void enable_alpha_blend(bool b) override;
+    virtual void enable_depth(bool b) override;
 
 protected:
-    D3D_DRIVER_TYPE         _drvtype;
-    D3D_FEATURE_LEVEL       _level;
-    render_device*          _device;
-    render_context*         _context;
-    render_swap_chain*      _swapchain;
-    render_target_view*     _rtview;
-    render_blend_state*     _blendstate;
-    bool                    _vsync;
-    bool                    _fullscreen;
+    D3D_DRIVER_TYPE         _drvtype        = D3D_DRIVER_TYPE_NULL;
+    D3D_FEATURE_LEVEL       _level          = D3D_FEATURE_LEVEL_11_0;
+    render_device*          _device         = nullptr;
+    render_context*         _context        = nullptr;
+    render_swap_chain*      _swapchain      = nullptr;
+    render_target_view*     _rtview         = nullptr;
+    render_blend_state*     _blendstate     = nullptr;
+    depth_stencil_view*     _dsview         = nullptr;
+    render_raster_state*    _rasterstate    = nullptr;
+    render_depth_state*     _depthstate     = nullptr;
+    uint                    _msaa_x         = 0;
+    bool                    _vsync          = false;
+    bool                    _fullscreen     = false;
+    bool                    _msaa           = false;
 
 protected:
     void install_configs(const configs& cfg);

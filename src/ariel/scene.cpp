@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -159,9 +159,19 @@ bool ui_stage::setup()
 
 void ui_stage::draw()
 {
+    setup_draw();
     _wsys_manager.refresh();
     _wsys_manager.update();
     on_next_draw();
+}
+
+void ui_stage::setup_draw()
+{
+    assert(_rose);
+    auto* rsys = _rose->get_rendersys();
+    assert(rsys);
+    rsys->enable_alpha_blend(true);
+    rsys->enable_depth(false);
 }
 
 bool ui_stage::on_frame_event(const frame_event& event)

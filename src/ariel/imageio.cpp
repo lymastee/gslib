@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -1249,6 +1249,14 @@ public:
     ~png_reader()
     {
         if(png_ptr) {
+            if(end_info) {
+                png_destroy_info_struct(png_ptr, &end_info);
+                end_info = nullptr;
+            }
+            if(info_ptr) {
+                png_destroy_info_struct(png_ptr, &info_ptr);
+                info_ptr = nullptr;
+            }
             png_destroy_read_struct(&png_ptr, 0, 0);
             png_ptr = nullptr;
         }

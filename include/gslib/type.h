@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -23,6 +23,8 @@
  * SOFTWARE.
  */
 
+#pragma once
+
 #ifndef type_3f1a28e2_0da6_44b6_84db_29542f5a65c0_h
 #define type_3f1a28e2_0da6_44b6_84db_29542f5a65c0_h
 
@@ -31,44 +33,35 @@
 
 __gslib_begin__
 
-template<class _ty> struct protopt {};
-template<> struct protopt<int> { int x, y; };
-template<>
-struct protopt<float>: public vec2
-{
-    protopt() {}
-    protopt(const vec2& v): vec2(v) {}
-    protopt(float x, float y): vec2(x, y) {}
-};
-
-template<class _ty>
+template<class _ty, class _protopt>
 struct point_t:
-    public protopt<_ty>
+    public _protopt
 {
     typedef _ty type;
-    typedef protopt<_ty> proto;
-    typedef point_t<_ty> myref;
+    typedef _protopt proto;
+    typedef point_t<_ty, _protopt> myref;
 
 public:
-    point_t() { x = 0; y = 0; }
+    point_t() { this->x = 0; this->y = 0; }
     point_t(const proto& p): proto(p) {}
-    point_t(type a, type b) { x = a; y = b; }
-    void offset(type u, type v) { x += u; y += v; }
-    void offset(const proto& p) { x += p.x; y += p.y; }
-    void set_point(type a, type b) { x = a; y = b; }
-    bool operator == (const myref& that) const { return x == that.x && y == that.y; }
-    bool operator != (const myref& that) const { return x != that.x || y != that.y; }
+    point_t(type a, type b) { this->x = a; this->y = b; }
+    void offset(type u, type v) { this->x += u; this->y += v; }
+    void offset(const proto& p) { this->x += p.x; this->y += p.y; }
+    void set_point(type a, type b) { this->x = a; this->y = b; }
+    bool operator == (const myref& that) const { return this->x == that.x && this->y == that.y; }
+    bool operator != (const myref& that) const { return this->x != that.x || this->y != that.y; }
 };
 
-typedef point_t<int> point;
-typedef point_t<float> pointf;
+struct vec2i { int x, y; };
+typedef point_t<int, vec2i> point;
+typedef point_t<float, vec2> pointf;
 
-template<class _ty>
+template<class _ty, class _ptcls>
 struct rect_t
 {
     typedef _ty type;
-    typedef rect_t<_ty> myref;
-    typedef point_t<_ty> point;
+    typedef rect_t<_ty, _ptcls> myref;
+    typedef _ptcls point;
 
 public:
     type    left, top, right, bottom;
@@ -98,6 +91,13 @@ public:
         right = r;
         bottom = b;
     }
+    void set_by_pts(const point& p1, const point& p2)
+    {
+        left = gs_min(p1.x, p2.x);
+        top = gs_min(p1.y, p2.y);
+        right = gs_max(p1.x, p2.x);
+        bottom = gs_max(p1.y, p2.y);
+    }
     bool in_rect(const point& pt) const { return pt.x >= left && pt.x < right && pt.y >= top && pt.y < bottom; }
     void offset(type x, type y) { left += x; right += x; top += y; bottom += y; }
     void deflate(type u, type v);
@@ -119,8 +119,8 @@ public:
     point bottom_right() const { return point(right, bottom); }
 };
 
-typedef rect_t<int> rect;
-typedef rect_t<float> rectf;
+typedef rect_t<int, point> rect;
+typedef rect_t<float, pointf> rectf;
 
 extern bool intersect_rect(rect& rc, const rect& rc1, const rect& rc2);
 extern bool is_rect_intersected(const rect& rc1, const rect& rc2);
@@ -128,8 +128,12 @@ extern void union_rect(rect& rc, const rect& rc1, const rect& rc2);
 extern bool substract_rect(rect& rc, const rect& rc1, const rect& rc2);
 extern bool intersect_rect(rectf& rc, const rectf& rc1, const rectf& rc2);
 extern bool is_rect_intersected(const rectf& rc1, const rectf& rc2);
+extern bool is_rect_contained(const rect& rc1, const rect& rc2);
+extern bool is_rect_contained(const rectf& rc1, const rectf& rc2);
 extern void union_rect(rectf& rc, const rectf& rc1, const rectf& rc2);
 extern bool substract_rect(rectf& rc, const rectf& rc1, const rectf& rc2);
+extern bool is_line_rect_overlapped(const point& p1, const point& p2, const rect& rc);
+extern bool is_line_rect_overlapped(const pointf& p1, const pointf& p2, const rectf& rc);
 
 __gslib_end__
 

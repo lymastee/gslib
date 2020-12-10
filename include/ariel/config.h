@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -22,6 +22,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+
+#pragma once
 
 #ifndef config_27ec2780_3d0a_41f9_8a8b_0099ced77cf1_h
 #define config_27ec2780_3d0a_41f9_8a8b_0099ced77cf1_h
@@ -80,6 +82,8 @@ define_select_type(render_texture2d);
 define_select_type(render_texture3d);
 define_select_type(render_sampler_state);
 define_select_type(render_blend_state);
+define_select_type(render_raster_state);
+define_select_type(render_depth_state);
 
 install_select_type(render_platform_d3d_11, render_device, ID3D11Device);
 install_select_type(render_platform_d3d_11, render_context, ID3D11DeviceContext);
@@ -109,6 +113,8 @@ install_select_type(render_platform_d3d_11, render_texture2d, ID3D11Texture2D);
 install_select_type(render_platform_d3d_11, render_texture3d, ID3D11Texture3D);
 install_select_type(render_platform_d3d_11, render_sampler_state, ID3D11SamplerState);
 install_select_type(render_platform_d3d_11, render_blend_state, ID3D11BlendState);
+install_select_type(render_platform_d3d_11, render_raster_state, ID3D11RasterizerState);
+install_select_type(render_platform_d3d_11, render_depth_state, ID3D11DepthStencilState);
 
 config_select_type(select_render_platform, render_device);
 config_select_type(select_render_platform, render_context);
@@ -135,6 +141,8 @@ config_select_type(select_render_platform, render_texture2d);
 config_select_type(select_render_platform, render_texture3d);
 config_select_type(select_render_platform, render_sampler_state);
 config_select_type(select_render_platform, render_blend_state);
+config_select_type(select_render_platform, render_raster_state);
+config_select_type(select_render_platform, render_depth_state);
 
 enum render_option
 {

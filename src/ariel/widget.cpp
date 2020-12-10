@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -390,7 +390,7 @@ void button::set_image(texture2d* img, bool fs)
     _pos.bottom = _pos.top + h;
     auto* rsys = scene::get_singleton_ptr()->get_rendersys();
     assert(rsys);
-    _bkground = rsys->create_texture2d(w, h, DXGI_FORMAT_R8G8B8A8_UNORM, 1, D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS, 0);
+    _bkground = rsys->create_texture2d(w, h, DXGI_FORMAT_R8G8B8A8_UNORM, 1, D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS, 0, 0);
     _enabled ? set_normal() : set_gray();
 }
 
@@ -1245,7 +1245,7 @@ void wsys_manager::initialize(const rect& rc)
     assert(!_caret && _driver);
     _caret = new timer(this);
     assert(_caret);
-    connect_notify(_caret, timer::on_timer, this, on_caret, 4);
+    connect_notify(_caret, &timer::on_timer, this, &wsys_manager::on_caret, 4);
     _caret->start(600);
     /* IME support */
     set_ime(0, point(0, 0), font(_t("simsun"), 14));

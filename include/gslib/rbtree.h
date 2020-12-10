@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -23,11 +23,12 @@
  * SOFTWARE.
  */
 
+#pragma once
+
 #ifndef rbtree_ebcaa429_edae_4ac6_b9a5_2fe774778822_h
 #define rbtree_ebcaa429_edae_4ac6_b9a5_2fe774778822_h
 
 #include <assert.h>
-#include <gslib/pool.h>
 #include <gslib/std.h>
 
 __gslib_begin__

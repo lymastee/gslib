@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -23,13 +23,15 @@
  * SOFTWARE.
  */
 
+#pragma once
+
 #ifndef clip_84d62df0_3a5c_4f7c_81dc_20b38c3b391c_h
 #define clip_84d62df0_3a5c_4f7c_81dc_20b38c3b391c_h
 
 #include <gslib/std.h>
 #include <gslib/tree.h>
 #include <gslib/mcls.h>
-#include <ariel/utility.h>
+#include <gslib/utility.h>
 #include <ariel/raster.h>
 
 __ariel_begin__
@@ -540,7 +542,7 @@ protected:
 // class clip_path_router_union;
 // class clip_path_router_intersect;
 
-typedef unordered_map<path_info*, curve_spliter*> curve_spliter_map;
+typedef unordered_map<path_info*, curve_splitter*> curve_splitter_map;
 typedef unordered_map<clip_joint*, vec2> clip_fixed_points;
 
 class clip_sweep_line_algorithm
@@ -571,7 +573,7 @@ protected:
     alg_joint_table     _sorted_by_y;
     clip_sweep_lines    _sweep_lines;
     clip_joints         _intersections;
-    curve_spliter_map   _spliters;
+    curve_splitter_map  _splitters;
     clip_fixed_points   _fixed_points;
 
 protected:
@@ -590,10 +592,10 @@ protected:
     void output_exclude(clip_result& result);
     void output_union(clip_result& result);
     void output_intersect(clip_result& result);
-    void destroy_spliters();
+    void destroy_splitters();
     void destroy_fixed_points();
-    void create_spliters();
-    void create_spliter(clip_intersect_joint* p, path_info* pnf1, path_info* pnf2);
+    void create_splitters();
+    void create_splitter(clip_intersect_joint* p, path_info* pnf1, path_info* pnf2);
     void replace_curves(clip_result& result);
     void replace_curves(clip_result& result, clip_result::iterator p);
     void replace_curves(clip_polygon& poly);

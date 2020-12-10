@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -46,6 +46,14 @@ static void release_any(c& cptr)
         cptr->Release();
         cptr = nullptr;
     }
+}
+
+static void debug_save_texture(texture2d* p, const string& path)
+{
+    assert(p);
+    image img;
+    textureop::convert_to_image(img, p);
+    img.save(path);
 }
 
 template<class stream_type>

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -157,6 +157,22 @@ static const style_sheet_def __menu_sub_style_sheet_defs[] =
 static const style_sheet_def __menubar_button_style_sheet_defs[] =
 {
     std::make_pair(sst_string, _t("caption")),
+};
+
+static const style_sheet_def __table_view_style_sheet_defs[] =
+{
+    std::make_pair(sst_color, _t("view_fill_color")),
+    std::make_pair(sst_color, _t("view_stroke_color")),
+    std::make_pair(sst_float, _t("view_fill_opacity")),
+    std::make_pair(sst_float, _t("view_stroke_opacity")),
+    std::make_pair(sst_color, _t("focus_fill_color")),
+    std::make_pair(sst_color, _t("focus_stroke_color")),
+    std::make_pair(sst_float, _t("focus_fill_opacity")),
+    std::make_pair(sst_float, _t("focus_stroke_opacity")),
+    std::make_pair(sst_string, _t("text_font_name")),
+    std::make_pair(sst_integer, _t("text_font_size")),
+    std::make_pair(sst_color, _t("text_font_color")),
+    std::make_pair(sst_float, _t("text_font_opacity")),
 };
 
 static const style_sheet_def __tree_view_style_sheet_defs[] =
@@ -1138,6 +1154,20 @@ void menubar_button_style_sheet::set_value(const string& name, const string& val
         assert(!"unexpected style sheet name.");
         break;
     }
+}
+
+table_view_style_sheet::table_view_style_sheet():
+    ariel::style_sheet(__table_view_style_sheet_defs, _countof(__table_view_style_sheet_defs))
+{
+}
+
+bool table_view_style_sheet::get_value(const string& name, string& value)
+{
+    return false;
+}
+
+void table_view_style_sheet::set_value(const string& name, const string& value)
+{
 }
 
 tree_view_style_sheet::tree_view_style_sheet():

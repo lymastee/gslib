@@ -13,7 +13,7 @@ solution "gslib"
 	
 	-- debug configs
 	filter "configurations:Debug"
-		defines { "DEBUG" }
+		defines { "DEBUG", "_DEBUG" }
 		symbols "On"
 		optimize "Debug"
 
@@ -25,14 +25,6 @@ solution "gslib"
 	-- windows specific
 	filter "system:Windows"
 		defines { "WIN32", "_WINDOWS", "_UNICODE" }
-		
-	filter "action:vs2017"
-		sysincludedirs {
-			"C:/Program Files (x86)/Windows Kits/10/Include/10.0.17763.0/ucrt"
-		}
-		syslibdirs {
-			"C:/Program Files (x86)/Windows Kits/10/Lib/10.0.17763.0/ucrt/x86"
-		}
 
 project "zlib"
 	language "C"
@@ -70,8 +62,6 @@ project "freetype"
 	kind "StaticLib"
 	entrypoint ""
 	defines { "_LIB", "_CRT_SECURE_NO_WARNINGS", "FT2_BUILD_LIBRARY" }
-	filter "configurations:Debug"
-		defines { "FT_DEBUG_LEVEL_ERROR", "FT_DEBUG_LEVEL_TRACE" }
 	includedirs {
 		"ext/freetype/include"
 	}
@@ -117,6 +107,8 @@ project "freetype"
 		"ext/freetype/src/ftdebug.c",
 		"ext/freetype/src/base/ftver.rc"
 	}
+	filter "configurations:Debug"
+		defines { "FT_DEBUG_LEVEL_ERROR", "FT_DEBUG_LEVEL_TRACE" }
 	
 project "libpng"
 	language "C"
@@ -232,6 +224,7 @@ project "gslib"
 		"include/gslib/dvt.h",
 		"include/gslib/error.h",
 		"include/gslib/file.h",
+		"include/gslib/gamma.h",
 		"include/gslib/json.h",
 		"include/gslib/library.h",
 		"include/gslib/linequ.h",
@@ -250,6 +243,7 @@ project "gslib"
 		"include/gslib/tree.h",
 		"include/gslib/treeop.h",
 		"include/gslib/type.h",
+		"include/gslib/utility.h",
 		"include/gslib/uuid.h",
 		"include/gslib/vdir.h",
 		"include/gslib/xml.h",
@@ -257,6 +251,7 @@ project "gslib"
 		"src/gslib/base64.cpp",
 		"src/gslib/dvt.cpp",
 		"src/gslib/error.cpp",
+		"src/gslib/gamma.cpp",
 		"src/gslib/json.cpp",
 		"src/gslib/library.cpp",
 		"src/gslib/math.cpp",
@@ -266,6 +261,7 @@ project "gslib"
 		"src/gslib/sha1.cpp",
 		"src/gslib/string.cpp",
 		"src/gslib/type.cpp",
+		"src/gslib/utility.cpp",
 		"src/gslib/uuid.cpp",
 		"src/gslib/vdir.cpp",
 		"src/gslib/xml.cpp",
@@ -314,6 +310,7 @@ project "ariel"
 		'fxc /T cs_5_0 /E "ariel_conv_from_premul_cs" /Fd /Zi /Fh "ariel_conv_from_premul_cs.h" "../../src/ariel/textureop.hlsl"'
 	}
 	files {
+		"include/ariel/application.h",
 		"include/ariel/batch.h",
 		"include/ariel/classicstyle.h",
 		"include/ariel/clip.h",
@@ -334,17 +331,23 @@ project "ariel"
 		"include/ariel/render.h",
 		"include/ariel/rendersys.h",
 		"include/ariel/rendersysd3d11.h",
+		"include/ariel/resourcemgr.h",
 		"include/ariel/rose.h",
 		"include/ariel/style.h",
 		"include/ariel/scene.h",
+		"include/ariel/scenemgr.h",
 		"include/ariel/smaa.h",
 		"include/ariel/sysop.h",
 		"include/ariel/temporal.h",
 		"include/ariel/texbatch.h",
 		"include/ariel/textureop.h",
 		"include/ariel/type.h",
-		"include/ariel/utility.h",
 		"include/ariel/widget.h",
+		"include/ariel/classicstyle/slider_service.h",
+		"include/ariel/classicstyle/canvas_service.h",
+		"include/ariel/io/utilities.h",
+		"include/ariel/io/mesh.h",
+		"src/ariel/application.cpp",
 		"src/ariel/batch.cpp",
 		"src/ariel/classicstyle.cpp",
 		"src/ariel/clip.cpp",
@@ -365,20 +368,25 @@ project "ariel"
 		"src/ariel/render.cpp",
 		"src/ariel/rendersys.cpp",
 		"src/ariel/rendersysd3d11.cpp",
+		"src/ariel/resourcemgr.cpp",
 		"src/ariel/rose.cpp",
 		"src/ariel/scene.cpp",
+		"src/ariel/scenemgr.cpp",
 		"src/ariel/style.cpp",
 		"src/ariel/smaa.cpp",
 		"src/ariel/temporal.cpp",
 		"src/ariel/texbatch.cpp",
 		"src/ariel/textureop.cpp",
 		--"src/ariel/textureop.hlsl",
-		"src/ariel/utility.cpp",
 		"src/ariel/widget.cpp",
 		--"src/ariel/rose.hlsl",
-		--"src/ariel/smaa.hlsl"
+		--"src/ariel/smaa.hlsl",
+		"src/ariel/io/utilities.cpp",
+		"src/ariel/io/mesh.cpp",
+		"include/ariel/clip2.h",
+		"src/ariel/clip2.cpp"
 	}
-	
+
 project "test111"
 	language "C++"
 	kind "WindowedApp"
@@ -788,49 +796,64 @@ project "uic"
 		"proj/uieditor/io.cpp",
 		"proj/uieditor/io.h"
 	}
-
-project "msomorph"
+	
+project "mayaplugin"
 	language "C++"
-	kind "WindowedApp"
+	kind "SharedLib"
+	entrypoint ""
+	architecture "x86_64"
+	targetextension ".mll"
+	toolset "v140"
+	inlining "Explicit"
+	defines { "_USRDLL", "NT_PLUGIN", "_HAS_ITERATOR_DEBUGGING=0", "_SECURE_SCL=0", "_SECURE_SCL_THROWS=0", "_SECURE_SCL_DEPRECATE=0", "_CRT_SECURE_NO_DEPRECATE", "TBB_USE_DEBUG=0", "__TBB_LIB_NAME=tbb.lib", "REQUIRE_IOSTREAM", "AW_NEW_IOSTREAMS", "Bits64_" }		
+	flags { "NoIncrementalLink" }
+	stringpooling "on"
+	exceptionhandling "on"
+	staticruntime "off"
+	functionlevellinking "on"
+	rtti "on"
+	buildoptions { "/export:initializePlugin", "/export:uninitializePlugin", "/DYNAMICBASE:NO" }
+	includedirs {
+		todir,
+		"C:/Program Files/Autodesk/Maya2019/include",
+		"D:/Program Files/Autodesk/Maya2019/include"
+	}
+	libdirs {
+		"$(OutDir)",
+		"C:/Program Files/Autodesk/Maya2019/lib",
+		"D:/Program Files/Autodesk/Maya2019/lib"
+	}
+	links {
+		"Foundation.lib",
+		"OpenMaya.lib"
+	}
+	files {
+		"proj/mayaplugin/main.cpp",
+		"proj/mayaplugin/mesh.h",
+		"proj/mayaplugin/mesh.cpp"
+	}
+	
+project "copyrighttool"
+	language "C++"
+	kind "ConsoleApp"
 	entrypoint ""
 	dependson {
 		"zlib",
-		"libpng",
-		"libjpeg",
-		"gslib",
-		"ariel"
+		"gslib"
 	}
 	includedirs {
 		todir,
 		"include",
-		"src",
-		"ext",
-		"framework"
+		"ext"
 	}
 	libdirs {
 		"$(OutDir)"
 	}
 	links {
-		"dxgi.lib",
-		"d3d11.lib",
 		"zlib.lib",
-		"libjpeg.lib",
-		"libpng.lib",
-		"gslib.lib",
-		"ariel.lib",
-		"imm32.lib",
-		"snmpapi.lib",
-		"d3d10_1.lib",
-		"dwrite.lib",
-		"d2d1.lib"
-	}
-	prebuildcommands {
-		'fxc /T vs_4_0 /E "vs_main" /Fd /Zi /Fh "vs_main.h" "../../proj/msomorph/shader.hlsl"',
-		'fxc /T ps_4_0 /E "ps_main" /Fd /Zi /Fh "ps_main.h" "../../proj/msomorph/shader.hlsl"'
+		"gslib.lib"
 	}
 	files {
-		"framework/entrywin32.h",
-		"framework/entrywin32.cpp",
-		"proj/msomorph/main.cpp"
-		--"proj/msomorph/shader.hlsl"
+		"proj/copyrighttool/main.cpp"
 	}
+	

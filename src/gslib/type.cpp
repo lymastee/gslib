@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -49,6 +49,15 @@ inline bool _is_rect_intersected(const _rect& rc1, const _rect& rc2)
     auto max_top = gs_max(rc1.top, rc2.top);
     auto min_bottom = gs_min(rc1.bottom, rc2.bottom);
     return max_top <= min_bottom;
+}
+
+template<class _rect>
+inline bool _is_rect_contained(const _rect& rc1, const _rect& rc2)
+{
+    assert(rc1.left <= rc1.right && rc1.top <= rc1.bottom &&
+        rc2.left <= rc2.right && rc2.top <= rc2.bottom
+        );
+    return rc1.left <= rc2.left && rc1.top <= rc2.top && rc1.right >= rc2.right && rc1.bottom >= rc2.bottom;
 }
 
 template<class _rect>
@@ -159,14 +168,189 @@ bool _substract_rect(_rect& rc, const _rect& rc1, const _rect& rc2)
     }
 }
 
+/* point-rect position relationship:
+ *     TL   |       T       |   TR      
+ *  --------+---------------+--------   
+ *     L    |       C       |   R       
+ *  --------+---------------+--------   
+ *     BL   |       B       |   BR      
+ */
+enum prp_relation_type
+{
+    prpr_TL,
+    prpr_L,
+    prpr_BL,
+    prpr_T,
+    prpr_C,
+    prpr_B,
+    prpr_TR,
+    prpr_R,
+    prpr_BR,
+};
+
+template<class _point, class _rect>
+static prp_relation_type query_prp_relation(const _point& pt, const _rect& rc)
+{
+    if(pt.x < rc.left) {
+        if(pt.y < rc.top)
+            return prpr_TL;
+        else if(pt.y > rc.bottom)
+            return prpr_BL;
+        return prpr_L;
+    }
+    else if(pt.x > rc.right) {
+        if(pt.y < rc.top)
+            return prpr_TR;
+        else if(pt.y > rc.bottom)
+            return prpr_BR;
+        return prpr_R;
+    }
+    else {
+        if(pt.y < rc.top)
+            return prpr_T;
+        else if(pt.y > rc.bottom)
+            return prpr_B;
+        return prpr_C;
+    }
+}
+
+static inline const pointf& convert_pt(const pointf& p) { return p; }
+static inline pointf convert_pt(const point& p) { return pointf((float)p.x, (float)p.y); }
+
+static inline bool is_point_upside(const pointf& p, const pointf& p1, const pointf& p2)
+{
+    /* This file cannot use ariel.utility, and to ensure precision, we use double here. */
+    double dx = (double)(p2.x - p1.x);
+    double dy = (double)(p2.y - p1.y);
+    double a = dy;
+    double b = -dx;
+    double c = dx * (double)p1.y - dy * (double)p1.x;
+    return a * (double)p.x + b * (double)p.y + c >= 0.0;
+}
+
+template<class _point, class _rect>
+static bool _is_line_rect_overlapped(const _point& p1, const _point& p2, const _rect& rc)
+{
+    auto rel1 = query_prp_relation(p1, rc);
+    if(rel1 == prpr_C)
+        return true;
+    auto rel2 = query_prp_relation(p2, rc);
+    if(rel2 == prpr_C)
+        return true;
+    switch(rel1)
+    {
+    case prpr_TL:
+        switch(rel2)
+        {
+        case prpr_B:
+            return is_point_upside(convert_pt(rc.bottom_left()), convert_pt(p2), convert_pt(p1));
+        case prpr_R:
+            return is_point_upside(convert_pt(rc.top_right()), convert_pt(p1), convert_pt(p2));
+        case prpr_BR:
+            return true;
+        }
+        break;
+    case prpr_L:
+        switch(rel2)
+        {
+        case prpr_T:
+        case prpr_TR:
+            return is_point_upside(convert_pt(rc.top_left()), convert_pt(p1), convert_pt(p2));
+        case prpr_B:
+        case prpr_BR:
+            return is_point_upside(convert_pt(rc.bottom_left()), convert_pt(p2), convert_pt(p1));
+        case prpr_R:
+            return true;
+        }
+        break;
+    case prpr_BL:
+        switch(rel2)
+        {
+        case prpr_T:
+            return is_point_upside(convert_pt(rc.top_left()), convert_pt(p1), convert_pt(p2));
+        case prpr_R:
+            return is_point_upside(convert_pt(rc.bottom_right()), convert_pt(p2), convert_pt(p1));
+        case prpr_TR:
+            return true;
+        }
+        break;
+    case prpr_T:
+        switch(rel2)
+        {
+        case prpr_L:
+        case prpr_BL:
+            return is_point_upside(convert_pt(rc.top_left()), convert_pt(p2), convert_pt(p1));
+        case prpr_R:
+        case prpr_BR:
+            return is_point_upside(convert_pt(rc.top_right()), convert_pt(p1), convert_pt(p2));
+        case prpr_B:
+            return true;
+        }
+        break;
+    case prpr_B:
+        switch(rel2)
+        {
+        case prpr_L:
+        case prpr_TL:
+            return is_point_upside(convert_pt(rc.bottom_left()), convert_pt(p1), convert_pt(p2));
+        case prpr_R:
+        case prpr_TR:
+            return is_point_upside(convert_pt(rc.bottom_right()), convert_pt(p2), convert_pt(p1));
+        case prpr_T:
+            return true;
+        }
+        break;
+    case prpr_TR:
+        switch(rel2)
+        {
+        case prpr_L:
+            return is_point_upside(convert_pt(rc.top_left()), convert_pt(p2), convert_pt(p1));
+        case prpr_B:
+            return is_point_upside(convert_pt(rc.bottom_right()), convert_pt(p1), convert_pt(p2));
+        case prpr_BL:
+            return true;
+        }
+        break;
+    case prpr_R:
+        switch(rel2)
+        {
+        case prpr_T:
+        case prpr_TL:
+            return is_point_upside(convert_pt(rc.top_right()), convert_pt(p2), convert_pt(p1));
+        case prpr_B:
+        case prpr_BL:
+            return is_point_upside(convert_pt(rc.bottom_right()), convert_pt(p1), convert_pt(p2));
+        case prpr_L:
+            return true;
+        }
+        break;
+    case prpr_BR:
+        switch(rel2)
+        {
+        case prpr_L:
+            return is_point_upside(convert_pt(rc.bottom_left()), convert_pt(p1), convert_pt(p2));
+        case prpr_T:
+            return is_point_upside(convert_pt(rc.top_right()), convert_pt(p2), convert_pt(p1));
+        case prpr_TL:
+            return true;
+        }
+        break;
+    }
+    return false;
+}
+
 bool intersect_rect(rect& rc, const rect& rc1, const rect& rc2) { return _intersect_rect(rc, rc1, rc2); }
 bool intersect_rect(rectf& rc, const rectf& rc1, const rectf& rc2) { return _intersect_rect(rc, rc1, rc2); }
 bool is_rect_intersected(const rect& rc1, const rect& rc2) { return _is_rect_intersected(rc1, rc2); }
 bool is_rect_intersected(const rectf& rc1, const rectf& rc2) { return _is_rect_intersected(rc1, rc2); }
+bool is_rect_contained(const rect& rc1, const rect& rc2) { return _is_rect_contained(rc1, rc2); }
+bool is_rect_contained(const rectf& rc1, const rectf& rc2) { return _is_rect_contained(rc1, rc2); }
 void union_rect(rect& rc, const rect& rc1, const rect& rc2) { _union_rect(rc, rc1, rc2); }
 void union_rect(rectf& rc, const rectf& rc1, const rectf& rc2) { _union_rect(rc, rc1, rc2); }
 bool substract_rect(rect& rc, const rect& rc1, const rect& rc2) { return _substract_rect(rc, rc1, rc2); }
 bool substract_rect(rectf& rc, const rectf& rc1, const rectf& rc2) { return _substract_rect(rc, rc1, rc2); }
+bool is_line_rect_overlapped(const point& p1, const point& p2, const rect& rc) { return _is_line_rect_overlapped(p1, p2, rc); }
+bool is_line_rect_overlapped(const pointf& p1, const pointf& p2, const rectf& rc) { return _is_line_rect_overlapped(p1, p2, rc); }
 
 void rect::deflate(int u, int v)
 {

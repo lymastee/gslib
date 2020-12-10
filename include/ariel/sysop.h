@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -22,6 +22,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
+
+#pragma once
 
 #ifndef sysop_eb634adc_cca3_4f8f_853c_7852abe06d2d_h
 #define sysop_eb634adc_cca3_4f8f_853c_7852abe06d2d_h
@@ -224,6 +226,7 @@ struct system_context
         sct_painter     = 0x02,
         sct_rectangle   = 0x04,
         sct_hwnd        = 0x08,
+        sct_hinst       = 0x10,
         sct_everything  = 0xffffffff,
     };
 
@@ -232,6 +235,7 @@ struct system_context
     void*               painter;
     rect                rectangle;
     uint                hwnd;
+    uint                hinst;
 };
 
 class __gs_novtable system_driver abstract
@@ -260,7 +264,7 @@ public:
     virtual void set_font(const font& f) = 0;
     virtual bool get_size(const gchar* str, int& w, int& h, int len = -1) = 0;
     virtual bool create_text_image(image& img, const gchar* str, int x, int y, const color& cr, int len = -1) = 0;
-    virtual bool create_text_texture(texture2d** tex, const gchar* str, int x, int y, const color& cr, int len = -1) = 0;
+    virtual bool create_text_texture(texture2d** tex, const gchar* str, int margin, const color& cr, int len = -1) = 0;
     virtual void draw(image& img, const gchar* str, int x, int y, const color& cr, int len = -1) = 0;
 };
 

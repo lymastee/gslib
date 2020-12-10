@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -23,11 +23,14 @@
  * SOFTWARE.
  */
 
+#pragma once
+
 #ifndef vdir_b62819a0_88a2_4eb7_9a92_6d287a152304_h
 #define vdir_b62819a0_88a2_4eb7_9a92_6d287a152304_h
 
 #include <gslib/config.h>
 #include <gslib/tree.h>
+#include <gslib/pool.h>
 
 __gslib_begin__
 

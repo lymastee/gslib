@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -23,6 +23,8 @@
  * SOFTWARE.
  */
 
+#pragma once
+ 
 #ifndef batch_8317ae94_87f4_4cc2_8dab_1eef2919a461_h
 #define batch_8317ae94_87f4_4cc2_8dab_1eef2919a461_h
 
@@ -139,7 +141,7 @@ struct bat_batch
 
 public:
     bat_batch(bat_type t): _type(t) {}
-    ~bat_batch() {}
+    virtual ~bat_batch() {}
     bat_type get_type() const { return _type; }
 };
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -224,7 +224,7 @@ bool fsys_win32::create_text_image(image& img, const gchar* str, int x, int y, c
     return true;
 }
 
-bool fsys_win32::create_text_texture(texture2d** tex, const gchar* str, int x, int y, const color& cr, int len)
+bool fsys_win32::create_text_texture(texture2d** tex, const gchar* str, int margin, const color& cr, int len)
 {
     assert(str);
     scene* scn = scene::get_singleton_ptr();
@@ -235,12 +235,15 @@ bool fsys_win32::create_text_texture(texture2d** tex, const gchar* str, int x, i
         len = strtool::length(str);
     int w, h;
     get_size(str, w, h, len);
+    w += (margin * 2);
+    h += (margin * 2);
     image img;
-    img.create(image::fmt_rgba, w + x, h + y);
+    img.create(image::fmt_rgba, w, h);
     img.enable_alpha_channel(true);
-    if(!create_text_image(img, str, x, y, cr, len))
+    img.clear(color(0, 0, 0, 0));
+    if(!create_text_image(img, str, margin, margin, cr, len))
         return false;
-    auto* p = rsys->create_texture2d(img, 1, D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0);
+    auto* p = rsys->create_texture2d(img, 1, D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0, 0);
     assert(p && tex);
     *tex = p;
     return true;

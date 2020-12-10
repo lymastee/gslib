@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2018 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -23,11 +23,13 @@
  * SOFTWARE.
  */
 
+#pragma once
+
 #ifndef math_870b373b_c3fb_4c7a_abc7_bc4bd4095aef_h
 #define math_870b373b_c3fb_4c7a_abc7_bc4bd4095aef_h
 
 #include <gslib/config.h>
-#include <gslib/type.h>
+#include <gslib/basetype.h>
 
 #ifndef PI
 #define PI  (3.14159265358979323846f)
@@ -307,29 +309,29 @@ public:
     vec2(float x, float y);
 
 public:
-    operator float* ();
-    operator const float* () const;
+    operator float*();
+    operator const float*() const;
 
 public:
-    vec2& operator += (const vec2&);
-    vec2& operator -= (const vec2&);
-    vec2& operator *= (float);
-    vec2& operator /= (float);
+    vec2& operator+=(const vec2&);
+    vec2& operator-=(const vec2&);
+    vec2& operator*=(float);
+    vec2& operator/=(float);
 
 public:
-    vec2 operator + () const;
-    vec2 operator - () const;
+    vec2 operator+() const;
+    vec2 operator-() const;
 
 public:
-    vec2 operator + (const vec2&) const;
-    vec2 operator - (const vec2&) const;
-    vec2 operator * (float) const;
-    vec2 operator / (float) const;
-    friend vec2 operator * (float, const vec2&);
+    vec2 operator+(const vec2&) const;
+    vec2 operator-(const vec2&) const;
+    vec2 operator*(float) const;
+    vec2 operator/(float) const;
+    friend vec2 operator*(float, const vec2&);
 
 public:
-    bool operator == (const vec2&) const;
-    bool operator != (const vec2&) const;
+    bool operator==(const vec2&) const;
+    bool operator!=(const vec2&) const;
 
 public:
     float length() const { return vec2length(this); }
@@ -364,29 +366,29 @@ public:
     vec3(float x, float y, float z);
 
 public:
-    operator float* ();
-    operator const float* () const;
+    operator float*();
+    operator const float*() const;
 
 public:
-    vec3& operator += (const vec3&);
-    vec3& operator -= (const vec3&);
-    vec3& operator *= (float);
-    vec3& operator /= (float);
-    
-public:
-    vec3 operator + () const;
-    vec3 operator - () const;
+    vec3& operator+=(const vec3&);
+    vec3& operator-=(const vec3&);
+    vec3& operator*=(float);
+    vec3& operator/=(float);
 
 public:
-    vec3 operator + (const vec3&) const;
-    vec3 operator - (const vec3&) const;
-    vec3 operator * (float) const;
-    vec3 operator / (float) const;
-    friend vec3 operator * (float, const vec3&);
+    vec3 operator+() const;
+    vec3 operator-() const;
 
 public:
-    bool operator == (const vec3&) const;
-    bool operator != (const vec3&) const;
+    vec3 operator+(const vec3&) const;
+    vec3 operator-(const vec3&) const;
+    vec3 operator*(float) const;
+    vec3 operator/(float) const;
+    friend vec3 operator*(float, const vec3&);
+
+public:
+    bool operator==(const vec3&) const;
+    bool operator!=(const vec3&) const;
 
 public:
     float length() const { return vec3length(this); }
@@ -424,29 +426,29 @@ public:
     vec4(float x, float y, float z, float w);
 
 public:
-    operator float* ();
-    operator const float* () const;
+    operator float*();
+    operator const float*() const;
 
 public:
-    vec4& operator += (const vec4&);
-    vec4& operator -= (const vec4&);
-    vec4& operator *= (float);
-    vec4& operator /= (float);
-    
-public:
-    vec4 operator + () const;
-    vec4 operator - () const;
+    vec4& operator+=(const vec4&);
+    vec4& operator-=(const vec4&);
+    vec4& operator*=(float);
+    vec4& operator/=(float);
 
 public:
-    vec4 operator + (const vec4&) const;
-    vec4 operator - (const vec4&) const;
-    vec4 operator * (float) const;
-    vec4 operator / (float) const;
-    friend vec4 operator * (float, const vec4&);
+    vec4 operator+() const;
+    vec4 operator-() const;
 
 public:
-    bool operator == (const vec4&) const;
-    bool operator != (const vec4&) const;
+    vec4 operator+(const vec4&) const;
+    vec4 operator-(const vec4&) const;
+    vec4 operator*(float) const;
+    vec4 operator/(float) const;
+    friend vec4 operator*(float, const vec4&);
+
+public:
+    bool operator==(const vec4&) const;
+    bool operator!=(const vec4&) const;
 
 public:
     float length() const { return vec4length(this); }
@@ -480,33 +482,33 @@ public:
          );
 
 public:
-    float& operator () (uint row, uint col);
-    float operator () (uint row, uint col) const;
-    operator float* ();
-    operator const float* () const;
+    float& operator()(uint row, uint col);
+    float operator()(uint row, uint col) const;
+    operator float*();
+    operator const float*() const;
 
 public:
-    mat3& operator *= (const mat3&);
-    mat3& operator += (const mat3&);
-    mat3& operator -= (const mat3&);
-    mat3& operator *= (float);
-    mat3& operator /= (float);
+    mat3& operator*=(const mat3&);
+    mat3& operator+=(const mat3&);
+    mat3& operator-=(const mat3&);
+    mat3& operator*=(float);
+    mat3& operator/=(float);
 
 public:
-    mat3 operator + () const;
-    mat3 operator - () const;
+    mat3 operator+() const;
+    mat3 operator-() const;
 
 public:
-    mat3 operator * (const mat3&) const;
-    mat3 operator + (const mat3&) const;
-    mat3 operator - (const mat3&) const;
-    mat3 operator * (float) const;
-    mat3 operator / (float) const;
-    friend mat3 operator * (float, const mat3&);
+    mat3 operator*(const mat3&) const;
+    mat3 operator+(const mat3&) const;
+    mat3 operator-(const mat3&) const;
+    mat3 operator*(float) const;
+    mat3 operator/(float) const;
+    friend mat3 operator*(float, const mat3&);
 
 public:
-    bool operator == (const mat3&) const;
-    bool operator != (const mat3&) const;
+    bool operator==(const mat3&) const;
+    bool operator!=(const mat3&) const;
 
 public:
     mat3& identity() { return *mat3identity(this); }
@@ -536,33 +538,33 @@ public:
          float f41, float f42, float f43, float f44);
 
 public:
-    float& operator () (uint row, uint col);
-    float operator () (uint row, uint col) const;
-    operator float* ();
-    operator const float* () const;
+    float& operator()(uint row, uint col);
+    float operator()(uint row, uint col) const;
+    operator float*();
+    operator const float*() const;
 
 public:
-    mat4& operator *= (const mat4&);
-    mat4& operator += (const mat4&);
-    mat4& operator -= (const mat4&);
-    mat4& operator *= (float);
-    mat4& operator /= (float);
-    
-public:
-    mat4 operator + () const;
-    mat4 operator - () const;
-    
-public:
-    mat4 operator * (const mat4&) const;
-    mat4 operator + (const mat4&) const;
-    mat4 operator - (const mat4&) const;
-    mat4 operator * (float) const;
-    mat4 operator / (float) const;
-    friend mat4 operator * (float, const mat4&);
+    mat4& operator*=(const mat4&);
+    mat4& operator+=(const mat4&);
+    mat4& operator-=(const mat4&);
+    mat4& operator*=(float);
+    mat4& operator/=(float);
 
 public:
-    bool operator == (const mat4&) const;
-    bool operator != (const mat4&) const;
+    mat4 operator+() const;
+    mat4 operator-() const;
+
+public:
+    mat4 operator*(const mat4&) const;
+    mat4 operator+(const mat4&) const;
+    mat4 operator-(const mat4&) const;
+    mat4 operator*(float) const;
+    mat4 operator/(float) const;
+    friend mat4 operator*(float, const mat4&);
+
+public:
+    bool operator==(const mat4&) const;
+    bool operator!=(const mat4&) const;
 
 public:
     mat4& identity() { return *matidentity(this); }
@@ -595,7 +597,7 @@ public:
     mat4& transform(const vec3& scalecenter, const quat& scalerot, const vec3& scale, const vec3& rotcenter, const quat& rot, const vec3& trans) { return *mattransform(this, &scalecenter, &scalerot, &scale, &rotcenter, &rot, &trans); }
     mat4& transform2d(const vec2& scalecenter, float scalerot, const vec2& scale, const vec2& rotcenter, float rot, const vec2& trans) { return *mattransform2d(this, &scalecenter, scalerot, &scale, &rotcenter, rot, &trans); }
     mat4& affinetransform(float scale, const vec3& rotcenter, const quat& rot, const vec3& trans) { return *mataffinetransform(this, scale, &rotcenter, &rot, &trans); }
-    mat4& affinetransform2d(float scale, const vec3& rotcenter, const quat& rot, const vec3& trans);    // todo:
+    mat4& affinetransform2d(float scale, const vec2& rotcenter, float rot, const vec2& trans) { return *mataffinetransform2d(this, scale, &rotcenter, rot, &trans); }
     float determinant() const { return matdeterminant(this); }
     mat4& multiply(const mat4& m) { return *matmultiply(this, this, &m); }
     mat4& multiply(const mat4& m1, const mat4& m2) { return *matmultiply(this, &m1, &m2); }
@@ -615,31 +617,31 @@ public:
     quat(float x, float y, float z, float w);
 
 public:
-    operator float* ();
-    operator const float* () const;
+    operator float*();
+    operator const float*() const;
 
 public:
-    quat& operator += (const quat&);
-    quat& operator -= (const quat&);
-    quat& operator *= (const quat&);
-    quat& operator *= (float);
-    quat& operator /= (float);
-    
-public:
-    quat operator + () const;
-    quat operator - () const;
+    quat& operator+=(const quat&);
+    quat& operator-=(const quat&);
+    quat& operator*=(const quat&);
+    quat& operator*=(float);
+    quat& operator/=(float);
 
 public:
-    quat operator + (const quat&) const;
-    quat operator - (const quat&) const;
-    quat operator * (const quat&) const;
-    quat operator * (float) const;
-    quat operator / (float) const;
-    friend quat operator * (float, const quat&);
+    quat operator+() const;
+    quat operator-() const;
 
 public:
-    bool operator == (const quat&) const;
-    bool operator != (const quat&) const;
+    quat operator+(const quat&) const;
+    quat operator-(const quat&) const;
+    quat operator*(const quat&) const;
+    quat operator*(float) const;
+    quat operator/(float) const;
+    friend quat operator*(float, const quat&);
+
+public:
+    bool operator==(const quat&) const;
+    bool operator!=(const quat&) const;
 
 public:
     float length() const { return quatlength(this); }
@@ -682,21 +684,21 @@ public:
     plane(float a, float b, float c, float d);
 
 public:
-    operator float* ();
-    operator const float* () const;
+    operator float*();
+    operator const float*() const;
 
 public:
-    plane& operator *= (float);
-    plane& operator /= (float);
-    plane operator + () const;
-    plane operator - () const;
-    plane operator * (float) const;
-    plane operator / (float) const;
-    friend plane operator * (float, const plane&);
-    
+    plane& operator*=(float);
+    plane& operator/=(float);
+    plane operator+() const;
+    plane operator-() const;
+    plane operator*(float) const;
+    plane operator/(float) const;
+    friend plane operator*(float, const plane&);
+
 public:
-    bool operator == (const plane&) const;
-    bool operator != (const plane&) const;
+    bool operator==(const plane&) const;
+    bool operator!=(const plane&) const;
 
 public:
     float dot(const vec4& v) const { return planedot(this, &v); }

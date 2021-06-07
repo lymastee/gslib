@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2020 lymastee, All rights reserved.
+ * Copyright (c) 2016-2021 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -28,6 +28,7 @@
 #ifndef type_3f1a28e2_0da6_44b6_84db_29542f5a65c0_h
 #define type_3f1a28e2_0da6_44b6_84db_29542f5a65c0_h
 
+#include <utility>
 #include <gslib/basetype.h>
 #include <gslib/math.h>
 
@@ -121,6 +122,16 @@ public:
 
 typedef rect_t<int, point> rect;
 typedef rect_t<float, pointf> rectf;
+
+inline rectf to_rectf(const rect& rc)
+{
+    return std::move(rectf((float)rc.left, (float)rc.top, (float)rc.width(), (float)rc.height()));
+}
+
+inline rect to_aligned_rect(const rectf& rc)
+{
+    return std::move(rect(round(rc.left), round(rc.top), round(rc.width()), round(rc.height())));
+}
 
 extern bool intersect_rect(rect& rc, const rect& rc1, const rect& rc2);
 extern bool is_rect_intersected(const rect& rc1, const rect& rc2);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2020 lymastee, All rights reserved.
+ * Copyright (c) 2016-2021 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -163,6 +163,8 @@ using list = std::list<_ty>;
 template<class _ty>
 using vector = std::vector<_ty>;
 template<class _ty>
+using queue = std::queue<_ty>;
+template<class _ty>
 using deque = std::deque<_ty>;
 template<class _ty>
 using stack = std::stack<_ty>;
@@ -225,7 +227,7 @@ public:
     }
     com_ptr(const myref& p)
     {
-        _ptr = p;
+        _ptr = p.get();
         if(_ptr)
             _ptr->AddRef();
     }

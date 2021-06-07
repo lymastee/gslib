@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2020 lymastee, All rights reserved.
+ * Copyright (c) 2016-2021 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -41,6 +41,8 @@ enum frame_strategy
     fs_lazy_passive,
 };
 
+struct app_config;
+struct app_env;
 class framesys;
 struct frame_event;
 class frame_listener;
@@ -336,6 +338,12 @@ public:
         static framesys inst;
         return &inst;
     }
+
+#if defined(WIN32) || defined(_WINDOWS)
+    static void set_default_config(app_config& cfg);
+    static void on_app_initialized(const app_env& env);
+    static void on_app_windowed(HWND);
+#endif
 
 protected:
     void idle()

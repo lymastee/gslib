@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2020 lymastee, All rights reserved.
+ * Copyright (c) 2016-2021 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -92,7 +92,7 @@ protected:
 public:
     const string& get_name() const { return _name; }
     const rect& get_rect() const { return _pos; }
-    rectf get_rectf() const { return rectf(0.f, 0.f, (float)get_width(), (float)get_height()); }
+    rectf get_rectf() const { return to_rectf(get_rect()); }
     bool is_visible() const { return _visible && (_style & sm_visible); }
     bool is_enabled() const { return _enabled; }
     bool is_focused() const;

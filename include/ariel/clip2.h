@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2020 lymastee, All rights reserved.
+ * Copyright (c) 2016-2021 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -256,6 +256,7 @@ public:
     void push_back(clip_edge* e);
     bool try_finish();
     void finish();
+    void close_finish();
 
 public:
     template<class _lamb>

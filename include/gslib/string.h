@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2020 lymastee, All rights reserved.
+ * Copyright (c) 2016-2021 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -315,11 +315,26 @@ public:
             return (int)this->npos;
         return pos;
     }
+    int test(int off, const element* cpset) const
+    {
+        if(this->empty() || off >= length())
+            return (int)this->npos;
+        int pos = _strtool::test(this->c_str() + off, cpset);
+        if(pos == length())
+            return (int)this->npos;
+        return pos;
+    }
     const element* _test(const element* cpset) const
     {
         if(this->empty())
-            return 0;
+            return nullptr;
         return _strtool::_test(this->c_str(), cpset);
+    }
+    const element* _test(int off, const element* cpset) const
+    {
+        if(this->empty() || off >= length())
+            return nullptr;
+        return _strtool::_test(this->c_str() + off, cpset);
     }
     void format(const element* fmt, ...)
     {
@@ -400,10 +415,34 @@ public:
         _stl_fix();
         return *this;
     }
+    bool starts_with(const element* str, int len) const
+    {
+        assert(str);
+        int s = length();
+        if(len > s)
+            return false;
+        return compare(str, len) == 0;
+    }
+    bool ends_with(const element* str, int len) const
+    {
+        assert(str);
+        int s = length();
+        if(len > s)
+            return false;
+        return compare(str + s - len, len) == 0;
+    }
+    bool starts_with(const element* str) const { return starts_with(str, _strtool::length(str)); }
+    bool starts_with(const myref& str) const { return starts_with(str.c_str(), str.length()); }
+    bool starts_with(const myref& str, int len) const { return starts_with(str.c_str(), len); }
+    bool ends_with(const element* str) const { return ends_with(str, _strtool::length(str)); }
+    bool ends_with(const myref& str) const { return ends_with(str.c_str(), str.length()); }
+    bool ends_with(const myref& str, int len) const { return ends_with(str.c_str(), len); }
     int compare(const element* str) const { return _strtool::compare(_stl_rawstr(), str); }
     int compare(const element* str, int len) const { return _strtool::compare(_stl_rawstr(), str, len); }
+    int compare(int off, const element* str, int len) const { return _strtool::compare(_stl_rawstr() + off, str, len); }
     int compare_cl(const element* str) const { return _strtool::compare_cl(_stl_rawstr(), str); }
     int compare_cl(const element* str, int len) const { return _strtool::compare_cl(_stl_rawstr(), str, len); }
+    int compare_cl(int off, const element* str, int len) const { return _strtool::compare_cl(_stl_rawstr() + off, str, len); }
     bool greater(const element* str) const { return comparefunc<_cpcase>(this, str) > 0; }
     bool greater(const element* str, int len) const { return comparefunc<_cpcase>(this, str, len) > 0; }
     bool equal(const element* str) const { return comparefunc<_cpcase>(this, str) == 0; }

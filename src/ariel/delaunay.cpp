@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2020 lymastee, All rights reserved.
+ * Copyright (c) 2016-2021 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -29,7 +29,7 @@
 
 __ariel_begin__
 
-static const float dt_tolerance = 1e-10f;
+static const float dt_tolerance = 1e-6f;
 
 static double dt_area(const vec2& a, const vec2& b, const vec2& c) { return (double)(b.x - a.x) * (double)(c.y - a.y) - (double)(b.y - a.y) * (double)(c.x - a.x); }
 static double dt_lengthsq(const vec2& q) { return (double)q.x * q.x + (double)q.y * q.y; }

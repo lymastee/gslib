@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2020 lymastee, All rights reserved.
+ * Copyright (c) 2016-2021 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -49,7 +49,7 @@ public:
     virtual ~fsys_dwrite();
     virtual void initialize() override;
     virtual void set_font(const font& f) override;
-    virtual bool get_size(const gchar* str, int& w, int& h, int len = -1) override;
+    virtual bool query_size(const gchar* str, int& w, int& h, int len = -1) override;
     virtual bool create_text_image(image& img, const gchar* str, int x, int y, const color& cr, int len = -1) override;
     virtual bool create_text_texture(texture2d** tex, const gchar* str, int margin, const color& cr, int len = -1) override;
     virtual void draw(image& img, const gchar* str, int x, int y, const color& cr, int len = -1) override;

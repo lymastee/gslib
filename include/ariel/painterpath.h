@@ -1,19 +1,19 @@
 /*
- * Copyright (c) 2016-2020 lymastee, All rights reserved.
+ * Copyright (c) 2016-2021 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -25,18 +25,78 @@
 
 #pragma once
 
-#ifndef raster_08d5e09d_ab61_4fc0_a471_389a3bd240f4_h
-#define raster_08d5e09d_ab61_4fc0_a471_389a3bd240f4_h
+#ifndef painterpath_d2d84280_c369_48f2_99f8_28652ad13baa_h
+#define painterpath_d2d84280_c369_48f2_99f8_28652ad13baa_h
 
 #include <ariel/config.h>
 #include <ariel/image.h>
-#include <ariel/painter.h>
 #include <gslib/std.h>
 
 __ariel_begin__
 
 class painter_path;
 typedef list<painter_path> painter_paths;
+
+class painter_linestrip
+{
+public:
+    typedef vector<vec2> points;
+    typedef points::iterator ptiter;
+    typedef points::const_iterator ptciter;
+
+protected:
+    bool                _closed;
+    points              _pts;
+
+public:
+    painter_linestrip();
+    ~painter_linestrip() {}
+    int get_size() const { return (int)_pts.size(); }
+    void get_bound_rect(rectf& rc) const;
+    vec2& get_point(int i) { return _pts.at(i); }
+    const vec2& get_point(int i) const { return _pts.at(i); }
+    vec2& get_last_point() { return _pts.back(); }
+    const vec2& get_last_point() const { return _pts.back(); }
+    void add_point(const vec2& pt) { _pts.push_back(pt); }
+    void clear() { _pts.clear(); }
+    void swap(painter_linestrip& another);
+    void finish();
+    void transform(const mat3& m);
+    vec2* expand(int size);
+    void expand_to(int size) { _pts.resize(size); }
+    void reverse();
+    bool is_closed() const { return _closed; }
+    void set_closed(bool c) { _closed = c; }
+    bool is_clockwise() const;
+    bool is_convex() const;
+    bool is_convex(int i) const;
+    void tracing() const;
+    void tracing_segments() const;
+
+protected:
+    enum
+    {
+        st_clockwise_mask = 1,
+        st_convex_mask = 2,
+    };
+    mutable uint        _tst_table;
+    mutable bool        _is_clock_wise;
+    mutable bool        _is_convex;
+
+protected:
+    bool is_clockwise_inited() const { return (_tst_table & st_clockwise_mask) != 0; }
+    void set_clockwise_inited() const { _tst_table |= st_clockwise_mask; }
+    bool is_convex_inited() const { return (_tst_table & st_convex_mask) != 0; }
+    void set_convex_inited() const { _tst_table |= st_convex_mask; }
+};
+
+typedef list<painter_linestrip> linestrips;
+typedef vector<painter_linestrip*> linestripvec;
+typedef linestrips painter_linestrips;
+
+/* create a random access view for linestrips */
+extern void append_linestrips_rav(linestripvec& rav, linestrips& src);
+extern void create_linestrips_rav(linestripvec& rav, linestrips& src);
 
 class painter_path
 {
@@ -129,7 +189,7 @@ protected:
 
 public:
     painter_path() {}
-    painter_path(const painter_path& path);
+    painter_path(const painter_path& path) { duplicate(path); }
     ~painter_path() { destroy(); }
     bool empty() const { return _nodelist.empty(); }
     int size() const { return (int)_nodelist.size(); }
@@ -138,7 +198,7 @@ public:
     void duplicate(const painter_path& path);
     void add_path(const painter_path& path);
     void add_rect(const rectf& rc);
-    void attach(painter_path& path);
+    void swap(painter_path& path);
     iterator begin() { return _nodelist.begin(); }
     iterator end() { return _nodelist.end(); }
     const_iterator begin() const { return _nodelist.begin(); }
@@ -260,105 +320,15 @@ struct painter_helper
 {
     enum
     {
-        merge_straight_line     = 0x01,
-        fix_loop                = 0x02,
-        fix_inflection          = 0x04,
-        reduce_straight_curve   = 0x08,
-        reduce_short_line       = 0x10,
+        merge_straight_line = 0x01,
+        fix_loop = 0x02,
+        fix_inflection = 0x04,
+        reduce_straight_curve = 0x08,
+        reduce_short_line = 0x10,
     };
 
     static void transform(painter_path& output, const painter_path& path, uint mask);
     static void close_sub_paths(painter_path& output, const painter_path& path);
-};
-
-class __gs_novtable raster abstract:
-    public painter
-{
-public:
-    typedef painter_context context;
-    typedef list<context> context_stack;
-
-public:
-    virtual ~raster() {}
-    virtual void draw_line(const vec2& p1, const vec2& p2) override
-    {
-        if(vec2().sub(p1, p2).length() < 0.001f)
-            return;
-        painter_path path;
-        path.move_to(p1);
-        path.line_to(p2);
-        draw_path(path);
-    }
-    virtual void draw_rect(const rectf& rc) override
-    {
-        if(!rc.width() || !rc.height())
-            return;
-        painter_path path;
-        path.move_to(rc.left, rc.top);
-        path.line_to(rc.left, rc.bottom);
-        path.line_to(rc.right, rc.bottom);
-        path.line_to(rc.right, rc.top);
-        path.close_path();
-        draw_path(path);
-    }
-    virtual void draw_quad(const vec2& p1, const vec2& p2, const vec2& p3) override
-    {
-        painter_path path;
-        path.move_to(p1);
-        path.quad_to(p2, p3);
-        draw_path(path);
-    }
-    virtual void draw_cubic(const vec2& p1, const vec2& p2, const vec2& p3, const vec2& p4) override
-    {
-        painter_path path;
-        path.move_to(p1);
-        path.cubic_to(p2, p3, p4);
-        draw_path(path);
-    }
-    virtual void draw_arc(const vec2& p1, const vec2& p2, float r, bool inv = false) override
-    {
-        painter_path path;
-        path.move_to(p1);
-        inv ? path.rarc_to(p2, r) : path.arc_to(p2, r);
-        draw_path(path);
-    }
-
-public:
-    raster()
-    {
-        _width = _height = 0;
-        _hints = 0;
-    }
-    void setup_dimensions(int w, int h)
-    {
-        _width = w;
-        _height = h;
-    }
-
-protected:
-    painter_context     _context;
-    context_stack       _ctxst;
-    int                 _width;
-    int                 _height;
-    uint                _hints;
-
-public:
-    virtual int get_width() const override { return _width; }
-    virtual int get_height() const override { return _height; }
-    virtual void set_dirty(dirty_list* dirty) override {}
-    virtual dirty_list* get_dirty() const override { return 0; }
-    virtual void set_hints(uint hints, bool enable) override;
-    virtual void set_brush(const painter_brush& b) override { _context.set_brush(b); }
-    virtual void set_pen(const painter_pen& p) override { _context.set_pen(p); }
-    virtual void set_tranform(const mat3& m) override { _context.set_transform(m); }
-    virtual void save() override;
-    virtual void restore() override;
-    virtual bool query_hints(uint hints) const override { return (_hints & hints) == hints; }
-    virtual context& get_context() override { return _context; }
-
-public:
-    bool query_antialias() const { return query_hints(hint_anti_alias); }
-    void get_transform_recursively(mat3& m) const;
 };
 
 __ariel_end__

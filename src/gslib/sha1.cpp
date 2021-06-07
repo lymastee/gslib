@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2020 lymastee, All rights reserved.
+ * Copyright (c) 2016-2021 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -33,6 +33,17 @@
  */
 
 __gslib_begin__
+
+sha1::sha1(const sha1& that)
+{
+    std::memmove(_digest, that.get_digest(), sizeof(_digest));
+}
+
+sha1& sha1::operator=(const sha1& that)
+{
+    std::memmove(_digest, that.get_digest(), sizeof(_digest));
+    return *this;
+}
 
 void sha1::reset()
 {
@@ -329,6 +340,24 @@ void sha1::get_string(string& str) const
         str.push_back(hexconv(r[3]>>4));
         str.push_back(hexconv(r[3]&0xf));
     }
+}
+
+bool sha1::operator==(const sha1& that) const
+{
+    return _digest[0] == that._digest[0] &&
+        _digest[1] == that._digest[1] &&
+        _digest[2] == that._digest[2] &&
+        _digest[3] == that._digest[3] &&
+        _digest[4] == that._digest[4];
+}
+
+bool sha1::operator!=(const sha1& that) const
+{
+    return _digest[0] != that._digest[0] ||
+        _digest[1] != that._digest[1] ||
+        _digest[2] != that._digest[2] ||
+        _digest[3] != that._digest[3] ||
+        _digest[4] != that._digest[4];
 }
 
 __gslib_end__

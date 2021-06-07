@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2019 lymastee, All rights reserved.
+ * Copyright (c) 2016-2020 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -105,7 +105,6 @@ void ui_transparent_layer::install_reflection_widget(core_widget* refw)
     connect_reflect(refw, &core_widget::on_caret, this, &ui_transparent_layer::on_reflection_caret);
     connect_reflect(refw, &core_widget::on_capture, this, &ui_transparent_layer::on_reflection_capture);
     connect_reflect(refw, &core_widget::on_focus, this, &ui_transparent_layer::on_reflection_focus);
-    connect_reflect(refw, &core_widget::on_scroll, this, &ui_transparent_layer::on_reflection_scroll);
     connect_reflect(refw, &core_widget::on_accelerator, this, &ui_transparent_layer::on_reflection_accelerator);
     /* initially synchronize the size */
     sync_size_with_reflection();

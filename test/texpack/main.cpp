@@ -44,7 +44,7 @@ static void make_random_image(fontsys* fsys, image& img)
         bkcr(mtrand() % 255, mtrand() % 255, mtrand() % 255);
     /* create image */
     int w, h;
-    fsys->get_size(s.c_str(), w, h);
+    fsys->query_size(s.c_str(), w, h);
     img.create(image::fmt_rgba, w, h);
     img.enable_alpha_channel(false);
     img.clear(bkcr);
@@ -81,7 +81,7 @@ int gs_main()
 #ifdef _GS_BATCH_IMAGE
         batcher.add_image(&img);
 #else
-        auto* tex = rsys->create_texture2d(img, 1, D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0);
+        auto* tex = rsys->create_texture2d(img, 1, D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0, 0);
         assert(tex);
         batcher.add_texture(tex);
 #endif

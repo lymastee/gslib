@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2020 lymastee, All rights reserved.
+ * Copyright (c) 2016-2021 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -24,7 +24,7 @@
  */
 
 #include <ariel/classicstyle.h>
-#include <ariel/raster.h>
+#include <ariel/painterpath.h>
 #include <ariel/scene.h>
 #include <ariel/rendersys.h>
 #include <ariel/textureop.h>
@@ -1270,7 +1270,9 @@ void widget::draw(painter* paint)
         paint->set_brush(_disable_brush);
         paint->set_pen(_disable_pen);
     }
-    paint->draw_rect(get_rectf());
+    auto rc = get_rectf();
+    rc.move_to(0.f, 0.f);
+    paint->draw_rect(rc);
 }
 
 void widget::flush_style()
@@ -1319,7 +1321,9 @@ void placeholder::draw(painter* paint)
     assert(paint);
     paint->set_brush(_normal_brush);
     paint->set_pen(_normal_pen);
-    paint->draw_rect(get_rectf());
+    auto rc = get_rectf();
+    rc.move_to(0.f, 0.f);
+    paint->draw_rect(rc);
     paint->set_font(_remark_font);
     if(!_remark.empty())
         paint->draw_text(_remark.c_str(), 0, 0, _remark_font_color, _remark.length());
@@ -1362,7 +1366,7 @@ void button::draw(painter* paint)
     if(!_caption.empty()) {
         paint->set_font(_caption_font);
         paint->get_text_dimension(_caption.c_str(), w, h);
-        paint->draw_text(_caption.c_str(), (get_width() - w) / 2, (get_height() - h) / 2, _caption_font_color, _caption.length());
+        paint->draw_text(_caption.c_str(), (float)(get_width() - w) / 2.f, (float)(get_height() - h) / 2.f, _caption_font_color, _caption.length());
     }
 }
 
@@ -1446,7 +1450,9 @@ void edit_line::draw_background(painter* paint)
         paint->set_brush(_normal_brush);
         paint->set_pen(_normal_pen);
     }
-    paint->draw_rect(get_rectf());
+    auto rc = get_rectf();
+    rc.move_to(0.f, 0.f);
+    paint->draw_rect(rc);
     paint->restore();
 }
 
@@ -1763,7 +1769,7 @@ scrollbar::scrollbar(wsys_manager* m):
     _scroller = nullptr;
     _inc_button = _dec_button = nullptr;
     _scroll_pace = 2;
-    _canvas_range = 1;
+    _scrollarea_range = 1;
     _scroll_ratio = 0.f;
     _min_width = _min_height = 0;
     _hori_margin = _vert_margin = 1;
@@ -1819,10 +1825,10 @@ void scrollbar::on_dec_button_clicked(uint um, unikey uk, const point& pt)
     scroll_by(-_scroll_pace);
 }
 
-void scrollbar::set_canvas_range(int range)
+void scrollbar::set_scrollarea_range(int range)
 {
-    if(_canvas_range != range) {
-        _canvas_range = range;
+    if(_scrollarea_range != range) {
+        _scrollarea_range = range;
         layout_scrollbar();
     }
 }
@@ -1865,7 +1871,7 @@ void horizontal_scrollbar::initialize_scrollbar(int range)
     _inc_button->set_button_type(scroll_button::btn_right);
     _inc_button->flush_style();
     connect_scrollbar_notifications();
-    _canvas_range = range;
+    _scrollarea_range = range;
     layout_scrollbar();
 }
 
@@ -1877,7 +1883,7 @@ void horizontal_scrollbar::adjust_scrollbar()
     float scroll_range = (float)calc_scroll_range();
     assert(scroll_range >= 0.f);
     float view_range = (float)get_width();
-    float scroller_width_ratio = gs_min(1.f, view_range / (float)_canvas_range);
+    float scroller_width_ratio = gs_min(1.f, view_range / (float)_scrollarea_range);
     int scroller_width = round(scroller_width_ratio * scroll_range) - _hori_margin * 2;
     int scroller_height = calc_scroll_button_height();
     _scroller->move(rect(_hori_margin, _vert_margin, scroller_width, scroller_height));
@@ -1966,7 +1972,7 @@ void vertical_scrollbar::initialize_scrollbar(int range)
     _inc_button->set_button_type(scroll_button::btn_down);
     _inc_button->flush_style();
     connect_scrollbar_notifications();
-    _canvas_range = range;
+    _scrollarea_range = range;
     layout_scrollbar();
 }
 
@@ -1978,7 +1984,7 @@ void vertical_scrollbar::adjust_scrollbar()
     float scroll_range = (float)calc_scroll_range();
     assert(scroll_range >= 0.f);
     float view_range = (float)get_height();
-    float scroller_height_ratio = gs_min(1.f, view_range / (float)_canvas_range);
+    float scroller_height_ratio = gs_min(1.f, view_range / (float)_scrollarea_range);
     int scroller_width = calc_scroll_button_width();
     int scroller_height = round(scroller_height_ratio * scroll_range) - _vert_margin * 2;
     _scroller->move(rect(_hori_margin, _vert_margin, scroller_width, scroller_height));
@@ -2046,30 +2052,14 @@ void vertical_scrollbar::refresh_scroller_pos()
     _scroller->move(point(_hori_margin, scroll_start + pos));
 }
 
-class raw_tree_view
-{
-public:
-    raw_tree_view(tree_view* ptv)
-    {
-        _view = ptv;
-    }
-
-private:
-    tree_view*          _view;
-};
-
 tree_view::tree_view(wsys_manager* m):
-    ariel::widget(m)
+    ariel::widget(m), _hori_scrollbar(nullptr), _vert_scrollbar(nullptr)
 {
-    _raw_view = new raw_tree_view(this);
+    _scrollbar_width = 12;
 }
 
 tree_view::~tree_view()
 {
-    if(_raw_view) {
-        delete _raw_view;
-        _raw_view = nullptr;
-    }
 }
 
 void* tree_view::query_interface(const uuid& uid)
@@ -2079,8 +2069,55 @@ void* tree_view::query_interface(const uuid& uid)
     return __super::query_interface(uid);
 }
 
+bool tree_view::create(widget* ptr, const gchar* name, const rect& rc, uint style)
+{
+    bool r = __super::create(ptr, name, rc, style);
+    _hori_scrollbar = _manager->add_widget<horizontal_scrollbar>(this, nullptr, rect(), sm_visible | sm_hitable);
+    _vert_scrollbar = _manager->add_widget<vertical_scrollbar>(this, nullptr, rect(), sm_visible | sm_hitable);
+    assert(_hori_scrollbar && _vert_scrollbar);
+    _hori_scrollbar->initialize_scrollbar(rc.width());
+    _vert_scrollbar->initialize_scrollbar(rc.height());
+    connect_notify(_hori_scrollbar, &horizontal_scrollbar::adjust_scrollbar, this, &tree_view::on_adjust_horizontal_scrollbar, 0);
+    connect_notify(_vert_scrollbar, &vertical_scrollbar::adjust_scrollbar, this, &tree_view::on_adjust_vertical_scrollbar, 0);
+    return r;
+}
+
+void tree_view::move(const rect& rc)
+{
+    int w = get_width();
+    int h = get_height();
+    __super::move(rc);
+    if(w != rc.width() || h != rc.height())
+        refresh_tree_view();
+}
+
 void tree_view::draw(painter* paint)
 {
+    painter_objs objs;
+    auto rc = get_rectf();
+    //rc.move_to();
+    _paintport.query_objs(objs, rc);
+    __asm nop;
+}
+
+void tree_view::refresh_tree_view()
+{
+    int w = get_width();
+    int h = get_height();
+    assert(_hori_scrollbar && _vert_scrollbar);
+    _hori_scrollbar->move(rect(0, h - _scrollbar_width, w - _scrollbar_width, _scrollbar_width));
+    _vert_scrollbar->move(rect(w - _scrollbar_width, 0, _scrollbar_width, h - _scrollbar_width));
+    refresh(false);
+}
+
+void tree_view::on_adjust_horizontal_scrollbar()
+{
+    refresh(false);
+}
+
+void tree_view::on_adjust_vertical_scrollbar()
+{
+    refresh(false);
 }
 
 void* menu_separator::query_interface(const uuid& uid)
@@ -2141,7 +2178,7 @@ void menu_sub_item::draw(painter* paint)
     float x, y;
     x = iconw + _menu->_text_horizontal_margin;
     y = ((float)get_height() - h) * 0.5f;
-    paint->draw_text(_caption.c_str(), round(x), round(y), _menu->_caption_font_color, _caption.length());
+    paint->draw_text(_caption.c_str(), x, y, _menu->_caption_font_color, _caption.length());
     /* draw arrow */
     const int arrow_width = 4, arrow_height = 6;
     x = (float)get_width() - arrow_width - _menu->_text_horizontal_margin;
@@ -2206,7 +2243,7 @@ static void retrieve_text_dimensions(const font& ft, const string& str, int& w, 
     auto* fsys = scene::get_singleton_ptr()->get_fontsys();
     assert(fsys);
     fsys->set_font(ft);
-    fsys->get_size(str.c_str(), w, h, str.length());
+    fsys->query_size(str.c_str(), w, h, str.length());
 }
 
 void menu_sub_item::get_caption_dimensions(int& w, int& h) const
@@ -2248,7 +2285,7 @@ void menu_cmd_item::draw(painter* paint)
     float x, y;
     x = (float)(parent->_icon_width + _menu->_text_horizontal_margin);
     y = ((float)get_height() - h) * 0.5f;
-    paint->draw_text(_caption.c_str(), round(x), round(y), _menu->_caption_font_color, _caption.length());
+    paint->draw_text(_caption.c_str(), x, y, _menu->_caption_font_color, _caption.length());
     /* draw accel text */
     if(!_accel_key.is_valid())
         return;
@@ -2256,7 +2293,7 @@ void menu_cmd_item::draw(painter* paint)
     _accel_key.to_string(str);
     paint->get_text_dimension(str.c_str(), w, h, str.length());
     x = (float)(parent->_icon_width + parent->_caption_text_width + _menu->_text_horizontal_margin);
-    paint->draw_text(str.c_str(), round(x), round(y), _menu->_caption_font_color, str.length());
+    paint->draw_text(str.c_str(), x, y, _menu->_caption_font_color, str.length());
 }
 
 void menu_cmd_item::on_press(uint um, unikey uk, const point& pt)

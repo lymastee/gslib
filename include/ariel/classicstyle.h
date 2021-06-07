@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2020 lymastee, All rights reserved.
+ * Copyright (c) 2016-2021 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -30,6 +30,7 @@
 
 #include <ariel/widget.h>
 #include <ariel/style.h>
+#include <ariel/painterport.h>
 #include <ariel/classicstyle/slider_service.h>
 
 /*
@@ -504,7 +505,7 @@ public:
     virtual void on_scrollbar_size_changed();
     virtual void on_inc_button_clicked(uint um, unikey uk, const point& pt);
     virtual void on_dec_button_clicked(uint um, unikey uk, const point& pt);
-    virtual void set_canvas_range(int range);
+    virtual void set_scrollarea_range(int range);
     virtual void set_scroll_ratio(float t);
     virtual void adjust_scrollbar() = 0;
     /*
@@ -520,7 +521,7 @@ public:
     void set_scrollbar_min_height(int h) { _min_height = h; }
     int get_scrollbar_min_width() const { return _min_width; }
     int get_scrollbar_min_height() const { return _min_height; }
-    int get_canvas_range() const { return _canvas_range; }
+    int get_scrollarea_range() const { return _scrollarea_range; }
     float get_scroll_ratio() const { return _scroll_ratio; }
     void set_scroll_pace(int pace) { _scroll_pace = pace; }
     int get_scroll_pace() const { return _scroll_pace; }
@@ -530,7 +531,7 @@ protected:
     scroll_button*      _inc_button;
     scroll_button*      _dec_button;
     int                 _scroll_pace;
-    int                 _canvas_range;
+    int                 _scrollarea_range;
     float               _scroll_ratio;
     int                 _min_width;
     int                 _min_height;
@@ -584,19 +585,27 @@ class tree_view:
     public tree_view_style_sheet
 {
 public:
-    friend class raw_tree_view;
-
-public:
     tree_view(wsys_manager* m);
     virtual ~tree_view();
     virtual void* query_interface(const uuid& uid) override;
+    virtual bool create(widget* ptr, const gchar* name, const rect& rc, uint style) override;
+    virtual void move(const rect& rc) override;
     virtual void draw(painter* paint) override;
+    virtual void refresh_tree_view();
+    virtual void on_adjust_horizontal_scrollbar();
+    virtual void on_adjust_vertical_scrollbar();
 
 protected:
-    raw_tree_view*      _raw_view;
-    //ariel::scroller*    _;
+    horizontal_scrollbar* _hori_scrollbar;
+    vertical_scrollbar* _vert_scrollbar;
+    painterport         _paintport;
     painter_brush       _view_brush;
     painter_pen         _view_pen;
+    int                 _scrollbar_width;
+
+public:
+    void set_scrollbar_width(int w) { _scrollbar_width = w; }
+    int get_scrollbar_width() const { return _scrollbar_width; }
 };
 
 class menu;

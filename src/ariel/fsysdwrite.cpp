@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2020 lymastee, All rights reserved.
+ * Copyright (c) 2016-2021 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -111,7 +111,7 @@ void fsys_dwrite::set_font(const font& ft)
     _font_map.emplace(ft, spformat.detach());
 }
 
-bool fsys_dwrite::get_size(const gchar* str, int& w, int& h, int len)
+bool fsys_dwrite::query_size(const gchar* str, int& w, int& h, int len)
 {
     if(!str) {
         w = 0, h = 0;
@@ -149,7 +149,7 @@ bool fsys_dwrite::create_text_texture(texture2d** tex, const gchar* str, int mar
     if(len < 0)
         len = strtool::length(str);
     int w, h;
-    get_size(str, w, h, len);
+    query_size(str, w, h, len);
     w += (margin * 2);
     h += (margin * 2);
     D3D11_TEXTURE2D_DESC stdesc;

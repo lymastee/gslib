@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2020 lymastee, All rights reserved.
+ * Copyright (c) 2016-2021 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -648,7 +648,7 @@ void edit_line::set_caret(int n)
     assert(pfs);
     int w, h;
     pfs->set_font(_font);
-    pfs->get_size(s.c_str(), w, h, s.length());
+    pfs->query_size(s.c_str(), w, h, s.length());
     _manager->set_ime(this, point(w, 0), _font);
     refresh(false);
 }
@@ -706,11 +706,11 @@ void edit_line::draw_normal_text(painter* paint)
             return;
         paint->set_font(_font);
         if(start > 0)
-            paint->draw_text(_textbuf.c_str(), 0, 0, _txtcolor, start);
+            paint->draw_text(_textbuf.c_str(), 0.f, 0.f, _txtcolor, start);
         if(end < _textbuf.length()) {
             int w, h;
             paint->get_text_dimension(_textbuf.c_str(), w, h, end);
-            paint->draw_text(_textbuf.c_str() + end, w, 0, _txtcolor, _textbuf.length() - end);
+            paint->draw_text(_textbuf.c_str() + end, (float)w, 0.f, _txtcolor, _textbuf.length() - end);
         }
     }
 }
@@ -740,7 +740,7 @@ void edit_line::draw_select_text(painter* paint)
     int w, h;
     paint->get_text_dimension(_textbuf.c_str() + start, w, h, end - start);
     paint->draw_rect(rectf((float)bias, 0.f, (float)w, (float)h), _selcolor);
-    paint->draw_text(_textbuf.c_str() + start, bias, 0, color(255, 255, 255), end - start);
+    paint->draw_text(_textbuf.c_str() + start, (float)bias, 0.f, color(255, 255, 255), end - start);
 }
 
 void edit_line::draw_caret(painter* paint)
@@ -785,7 +785,7 @@ int edit_line::hit_char(point pt)
     assert(pfs);
     int w, h, fixc;
     pfs->set_font(_font);
-    pfs->get_size(_t("a"), w, h);
+    pfs->query_size(_t("a"), w, h);
     fixc = pt.x / w;
     if(fixc > _textbuf.length())
         fixc = _textbuf.length();
@@ -797,7 +797,7 @@ int edit_line::hit_char(point pt)
 #endif
     string s;
     s.assign(_textbuf.c_str(), fixc);
-    pfs->get_size(s.c_str(), w, h, s.length());
+    pfs->query_size(s.c_str(), w, h, s.length());
     if(pt.x > w) {
         for(fixc ++; fixc <= _textbuf.length(); fixc ++) {
             s.push_back(_textbuf.at(fixc - 1));
@@ -805,7 +805,7 @@ int edit_line::hit_char(point pt)
             if(_textbuf.at(fixc - 1) & 0x80)
                 s.push_back(_textbuf.at(fixc ++));
 #endif
-            pfs->get_size(s.c_str(), w, h, s.length());
+            pfs->query_size(s.c_str(), w, h, s.length());
             if(pt.x < w)
                 break;
         }
@@ -829,7 +829,7 @@ int edit_line::hit_char(point pt)
 #else
             s.pop_back();
 #endif
-            pfs->get_size(s.c_str(), w, h, s.length());
+            pfs->query_size(s.c_str(), w, h, s.length());
             if(pt.x >= w)
                 break;
         }
@@ -943,7 +943,7 @@ int edit_line::trim_if_overrun(bool alarm)
     int c = len;
     for( ; c > 0; c --) {
         int w, h;
-        fsys->get_size(_textbuf.c_str(), w, h, c);
+        fsys->query_size(_textbuf.c_str(), w, h, c);
         if(w <= get_width())
             break;
     }

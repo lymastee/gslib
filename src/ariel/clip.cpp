@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2020 lymastee, All rights reserved.
+ * Copyright (c) 2016-2021 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -849,6 +849,7 @@ void clip_sweep_line_algorithm::output(clip_result& result)
 //             return;
 //         w->get_ptr()->tracing();
 //     });
+
     assert(_splitters.empty());
     create_splitters();
     replace_curves(result);
@@ -1677,10 +1678,16 @@ void clip_sweep_line_algorithm::output_exclude(clip_result& result)
 
 void clip_sweep_line_algorithm::output_union(clip_result& result)
 {
+    assert(!_sweep_lines.empty());
+    clip_path_router_union path_router(result);
+    path_router.proceed(_sweep_lines);
 }
 
 void clip_sweep_line_algorithm::output_intersect(clip_result& result)
 {
+    assert(!_sweep_lines.empty());
+    clip_path_router_intersect path_router(result);
+    path_router.proceed(_sweep_lines);
 }
 
 void clip_sweep_line_algorithm::destroy_splitters()
@@ -2208,8 +2215,6 @@ void clip_sweep_line_algorithm::replace_curve(clip_polygon& poly, clip_joint*& s
         poly.create_line(c2, fj2);
     }
 }
-
-//////////////////////////////////////////////////////////////////////////
 
 void clip_path_router::trace_route_nodes() const
 {
@@ -3254,45 +3259,35 @@ void clip_path_router_exclude::finish_proceed_sub_patches(iterator p)
     }
 }
 
-//////////////////////////////////////////////////////////////////////////
-
-void clip_test(const painter_path& path)
+clip_path_router_union::clip_path_router_union(clip_result& result):
+    clip_path_router(result)
 {
-//     painter_path prepare;
-//     painter_helper::close_sub_paths(prepare, path);
-//     clip_polygons polygons;
-//     clip_create_polygons(polygons, prepare);
-//     for(auto* p : polygons) {
-//         assert(p);
-//         p->trace_segments();
-//     }
-//     for(auto* p : polygons) {
-//         clip_sweep_line_algorithm sla;
-//         sla.add_polygon(p);
-//         sla.proceed();
-//         //sla.tracing();
-//         sla.trace_intersections();
-//         //sla.trace_cells();
-//         
-//         clip_result result;
-//         sla.output(result);
-// 
-//         trace(_t("@!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"));
-//         result.for_each([](clip_polygon* poly) {
-//             assert(poly && !poly->is_patch());
-//             poly->trace_final();
-//         });
-// 
-//         __asm nop;
-//     }
+}
 
-    clip_polygons polys;
-    clip_result result;
-    painter_path output;
-    clip_create_polygons(polys, path);
-    clip_exclude(result, polys);
-    clip_compile_path(output, result);
-    output.tracing();
+void clip_path_router_union::proceed(clip_sweep_lines& sweeplines)
+{
+    assert(!_result.is_valid());
+    auto r = _result.birth<clip_polygon>(clip_result_iter(nullptr));
+    assert(r);
+    assert(sweeplines.size() >= 2);
+    auto i = sweeplines.begin();
+    auto j = std::next(i);
+    auto end = sweeplines.end();
+    for(; j != end; i = j ++)
+        proceed(*i, *j);
+}
+
+void clip_path_router_union::proceed(clip_sweep_line* line1, clip_sweep_line* line2)
+{
+}
+
+clip_path_router_intersect::clip_path_router_intersect(clip_result& result):
+    clip_path_router(result)
+{
+}
+
+void clip_path_router_intersect::proceed(clip_sweep_lines& sweeplines)
+{
 }
 
 void clip_create_polygons(clip_polygons& polygons, const painter_path& path)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2020 lymastee, All rights reserved.
+ * Copyright (c) 2016-2021 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -58,7 +58,7 @@ static void connect_edge(clip_edge* last_edge, clip_edge* edge)
     auto* last_symm = last_edge->get_symmetric();
     auto* symm = edge->get_symmetric();
     assert(last_symm && symm);
-    assert(last_edge->get_dest() == edge->get_org());
+    assert(fuzz_cmp(last_edge->get_dest(), edge->get_org()) < 1e-3f);
     last_edge->set_next(edge);
     edge->set_prev(last_edge);
     symm->set_next(last_symm);
@@ -68,7 +68,7 @@ static void connect_edge(clip_edge* last_edge, clip_edge* edge)
 static void disconnect_edge(clip_edge* edge0, clip_edge* edge1)
 {
     assert(edge0 && edge1);
-    assert(edge0->get_dest() == edge1->get_org());
+    assert(fuzz_cmp(edge0->get_dest(), edge1->get_org()) < 1e-3f);
     auto* symm0 = edge0->get_symmetric();
     auto* symm1 = edge1->get_symmetric();
     assert(symm0 && symm1);
@@ -87,10 +87,15 @@ static inline float tolerance_correct(float f)
     return f;
 }
 
-static inline bool is_fuzzy_neighbourhood(float t, float s)
+static inline bool is_fuzzy_neighbour(float t, float s)
 {
     return (fuzzy_zero(t) && fuzzy_zero(s - 1.f)) ||
         (fuzzy_zero(t - 1.f) && fuzzy_zero(s));
+}
+
+static inline bool is_fuzzy_neighbour(const vec2& p1, const vec2& p2)
+{
+    return fuzz_cmp(p1, p2) < 0.5f;
 }
 
 static inline bool clip_edge_ahead_of(const clip_edge& e1, const clip_edge& e2)
@@ -176,7 +181,7 @@ static void query_intersection_infos(clip_intersection_list& ci, const vec2& p0,
                 t1 = tolerance_correct(t1);
                 t2 = tolerance_correct(t2);
                 if(t1 >= 0.f && t1 <= 1.f && t2 >= 0.f && t2 <= 1.f) {
-                    if(!is_fuzzy_neighbourhood(t1, t2))
+                    if(!is_fuzzy_neighbour(t1, t2))
                         ci.push_back(clip_intersection_info(p, e, t1, t2));
                 }
                 break;
@@ -193,7 +198,11 @@ static void query_intersection_infos(clip_intersection_list& ci, const vec2& p0,
                     eval_quad(p, para, t2);
                     float t1 = linear_reparameterize(p0, p1, p);
                     t1 = tolerance_correct(t1);
-                    if(!is_fuzzy_neighbourhood(t1, t2))
+                    if(!is_fuzzy_neighbour(p, p0) &&
+                        !is_fuzzy_neighbour(p, p1) &&
+                        !is_fuzzy_neighbour(p, sef->get_begin_point()) &&
+                        !is_fuzzy_neighbour(p, sef->get_end_point())
+                        )
                         ci.push_back(clip_intersection_info(p, e, t1, t2));
                 }
                 break;
@@ -210,7 +219,11 @@ static void query_intersection_infos(clip_intersection_list& ci, const vec2& p0,
                     eval_cubic(p, para, t2);
                     float t1 = linear_reparameterize(p0, p1, p);
                     t1 = tolerance_correct(t1);
-                    if(!is_fuzzy_neighbourhood(t1, t2))
+                    if(!is_fuzzy_neighbour(p, p0) &&
+                        !is_fuzzy_neighbour(p, p1) &&
+                        !is_fuzzy_neighbour(p, sef->get_begin_point()) &&
+                        !is_fuzzy_neighbour(p, sef->get_end_point())
+                        )
                         ci.push_back(clip_intersection_info(p, e, t1, t2));
                 }
                 break;
@@ -252,7 +265,11 @@ static void query_intersection_infos(clip_intersection_list& ci, const vec2& p0,
                     eval_quad(p, para, t1);
                     float t2 = linear_reparameterize(sef->get_begin_point(), sef->get_end_point(), p);
                     t2 = tolerance_correct(t2);
-                    if(!is_fuzzy_neighbourhood(t1, t2))
+                    if(!is_fuzzy_neighbour(p, p0) &&
+                        !is_fuzzy_neighbour(p, p1) &&
+                        !is_fuzzy_neighbour(p, sef->get_begin_point()) &&
+                        !is_fuzzy_neighbour(p, sef->get_end_point())
+                        )
                         ci.push_back(clip_intersection_info(p, e, t1, t2));
                 }
                 break;
@@ -268,7 +285,11 @@ static void query_intersection_infos(clip_intersection_list& ci, const vec2& p0,
                     eval_quad(p, para, t[i][0]);
                     float t1 = gs_max(gs_min(t[i][0], 1.f), 0.f);
                     float t2 = gs_max(gs_min(t[i][1], 1.f), 0.f);
-                    if(!is_fuzzy_neighbourhood(t1, t2))
+                    if(!is_fuzzy_neighbour(p, p0) &&
+                        !is_fuzzy_neighbour(p, p1) &&
+                        !is_fuzzy_neighbour(p, sef->get_begin_point()) &&
+                        !is_fuzzy_neighbour(p, sef->get_end_point())
+                        )
                         ci.push_back(clip_intersection_info(p, e, t1, t2));
                 }
                 break;
@@ -281,11 +302,15 @@ static void query_intersection_infos(clip_intersection_list& ci, const vec2& p0,
                 vec2 p[6];
                 int c = intersectp_cubic_quad(p, cp2, cp, 0.2f);
                 for(int i = 0; i < c; i ++) {
-                    float t1 = quad_reparameterize(para, p[0]);
-                    float t2 = cubic_reparameterize(para2, p[0]);
+                    float t1 = quad_reparameterize(para, p[i]);
+                    float t2 = cubic_reparameterize(para2, p[i]);
                     t1 = gs_max(gs_min(t1, 1.f), 0.f);
                     t2 = gs_max(gs_min(t2, 1.f), 0.f);
-                    if(!is_fuzzy_neighbourhood(t1, t2))
+                    if(!is_fuzzy_neighbour(p[i], p0) &&
+                        !is_fuzzy_neighbour(p[i], p1) &&
+                        !is_fuzzy_neighbour(p[i], sef->get_begin_point()) &&
+                        !is_fuzzy_neighbour(p[i], sef->get_end_point())
+                        )
                         ci.push_back(clip_intersection_info(p[i], e, t1, t2));
                 }
                 break;
@@ -327,7 +352,11 @@ static void query_intersection_infos(clip_intersection_list& ci, const vec2& p0,
                     eval_cubic(p, para, t1);
                     float t2 = linear_reparameterize(sef->get_begin_point(), sef->get_end_point(), p);
                     t2 = tolerance_correct(t2);
-                    if(!is_fuzzy_neighbourhood(t1, t2))
+                    if(!is_fuzzy_neighbour(p, p0) &&
+                        !is_fuzzy_neighbour(p, p1) &&
+                        !is_fuzzy_neighbour(p, sef->get_begin_point()) &&
+                        !is_fuzzy_neighbour(p, sef->get_end_point())
+                        )
                         ci.push_back(clip_intersection_info(p, e, t1, t2));
                 }
                 break;
@@ -344,7 +373,11 @@ static void query_intersection_infos(clip_intersection_list& ci, const vec2& p0,
                     float t2 = quad_reparameterize(para2, p[i]);
                     t1 = gs_max(gs_min(t1, 1.f), 0.f);
                     t2 = gs_max(gs_min(t2, 1.f), 0.f);
-                    if(!is_fuzzy_neighbourhood(t1, t2))
+                    if(!is_fuzzy_neighbour(p[i], p0) &&
+                        !is_fuzzy_neighbour(p[i], p1) &&
+                        !is_fuzzy_neighbour(p[i], sef->get_begin_point()) &&
+                        !is_fuzzy_neighbour(p[i], sef->get_end_point())
+                        )
                         ci.push_back(clip_intersection_info(p[i], e, t1, t2));
                 }
                 break;
@@ -361,7 +394,11 @@ static void query_intersection_infos(clip_intersection_list& ci, const vec2& p0,
                     float t2 = cubic_reparameterize(para2, p[i]);
                     t1 = gs_max(gs_min(t1, 1.f), 0.f);
                     t2 = gs_max(gs_min(t2, 1.f), 0.f);
-                    if(!is_fuzzy_neighbourhood(t1, t2))
+                    if(!is_fuzzy_neighbour(p[i], p0) &&
+                        !is_fuzzy_neighbour(p[i], p1) &&
+                        !is_fuzzy_neighbour(p[i], sef->get_begin_point()) &&
+                        !is_fuzzy_neighbour(p[i], sef->get_end_point())
+                        )
                         ci.push_back(clip_intersection_info(p[i], e, t1, t2));
                 }
                 break;
@@ -391,8 +428,19 @@ public:
         size_t operator()(const ep_map_key& k) const { return hash_bytes((const byte*)&k, 5); }
     };
 
+    struct ep_strip_node
+    {
+        clip_strip*     strip = nullptr;
+        clip_intersection_info* ep = nullptr;
+
+    public:
+        ep_strip_node() {}
+        ep_strip_node(clip_strip* s, clip_intersection_info* i) { strip = s, ep = i; }
+    };
+
     typedef unordered_map<ep_map_key, clip_edge*, ep_map_hasher> ep_map;
     typedef unordered_multimap<clip_edge*, clip_intersection_info*> edge_ips_map;
+    typedef map<int, ep_strip_node> ep_strip_map;
 
 protected:
     clipper&            _clipper;
@@ -401,50 +449,38 @@ public:
     clip_proc_intersections(clipper& c): _clipper(c)
     {
     }
-//     void proc_line_phase1(clip_strip* strip, ep_map& epm, clip_intersection_list& cil, clip_intersection_list::iterator i, clip_intersection_list::iterator j)
-//     {
-//         assert(strip);
-//         assert(std::next(i) == j && j != cil.end());
-//         assert(i->serial_id + 1 == j->serial_id);
-//         auto* clip0 = _clipper.add_line_edge(j->pt, i->pt);
-//         strip->push_front(clip0);
-//         auto* subject0 = find_subject_edge_negative(epm, &*j);
-//         auto* subject1 = find_subject_edge_positive(epm, &*j);
-//         assert(subject0 && subject1);
-//         
-//     }
-//     void proc_line_phase2(clip_strip* strip, clip_intersection_list& cil, ep_map& emp, clip_strip* last_strip, clip_intersection_list::iterator i, clip_intersection_list::iterator j)
-//     {
-//         assert(strip && last_strip);
-//         assert(std::next(i) == j && j != cil.end());
-//     }
     int proc_line(clip_strip* strip, clip_intersection_list& cil, int eid, const vec2& p0, const vec2& p1)
     {
         assert(!cil.empty());
         ep_map subjects_epm, clip_epm;
         build_epm_subjects(subjects_epm, cil);
-
-        strip->tracing();
-
         auto* next = build_epm_clip_line(clip_epm, cil, strip, eid, p0, p1);
         assert(next);
-
-        strip->tracing();
-        // todo: 重新组织strips.
-        // 
+        reorganize_strips(strip, cil, subjects_epm, clip_epm);
         int nextid = next->get_ids().front();
         return ++ nextid;
     }
     int proc_quad(clip_strip* strip, clip_intersection_list& cil, int eid, const vec2& p0, const vec2& p1, const vec2& p2)
     {
         assert(!cil.empty());
-        ep_map epm;
-        build_epm_subjects(epm, cil);
-        return ++ eid;
+        ep_map subjects_epm, clip_epm;
+        build_epm_subjects(subjects_epm, cil);
+        auto* next = build_epm_clip_quad(clip_epm, cil, strip, eid, p0, p1, p2);
+        assert(next);
+        reorganize_strips(strip, cil, subjects_epm, clip_epm);
+        int nextid = next->get_ids().front();
+        return ++ nextid;
     }
     int proc_cubic(clip_strip* strip, clip_intersection_list& cil, int eid, const vec2& p0, const vec2& p1, const vec2& p2, const vec2& p3)
     {
-        return ++ eid;
+        assert(!cil.empty());
+        ep_map subjects_epm, clip_epm;
+        build_epm_subjects(subjects_epm, cil);
+        auto* next = build_epm_clip_cubic(clip_epm, cil, strip, eid, p0, p1, p2, p3);
+        assert(next);
+        reorganize_strips(strip, cil, subjects_epm, clip_epm);
+        int nextid = next->get_ids().front();
+        return ++ nextid;
     }
     clip_strip* add_coarse_strip()
     {
@@ -580,7 +616,83 @@ public:
         epm.emplace(ep_map_key(&*i, true), e);
         return e;
     }
-    void replace_head(clip_edge* o, clip_edge* n)
+    void reorganize_strips(clip_strip* strip, clip_intersection_list& cil, ep_map& subject_epm, ep_map& clip_epm)
+    {
+        assert(strip);
+        if(cil.empty())
+            return;
+        auto i = cil.rbegin();
+        assert(i != cil.rend());
+        auto* first_strip = add_coarse_strip();
+        assert(first_strip);
+        split_strip(strip, first_strip, &*i, subject_epm, clip_epm);
+        if(cil.size() == 1) {
+            first_strip->close_finish();
+            return;
+        }
+        ep_strip_map esm;
+        esm.emplace(i->serial_id, ep_strip_node(first_strip, &*i));
+        reorganize_strips(first_strip, esm, cil, std::next(i), subject_epm, clip_epm);
+    }
+    void reorganize_strips(clip_strip* last_strip, ep_strip_map& esm, clip_intersection_list& cil, const clip_intersection_list::reverse_iterator& i, ep_map& epm1, ep_map& epm2)
+    {
+        auto j = std::next(i);
+        if(j == cil.rend()) {    /* close all */
+            if(esm.size() == 1) {
+                assert(last_strip == esm.begin()->second.strip);
+                auto* next_strip = add_coarse_strip();
+                assert(next_strip);
+                split_strip(last_strip, next_strip, &*i, epm1, epm2);
+                next_strip->close_finish();
+            }
+            else {
+                assert(esm.size() == 2);
+                clip_strip* other_strip = nullptr;
+                auto* strip1 = esm.begin()->second.strip;
+                if(strip1 == last_strip)
+                    other_strip = (++esm.begin())->second.strip;
+                else {
+                    assert(last_strip == (++esm.begin())->second.strip);
+                    other_strip = strip1;
+                }
+                assert(other_strip);
+                split_strip(last_strip, other_strip, &*i, epm1, epm2);
+                other_strip->close_finish();
+            }
+            return;
+        }
+        auto* next_strip = add_coarse_strip();
+        assert(next_strip);
+        split_strip(last_strip, next_strip, &*j, epm1, epm2);
+        auto f = esm.find(j->serial_id - 1);
+        if(f != esm.end()) {
+            f->second.strip->close_finish();
+            esm.erase(f);
+        }
+        esm.emplace(j->serial_id, ep_strip_node(next_strip, &*j));
+        reorganize_strips(next_strip, esm, cil, j, epm2, epm1);
+    }
+    static void split_strip(clip_strip* strip1, clip_strip* strip2, clip_intersection_info* info, ep_map& epm1, ep_map& epm2)
+    {
+        assert(strip1 && strip2 && info);
+        auto* closing_tail = epm2.find(ep_map_key(info, true))->second;
+        auto* closing_front = epm1.find(ep_map_key(info, false))->second;
+        auto* opening_front = epm2.find(ep_map_key(info, false))->second;
+        auto* opening_tail = epm1.find(ep_map_key(info, true))->second;
+
+        closing_front->tracing();
+        closing_tail->tracing();
+        opening_front->tracing();
+        opening_tail->tracing();
+
+        connect_edge(closing_front, closing_tail);
+        connect_edge(opening_front, opening_tail);
+        strip1->set_end(closing_tail);
+        strip2->set_begin(opening_front);
+        strip2->set_end(opening_tail);
+        opening_front->set_loop(strip2);
+    }
+    static void replace_head(clip_edge* o, clip_edge* n)
     {
         assert(o && n);
         auto* head = o->get_prev();
@@ -595,7 +707,7 @@ public:
             n->set_loop(lp);
         }
     }
-    void replace_tail(clip_edge* o, clip_edge* n)
+    static void replace_tail(clip_edge* o, clip_edge* n)
     {
         assert(o && n);
         auto* tail = o->get_next();
@@ -720,13 +832,13 @@ public:
         epm.emplace(ep_map_key(*i, true), se);
         replace_tail(e, se);
     }
-    clip_edge* find_subject_edge_positive(ep_map& epm, clip_intersection_info* info)
+    static clip_edge* find_subject_edge_positive(ep_map& epm, clip_intersection_info* info)
     {
         assert(info);
         auto f = epm.find(ep_map_key(info, true));
         return f != epm.end() ? f->second : nullptr;
     }
-    clip_edge* find_subject_edge_negative(ep_map& epm, clip_intersection_info* info)
+    static clip_edge* find_subject_edge_negative(ep_map& epm, clip_intersection_info* info)
     {
         assert(info);
         auto f = epm.find(ep_map_key(info, false));
@@ -966,6 +1078,12 @@ void clip_strip::finish()
     set_complete(true);
 }
 
+void clip_strip::close_finish()
+{
+    set_end(get_begin()->get_prev());
+    set_complete(true);
+}
+
 void clipper::reset()
 {
     _edge_holdings.clear();
@@ -1001,7 +1119,7 @@ void clipper::tracing() const
 {
     trace(_t("@!\n"));
     for(const clip_strip* s : _coarse_strips) {
-        assert(s && s->is_complete());
+        //assert(s && s->is_complete());
         s->tracing();
     }
     trace(_t("@@\n"));
@@ -1045,6 +1163,8 @@ int clipper::clip_coarse(const painter_path& path, int start)
             break;
         }
         last_node = node;
+
+        tracing();
     }
     strip->try_finish();
     return i;
@@ -1154,6 +1274,8 @@ clip_edge* clipper::add_line_edge(const vec2& p0, const vec2& p1)
 
 clip_edge* clipper::add_quad_edge(const vec2& p0, const vec2& p1, const vec2& p2)
 {
+    if(is_approx_line(p0, p1, p2, 0.5f))
+        return add_line_edge(p0, p2);
     auto* edge = add_edge(p0, p2);
     assert(edge);
     auto* src_edge = create_src_edge_quad(_src_edge_holdings, p0, p1, p2);
@@ -1165,6 +1287,8 @@ clip_edge* clipper::add_quad_edge(const vec2& p0, const vec2& p1, const vec2& p2
 
 clip_edge* clipper::add_cubic_edge(const vec2& p0, const vec2& p1, const vec2& p2, const vec2& p3)
 {
+    if(is_approx_line(p0, p1, p2, 0.5f) && is_approx_line(p1, p2, p3, 0.5f))
+        return add_line_edge(p0, p3);
     auto* edge = add_edge(p0, p3);
     assert(edge);
     auto* src_edge = create_src_edge_cubic(_src_edge_holdings, p0, p1, p2, p3);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2020 lymastee, All rights reserved.
+ * Copyright (c) 2016-2021 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -28,6 +28,68 @@
 #include <ariel/scene.h>
 
 __ariel_begin__
+
+static LPSTR* command_line_to_argv_A(LPSTR lpCmdLine, INT *pNumArgs)
+{
+    int retval;
+    retval = MultiByteToWideChar(CP_ACP, MB_ERR_INVALID_CHARS, lpCmdLine, -1, NULL, 0);
+    if(!SUCCEEDED(retval))
+        return NULL;
+    LPWSTR lpWideCharStr = (LPWSTR)malloc(retval * sizeof(WCHAR));
+    if(lpWideCharStr == NULL)
+        return NULL;
+    retval = MultiByteToWideChar(CP_ACP, MB_ERR_INVALID_CHARS, lpCmdLine, -1, lpWideCharStr, retval);
+    if(!SUCCEEDED(retval)) {
+        free(lpWideCharStr);
+        return NULL;
+    }
+    int numArgs;
+    LPWSTR* args;
+    args = CommandLineToArgvW(lpWideCharStr, &numArgs);
+    free(lpWideCharStr);
+    if(args == NULL)
+        return NULL;
+    int storage = numArgs * sizeof(LPSTR);
+    for(int i = 0; i < numArgs; ++ i) {
+        BOOL lpUsedDefaultChar = FALSE;
+        retval = WideCharToMultiByte(CP_ACP, 0, args[i], -1, NULL, 0, NULL, &lpUsedDefaultChar);
+        if(!SUCCEEDED(retval)) {
+            LocalFree(args);
+            return NULL;
+        }
+        storage += retval;
+    }
+    LPSTR* result = (LPSTR*)LocalAlloc(LMEM_FIXED, storage);
+    if(result == NULL) {
+        LocalFree(args);
+        return NULL;
+    }
+    int bufLen = storage - numArgs * sizeof(LPSTR);
+    LPSTR buffer = ((LPSTR)result) + numArgs * sizeof(LPSTR);
+    for(int i = 0; i < numArgs; ++ i) {
+        assert(bufLen > 0);
+        BOOL lpUsedDefaultChar = FALSE;
+        retval = WideCharToMultiByte(CP_ACP, 0, args[i], -1, buffer, bufLen, NULL, &lpUsedDefaultChar);
+        if(!SUCCEEDED(retval)) {
+            LocalFree(result);
+            LocalFree(args);
+            return NULL;
+        }
+        result[i] = buffer;
+        buffer += retval;
+        bufLen -= retval;
+    }
+    LocalFree(args);
+    *pNumArgs = numArgs;
+    return result;
+}
+
+#define CommandLineToArgvA command_line_to_argv_A
+#if defined(UNICODE) || defined(_UNICODE)
+#define CommandLineToArgv CommandLineToArgvW
+#else
+#define CommandLineToArgv CommandLineToArgvA
+#endif
 
 static LRESULT __stdcall default_wndproc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
@@ -62,6 +124,15 @@ void set_execute_path_as_directory()
     SetCurrentDirectory(dir);
 }
 
+void init_application_environment(app_env& env)
+{
+    HINSTANCE hinst = (HINSTANCE)GetModuleHandle(NULL);
+    int argc = 0;
+    auto cl = GetCommandLine();
+    auto argv = CommandLineToArgv(cl, &argc);
+    init_application_environment(env, hinst, nullptr, (const gchar**)argv, argc);
+}
+
 void init_application_environment(app_env& env, HINSTANCE hinst, HINSTANCE hprevinst, const gchar* argv[], int argc)
 {
     env.hinst = hinst;
@@ -73,6 +144,8 @@ void init_application_environment(app_env& env, HINSTANCE hinst, HINSTANCE hprev
 
 bool app_data::install(const app_config& cfg, const app_env& env)
 {
+    framesys::on_app_initialized(env);
+
     this->wndproc = (fnwndproc)cfg.window_proc;
     if(!this->wndproc)
         this->wndproc = default_wndproc;
@@ -106,6 +179,8 @@ bool app_data::install(const app_config& cfg, const app_env& env)
         assert(!"create window failed.");
         return false;
     }
+    framesys::on_app_windowed(hwnd);
+
     this->hwnd = hwnd;
     this->arglist = env.arglist;
     /* set to framesys */
@@ -160,6 +235,13 @@ int application::run()
     if(_data)
         return _data->run();
     return default_loop();
+}
+
+bool application::simple_setup(const app_config& cfg)
+{
+    app_env env;
+    init_application_environment(env);
+    return setup(cfg, env);
 }
 
 int application::default_loop()

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2020 lymastee, All rights reserved.
+ * Copyright (c) 2016-2021 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -43,14 +43,14 @@ public:
         reset();
         update((const byte*)src, len);
     }
+    sha1(const sha1&);
+    sha1& operator=(const sha1&);
     void reset();
     void update(const byte* src, int len);
     const uint* get_digest() const { return _digest; }
     void get_string(string& str) const;
-
-private:
-    sha1(const sha1&);
-    sha1& operator=(const sha1&);
+    bool operator==(const sha1& that) const;
+    bool operator!=(const sha1& that) const;
 
 protected:
     uint        _digest[5];

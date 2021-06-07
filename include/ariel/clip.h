@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2020 lymastee, All rights reserved.
+ * Copyright (c) 2016-2021 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -32,7 +32,7 @@
 #include <gslib/tree.h>
 #include <gslib/mcls.h>
 #include <gslib/utility.h>
-#include <ariel/raster.h>
+#include <ariel/painterpath.h>
 
 __ariel_begin__
 
@@ -539,8 +539,24 @@ protected:
     void finish_proceed_sub_patches(iterator p);
 };
 
-// class clip_path_router_union;
-// class clip_path_router_intersect;
+class clip_path_router_union:
+    public clip_path_router
+{
+public:
+    clip_path_router_union(clip_result& result);
+    void proceed(clip_sweep_lines& sweeplines);
+
+protected:
+    void proceed(clip_sweep_line* line1, clip_sweep_line* line2);
+};
+
+class clip_path_router_intersect:
+    public clip_path_router
+{
+public:
+    clip_path_router_intersect(clip_result& result);
+    void proceed(clip_sweep_lines& sweeplines);
+};
 
 typedef unordered_map<path_info*, curve_splitter*> curve_splitter_map;
 typedef unordered_map<clip_joint*, vec2> clip_fixed_points;
@@ -602,7 +618,6 @@ protected:
     void replace_curve(clip_polygon& poly, clip_joint*& joint1, clip_joint*& joint2);
 };
 
-extern void clip_test(const painter_path& path);
 extern void clip_create_polygons(clip_polygons& polygons, const painter_path& path);    /* ensure that you've called painter_helper::close_sub_paths to deal with the path */
 extern void clip_compile_path(painter_path& path, const clip_result& poly_result);
 extern void clip_union(clip_result& poly_result, clip_polygons& polygons);

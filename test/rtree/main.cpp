@@ -1,6 +1,10 @@
 #include <gslib/error.h>
 #include <gslib/rtree.h>
+#include <gslib/type.h>
 #include <windows.h>
+#include <timeapi.h>
+
+#pragma comment(lib, "winmm.lib")
 
 using namespace gs;
 
@@ -8,7 +12,7 @@ typedef rtree_entity<int> myentity;
 typedef rtree_node<myentity> mynode;
 typedef _tree_allocator<mynode> myalloc;
 typedef tree<myentity, mynode, myalloc> mytree;
-typedef rtree<myentity, quadratic_split_alg<5, 2, mytree>, mynode, myalloc> myrtree;
+typedef rtree<myentity, quadratic_split_alg<25, 10, mytree>, mynode, myalloc> myrtree;
 typedef deque<myentity> myentlist;
 
 static void make_rand_rect(rectf& rc, int width, int height)
@@ -34,15 +38,17 @@ static void make_entity_list(myentlist& entlist, int cap, int w, int h)
     for(int i = 0; i < cap; i ++) {
         rectf rc;
         make_rand_rect(rc, w, h);
-        entlist.push_back(myentity(rand(), rc));
+        entlist.push_back(myentity(i, rc));
     }
 }
 
 int main()
 {
-    const int test_area_width = 640;
-    const int test_area_height = 480;
-    const int test_times = 50;
+    //const int test_area_width = 640;
+    //const int test_area_height = 480;
+    const int test_area_width = 600000;
+    const int test_area_height = 600000;
+    const int test_times = 140000;
 
     srand(GetTickCount());
 
@@ -50,18 +56,16 @@ int main()
     myentlist entlist;
     make_entity_list(entlist, test_times, test_area_width, test_area_height);
 
-    auto t1 = GetTickCount();
+    auto t1 = timeGetTime();
 
-    rt.insert(entlist);
+    //rt.insert(entlist);
 
-    /*
     std::for_each(entlist.begin(), entlist.end(), [&rt](const myentity& ent) {
         rt.insert(ent.get_bind_arg(), ent.const_rect());
         //rt.tracing();
     });
-    */
 
-    auto t2 = GetTickCount();
+    auto t2 = timeGetTime();
     auto elapse = t2 - t1;
     gs::string info;
     info.format(_t("time elapse: %i"), (int)elapse);

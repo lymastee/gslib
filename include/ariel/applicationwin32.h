@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2020 lymastee, All rights reserved.
+ * Copyright (c) 2016-2021 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -42,6 +42,7 @@ typedef LRESULT(__stdcall *fnwndproc)(HWND, UINT, WPARAM, LPARAM);
 typedef list<string> arg_list;
 
 extern void set_execute_path_as_directory();
+extern void init_application_environment(app_env& env);
 extern void init_application_environment(app_env& env, HINSTANCE hinst, HINSTANCE hprevinst, const gchar* argv[], int argc);
 
 struct app_data

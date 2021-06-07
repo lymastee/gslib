@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2020 lymastee, All rights reserved.
+ * Copyright (c) 2016-2021 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -31,7 +31,7 @@
 #include <gslib/utility.h>
 #include <ariel/config.h>
 #include <ariel/rendersys.h>
-#include <ariel/raster.h>
+#include <ariel/painter.h>
 #include <ariel/batch.h>
 #include <ariel/texbatch.h>
 
@@ -306,7 +306,7 @@ extern void rose_paint_picture_pen(graphics_obj& gfx, const rectf& bound, rose_b
 /* more to come. */
 
 class rose:
-    public raster
+    public painter
 {
 public:
     typedef render_constant_buffer constant_buffer;

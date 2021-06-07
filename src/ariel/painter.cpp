@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2020 lymastee, All rights reserved.
+ * Copyright (c) 2016-2021 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -32,144 +32,6 @@
 
 __ariel_begin__
 
-painter_linestrip::painter_linestrip()
-{
-    _closed = false;
-    _tst_table = 0;
-}
-
-void painter_linestrip::swap(painter_linestrip& another)
-{
-    gs_swap(_closed, another._closed);
-    _pts.swap(another._pts);
-}
-
-vec2* painter_linestrip::expand(int size)
-{
-    int oss = (int)_pts.size();
-    _pts.resize(oss + size);
-    return &_pts.at(oss);
-}
-
-void painter_linestrip::reverse()
-{
-    points pts;
-    pts.assign(_pts.rbegin(), _pts.rend());
-    _pts.swap(pts);
-    if(is_clockwise_inited())
-        _is_clock_wise = !_is_clock_wise;
-}
-
-void painter_linestrip::finish()
-{
-    if(_pts.front() == _pts.back()) {
-        _pts.pop_back();
-        set_closed(true);
-    }
-}
-
-void painter_linestrip::transform(const mat3& m)
-{
-    for(vec2& v : _pts)
-        v.transformcoord(v, m);
-}
-
-bool painter_linestrip::is_clockwise() const
-{
-    if(!_closed || _pts.size() <= 2)
-        return false;
-    if(is_clockwise_inited())
-        return _is_clock_wise;
-    set_clockwise_inited();
-    float mx = -FLT_MAX;
-    int mi = 0, cap = (int)_pts.size();
-    for(int i = 0; i < cap; i ++) {
-        if(_pts.at(i).x >= mx) {
-            mx = _pts.at(i).x;
-            mi = i;
-        }
-    }
-    int prev = mi == 0 ? cap - 1 : mi - 1,
-        post = mi == cap - 1 ? 0 : mi + 1;
-    return _is_clock_wise = 
-        !is_concave_angle(_pts.at(prev), _pts.at(mi), _pts.at(post));
-}
-
-bool painter_linestrip::is_convex() const
-{
-    assert(get_size() >= 3);
-    if(is_convex_inited())
-        return _is_convex;
-    set_convex_inited();
-    bool cw = is_clockwise();
-    int cap = (int)_pts.size();
-    for(int i = 2; i < cap; i ++) {
-        if(is_concave_angle(_pts.at(i-2), _pts.at(i-1), _pts.at(i), cw))
-            return _is_convex = false;
-    }
-    if(is_concave_angle(_pts.back(), _pts.front(), _pts.at(1), cw))
-        return _is_convex = false;
-    return _is_convex = 
-        !is_concave_angle(_pts.at(cap-2), _pts.back(), _pts.front(), cw);
-}
-
-bool painter_linestrip::is_convex(int i) const
-{
-    bool cw = is_clockwise();
-    int cap = (int)_pts.size();
-    int prev = i == 0 ? cap - 1 : i - 1,
-        post = i == cap - 1 ? 0 : i + 1;
-    return !is_concave_angle(_pts.at(prev), _pts.at(i), _pts.at(post), cw);
-}
-
-void painter_linestrip::tracing() const
-{
-#ifdef _DEBUG
-    if(_pts.empty())
-        return;
-    trace(_t("@!\n"));
-    auto i = _pts.begin();
-    trace(_t("@moveTo %f, %f;\n"), i->x, i->y);
-    for(++ i; i != _pts.end(); ++ i) {
-        trace(_t("@lineTo %f, %f;\n"), i->x, i->y);
-    }
-    i = _pts.begin();
-    trace(_t("@lineTo %f, %f;\n"), i->x, i->y);
-    trace(_t("@@\n"));
-#endif
-}
-
-void painter_linestrip::tracing_segments() const
-{
-#ifdef _DEBUG
-    if(_pts.empty())
-        return;
-    trace(_t("@!\n"));
-    auto i = _pts.begin();
-    trace(_t("@moveTo %f, %f;\n"), i->x, i->y);
-    for(++ i; i != _pts.end(); ++ i) {
-        trace(_t("@lineTo %f, %f;\n"), i->x, i->y);
-        trace(_t("@moveTo %f, %f;\n"), i->x, i->y);
-    }
-    i = _pts.begin();
-    trace(_t("@lineTo %f, %f;\n"), i->x, i->y);
-    trace(_t("@@\n"));
-#endif
-}
-
-void append_linestrips_rav(linestripvec& rav, linestrips& src)
-{
-    rav.reserve(rav.size() + src.size());
-    for(painter_linestrip& ls : src)
-        rav.push_back(&ls);
-}
-
-void create_linestrips_rav(linestripvec& rav, linestrips& src)
-{
-    rav.clear();
-    append_linestrips_rav(rav, src);
-}
-
 painter_picture_data::painter_picture_data(texture2d* p)
 {
     assert(p);
@@ -200,6 +62,14 @@ void painter::on_draw_end()
 {
 }
 
+void painter::set_hints(uint hints, bool enable)
+{
+    if(enable)
+        _hints |= hints;
+    else
+        _hints &= ~hints;
+}
+
 void painter::set_font(const font& ft)
 {
     scene* scn = scene::get_singleton_ptr();
@@ -209,6 +79,20 @@ void painter::set_font(const font& ft)
     fsys->set_font(ft);
 }
 
+void painter::save()
+{
+    _ctxst.push_back(_context);
+    _context.set_transform(mat3().identity());
+}
+
+void painter::restore()
+{
+    if(_ctxst.empty())
+        return;
+    _context = _ctxst.back();
+    _ctxst.pop_back();
+}
+
 void painter::get_text_dimension(const gchar* str, int& w, int& h, int len)
 {
     assert(str);
@@ -216,7 +100,7 @@ void painter::get_text_dimension(const gchar* str, int& w, int& h, int len)
     assert(scn);
     fontsys* fsys = scn->get_fontsys();
     assert(fsys);
-    fsys->get_size(str, w, h, len);
+    fsys->query_size(str, w, h, len);
 }
 
 void painter::draw_image(texture2d* img, float x, float y)
@@ -276,7 +160,7 @@ void painter::draw_rect(const rectf& rc, const color& cr)
     restore();
 }
 
-void painter::draw_text(const gchar* str, int x, int y, const color& cr, int length)
+void painter::draw_text(const gchar* str, float x, float y, const color& cr, int length)
 {
     if(!str || !length)
         return;
@@ -297,7 +181,19 @@ void painter::draw_text(const gchar* str, int x, int y, const color& cr, int len
     float cw = (float)w - 2.f * margin;
     float ch = (float)h - 2.f * margin;
     assert(cw >= 0.f && ch >= 0.f);
-    draw_image(tex.detach(), rectf((float)x, (float)y, cw, ch), rectf((float)margin, (float)margin, cw, ch));
+    draw_image(tex.detach(), rectf(x, y, cw, ch), rectf((float)margin, (float)margin, cw, ch));
+}
+
+void painter::get_transform_recursively(mat3& m) const
+{
+    m = _context.get_trasnform();
+    if(_ctxst.empty())
+        return;
+    for(auto i = std::prev(_ctxst.end());; -- i) {
+        m *= i->get_trasnform();
+        if(i == _ctxst.begin())
+            break;
+    }
 }
 
 void painter::destroy_text_image_cache()
@@ -309,98 +205,98 @@ void painter::destroy_text_image_cache()
     _text_image_cache.clear();
 }
 
-painter_obj::painter_obj(const painter_context& ctx)
-{
-    set_context(ctx);
-    _parent = 0;
-}
-
-painter_obj_iter painter_obj::add_child(painter_obj* p)
-{
-    assert(p);
-    assert(!p->get_parent());
-    p->set_parent(this);
-    _children.push_back(p);
-    return -- _children.end();
-}
-
-painter_obj_iter painter_obj::find_child_iterator(painter_obj* p)
-{
-    assert(p);
-    assert(p->get_parent() == this);
-    auto f = std::find(_children.begin(), _children.end(), p);
-    return f;
-}
-
-painter_obj_iter painter_obj::add_child_before(painter_obj_iter pos, painter_obj* p)
-{
-    assert(p);
-    assert(!p->get_parent());
-    p->set_parent(this);
-    return _children.insert(pos, p);
-}
-
-painter_obj_iter painter_obj::add_child_after(painter_obj_iter pos, painter_obj* p)
-{
-    assert(p);
-    assert(pos != _children.end());
-    assert(!p->get_parent());
-    p->set_parent(this);
-    return _children.insert(++ pos, p);
-}
-
-void painter_obj::detach_child(painter_obj_iter pos)
-{
-    assert(pos != _children.end());
-    auto* p = *pos;
-    assert(p);
-    assert(p->get_parent() == this);
-    p->set_parent(0);
-    _children.erase(pos);
-}
-
-void painter_obj::detach_child(painter_obj* p)
-{
-    assert(p && (p->get_parent() == this));
-    auto f = find_child_iterator(p);
-    assert(f != _children.end());
-    detach_child(f);
-}
-
-void painter_obj::remove_child(painter_obj_iter pos)
-{
-    assert(pos != _children.end());
-    auto* p = *pos;
-    assert(p && (p->get_parent() == this));
-    detach_child(pos);
-    delete p;
-}
-
-void painter_obj::remove_child(painter_obj* p)
-{
-    assert(p && (p->get_parent() == this));
-    auto f = find_child_iterator(p);
-    assert(f != _children.end());
-    remove_child(f);
-}
-
-painter_obj_iter painter_obj::get_self_iterator()
-{
-    assert(_parent);
-    return _parent->find_child_iterator(this);
-}
-
-void painter_obj::destroy_children()
-{
-    for(auto* p : _children)
-        delete p;
-    _children.clear();
-}
-
-painter_obj::~painter_obj()
-{
-    _parent = nullptr;
-    destroy_children();
-}
+// painter_obj::painter_obj(const painter_context& ctx)
+// {
+//     set_context(ctx);
+//     _parent = 0;
+// }
+// 
+// painter_obj_iter painter_obj::add_child(painter_obj* p)
+// {
+//     assert(p);
+//     assert(!p->get_parent());
+//     p->set_parent(this);
+//     _children.push_back(p);
+//     return -- _children.end();
+// }
+// 
+// painter_obj_iter painter_obj::find_child_iterator(painter_obj* p)
+// {
+//     assert(p);
+//     assert(p->get_parent() == this);
+//     auto f = std::find(_children.begin(), _children.end(), p);
+//     return f;
+// }
+// 
+// painter_obj_iter painter_obj::add_child_before(painter_obj_iter pos, painter_obj* p)
+// {
+//     assert(p);
+//     assert(!p->get_parent());
+//     p->set_parent(this);
+//     return _children.insert(pos, p);
+// }
+// 
+// painter_obj_iter painter_obj::add_child_after(painter_obj_iter pos, painter_obj* p)
+// {
+//     assert(p);
+//     assert(pos != _children.end());
+//     assert(!p->get_parent());
+//     p->set_parent(this);
+//     return _children.insert(++ pos, p);
+// }
+// 
+// void painter_obj::detach_child(painter_obj_iter pos)
+// {
+//     assert(pos != _children.end());
+//     auto* p = *pos;
+//     assert(p);
+//     assert(p->get_parent() == this);
+//     p->set_parent(0);
+//     _children.erase(pos);
+// }
+// 
+// void painter_obj::detach_child(painter_obj* p)
+// {
+//     assert(p && (p->get_parent() == this));
+//     auto f = find_child_iterator(p);
+//     assert(f != _children.end());
+//     detach_child(f);
+// }
+// 
+// void painter_obj::remove_child(painter_obj_iter pos)
+// {
+//     assert(pos != _children.end());
+//     auto* p = *pos;
+//     assert(p && (p->get_parent() == this));
+//     detach_child(pos);
+//     delete p;
+// }
+// 
+// void painter_obj::remove_child(painter_obj* p)
+// {
+//     assert(p && (p->get_parent() == this));
+//     auto f = find_child_iterator(p);
+//     assert(f != _children.end());
+//     remove_child(f);
+// }
+// 
+// painter_obj_iter painter_obj::get_self_iterator()
+// {
+//     assert(_parent);
+//     return _parent->find_child_iterator(this);
+// }
+// 
+// void painter_obj::destroy_children()
+// {
+//     for(auto* p : _children)
+//         delete p;
+//     _children.clear();
+// }
+// 
+// painter_obj::~painter_obj()
+// {
+//     _parent = nullptr;
+//     destroy_children();
+// }
 
 __ariel_end__

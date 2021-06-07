@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2020 lymastee, All rights reserved.
+ * Copyright (c) 2016-2021 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -31,65 +31,9 @@
 #include <memory>
 #include <ariel/sysop.h>
 #include <ariel/image.h>
+#include <ariel/painterpath.h>
 
 __ariel_begin__
-
-class painter_linestrip
-{
-public:
-    typedef vector<vec2> points;
-    typedef points::iterator ptiter;
-    typedef points::const_iterator ptciter;
-
-protected:
-    bool                _closed;
-    points              _pts;
-
-public:
-    painter_linestrip();
-    ~painter_linestrip() {}
-    int get_size() const { return (int)_pts.size(); }
-    vec2& get_point(int i) { return _pts.at(i); }
-    const vec2& get_point(int i) const { return _pts.at(i); }
-    void add_point(const vec2& pt) { _pts.push_back(pt); }
-    void clear() { _pts.clear(); }
-    void swap(painter_linestrip& another);
-    void finish();
-    void transform(const mat3& m);
-    vec2* expand(int size);
-    void expand_to(int size) { _pts.resize(size); }
-    void reverse();
-    bool is_closed() const { return _closed; }
-    void set_closed(bool c) { _closed = c; }
-    bool is_clockwise() const;
-    bool is_convex() const;
-    bool is_convex(int i) const;
-    void tracing() const;
-    void tracing_segments() const;
-
-protected:
-    enum
-    {
-        st_clockwise_mask       = 1,
-        st_convex_mask          = 2,
-    };
-    mutable uint        _tst_table;
-    mutable bool        _is_clock_wise;
-    mutable bool        _is_convex;
-
-protected:
-    bool is_clockwise_inited() const { return (_tst_table & st_clockwise_mask) != 0; }
-    void set_clockwise_inited() const { _tst_table |= st_clockwise_mask; }
-    bool is_convex_inited() const { return (_tst_table & st_convex_mask) != 0; }
-    void set_convex_inited() const { _tst_table |= st_convex_mask; }
-};
-
-typedef list<painter_linestrip> linestrips;
-typedef vector<painter_linestrip*> linestripvec;
-
-/* create a random access view for linestrips */
-extern void append_linestrips_rav(linestripvec& rav, linestrips& src);
-extern void create_linestrips_rav(linestripvec& rav, linestrips& src);
 
 struct painter_data
 {
@@ -194,34 +138,31 @@ class __gs_novtable painter abstract
 public:
     enum painter_hints
     {
-        hint_anti_alias     = 0x1,
+        hint_antialias     = 0x1,
     };
     typedef vector<texture2d*> text_image_cache;
+    typedef painter_context context;
+    typedef list<context> context_stack;
 
 public:
     virtual ~painter();
-    virtual int get_width() const = 0;
-    virtual int get_height() const = 0;
-    virtual void set_dirty(dirty_list* dirty) = 0;
-    virtual dirty_list* get_dirty() const = 0;
     virtual void resize(int w, int h) = 0;
-    virtual void set_hints(uint hints, bool enable) = 0;
-    virtual void set_brush(const painter_brush& b) = 0;
-    virtual void set_pen(const painter_pen& p) = 0;
-    virtual void set_tranform(const mat3& m) = 0;
     virtual void draw_path(const painter_path& path) = 0;
-    virtual void draw_line(const vec2& p1, const vec2& p2) = 0;
-    virtual void draw_rect(const rectf& rc) = 0;
-    virtual void draw_quad(const vec2& p1, const vec2& p2, const vec2& p3) = 0;
-    virtual void draw_cubic(const vec2& p1, const vec2& p2, const vec2& p3, const vec2& p4) = 0;
-    virtual void draw_arc(const vec2& p1, const vec2& p2, float r, bool inv = false) = 0;
-    virtual void save() = 0;
-    virtual void restore() = 0;
-    virtual bool query_hints(uint hints) const = 0;
-    virtual painter_context& get_context() = 0;
 
 public:
+    virtual int get_width() const { return _width; }
+    virtual int get_height() const { return _height; }
+    virtual void set_dirty(dirty_list* dirty) {}
+    virtual dirty_list* get_dirty() const { return nullptr; }
+    virtual void set_hints(uint hints, bool enable);
+    virtual void set_brush(const painter_brush& b) { _context.set_brush(b); }
+    virtual void set_pen(const painter_pen& p) { _context.set_pen(p); }
+    virtual void set_tranform(const mat3& m) { _context.set_transform(m); }
     virtual void set_font(const font& ft);
+    virtual void save();
+    virtual void restore();
+    virtual bool query_hints(uint hints) const { return (_hints & hints) == hints; }
+    virtual context& get_context() { return _context; }
     virtual void get_text_dimension(const gchar* str, int& w, int& h, int len = -1);
     virtual void on_draw_begin();
     virtual void on_draw_end();
@@ -229,53 +170,108 @@ public:
     virtual void draw_image(texture2d* img, const rectf& dest, const rectf& src);
     virtual void draw_line(const vec2& p1, const vec2& p2, const color& cr);
     virtual void draw_rect(const rectf& rc, const color& cr);
-    virtual void draw_text(const gchar* str, int x, int y, const color& cr, int length = -1);
+    virtual void draw_text(const gchar* str, float x, float y, const color& cr, int length = -1);
+
+public:
+    virtual void draw_line(const vec2& p1, const vec2& p2)
+    {
+        if(vec2().sub(p1, p2).length() < 0.001f)
+            return;
+        painter_path path;
+        path.move_to(p1);
+        path.line_to(p2);
+        draw_path(path);
+    }
+    virtual void draw_rect(const rectf& rc)
+    {
+        if(!rc.width() || !rc.height())
+            return;
+        painter_path path;
+        path.move_to(rc.left, rc.top);
+        path.line_to(rc.left, rc.bottom);
+        path.line_to(rc.right, rc.bottom);
+        path.line_to(rc.right, rc.top);
+        path.close_path();
+        draw_path(path);
+    }
+    virtual void draw_quad(const vec2& p1, const vec2& p2, const vec2& p3)
+    {
+        painter_path path;
+        path.move_to(p1);
+        path.quad_to(p2, p3);
+        draw_path(path);
+    }
+    virtual void draw_cubic(const vec2& p1, const vec2& p2, const vec2& p3, const vec2& p4)
+    {
+        painter_path path;
+        path.move_to(p1);
+        path.cubic_to(p2, p3, p4);
+        draw_path(path);
+    }
+    virtual void draw_arc(const vec2& p1, const vec2& p2, float r, bool inv = false)
+    {
+        painter_path path;
+        path.move_to(p1);
+        inv ? path.rarc_to(p2, r) : path.arc_to(p2, r);
+        draw_path(path);
+    }
 
 protected:
+    painter_context     _context;
+    context_stack       _ctxst;
+    int                 _width = 0;
+    int                 _height = 0;
+    uint                _hints = 0;
     text_image_cache    _text_image_cache;
+
+public:
+    painter() {}
+    void setup_dimensions(int w, int h) { _width = w, _height = h; }
+    bool query_antialias() const { return query_hints(hint_antialias); }
+    void get_transform_recursively(mat3& m) const;
 
 protected:
     void destroy_text_image_cache();
 };
 
-class painter_obj;
-typedef list<painter_obj*> painter_obj_list;
-typedef painter_obj_list::iterator painter_obj_iter;
-typedef painter_obj_list::const_iterator painter_obj_const_iter;
-
-class __gs_novtable painter_obj abstract
-{
-public:
-    typedef painter_obj_list obj_list;
-    typedef painter_obj_iter iterator;
-    typedef painter_obj_const_iter const_iterator;
-
-public:
-    painter_obj(const painter_context& ctx);
-    void set_parent(painter_obj* p) { _parent = p; }
-    painter_obj* get_parent() const { return _parent; }
-    void set_context(const painter_context& c) { _context = c; }
-    const painter_context& get_context() const { return _context; }
-    painter_obj_iter add_child(painter_obj* p);
-    painter_obj_iter find_child_iterator(painter_obj* p);
-    painter_obj_iter add_child_before(painter_obj_iter pos, painter_obj* p);
-    painter_obj_iter add_child_after(painter_obj_iter pos, painter_obj* p);
-    void detach_child(painter_obj_iter pos);
-    void detach_child(painter_obj* p);
-    void remove_child(painter_obj_iter pos);
-    void remove_child(painter_obj* p);
-    painter_obj_iter get_self_iterator();
-    void destroy_children();
-
-protected:
-    painter_obj*        _parent;
-    obj_list            _children;
-    painter_context     _context;
-
-public:
-    virtual ~painter_obj();
-    virtual void draw() = 0;
-};
+// class painter_obj;
+// typedef list<painter_obj*> painter_obj_list;
+// typedef painter_obj_list::iterator painter_obj_iter;
+// typedef painter_obj_list::const_iterator painter_obj_const_iter;
+// 
+// class __gs_novtable painter_obj abstract
+// {
+// public:
+//     typedef painter_obj_list obj_list;
+//     typedef painter_obj_iter iterator;
+//     typedef painter_obj_const_iter const_iterator;
+// 
+// public:
+//     painter_obj(const painter_context& ctx);
+//     void set_parent(painter_obj* p) { _parent = p; }
+//     painter_obj* get_parent() const { return _parent; }
+//     void set_context(const painter_context& c) { _context = c; }
+//     const painter_context& get_context() const { return _context; }
+//     painter_obj_iter add_child(painter_obj* p);
+//     painter_obj_iter find_child_iterator(painter_obj* p);
+//     painter_obj_iter add_child_before(painter_obj_iter pos, painter_obj* p);
+//     painter_obj_iter add_child_after(painter_obj_iter pos, painter_obj* p);
+//     void detach_child(painter_obj_iter pos);
+//     void detach_child(painter_obj* p);
+//     void remove_child(painter_obj_iter pos);
+//     void remove_child(painter_obj* p);
+//     painter_obj_iter get_self_iterator();
+//     void destroy_children();
+// 
+// protected:
+//     painter_obj*        _parent;
+//     obj_list            _children;
+//     painter_context     _context;
+// 
+// public:
+//     virtual ~painter_obj();
+//     virtual void draw(painter*) const = 0;
+// };
 
 __ariel_end__
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016-2020 lymastee, All rights reserved.
+ * Copyright (c) 2016-2021 lymastee, All rights reserved.
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
@@ -27,8 +27,8 @@
 #include <windows.h>
 #include <windowsx.h>
 #include <imm.h>
-#include <entrywin32.h>
 #include <gslib/string.h>
+#include <ariel/applicationwin32.h>
 #include <ariel/framesys.h>
 #include <ariel/scene.h>
 #include <ariel/rendersysd3d11.h>
@@ -482,12 +482,7 @@ static LRESULT __stdcall frame_window_proc(HWND hwnd, UINT msg, WPARAM wparam, L
     return ret;
 }
 
-__ariel_end__
-
-using namespace gs;
-using namespace ariel;
-
-void gs_app_setup(gs_app_config& cfg)
+void framesys::set_default_config(app_config& cfg)
 {
     strtool::copy(cfg.class_name, _countof(cfg.class_name), _t("rendersysd11"));
     strtool::copy(cfg.window_name, _countof(cfg.window_name), _t(""));
@@ -495,23 +490,16 @@ void gs_app_setup(gs_app_config& cfg)
     cfg.position = rect(50, 50, 640, 480);
 }
 
-void gs_app_initialized(HINSTANCE hinst, HINSTANCE, LPCTSTR, int)
+void framesys::on_app_initialized(const app_env& env)
 {
-    /* record hinstance */
-    __frame_hinst = hinst;
+    /* record HINSTANCE */
+    __frame_hinst = env.hinst;
 }
 
-void gs_app_windowed(HWND hwnd)
+void framesys::on_app_windowed(HWND hwnd)
 {
-    /* record hwnd */
+    /* record HWND */
     __frame_hwnd = hwnd;
-    framesys* sys = framesys::get_framesys();
-    scene* scn = scene::get_singleton_ptr();
-    rect rc;
-    GetClientRect(hwnd, (LPRECT)&rc);
-    sys->initialize(rc);
-    scn->set_rendersys(sys->get_rendersys());
-    scn->set_rose(sys->get_rose());
-    scn->setup();
-    ShowWindow(hwnd, SW_SHOW);
 }
+
+__ariel_end__

@@ -4,21 +4,21 @@
 #include <ariel/widget.h>
 #include <ariel/scene.h>
 #include <gslib/error.h>
+#include <gslib/utility.h>
 #include <ariel/imageop.h>
 #include <ariel/textureop.h>
-#include <ariel/utility.h>
-
 #include <ariel/classicstyle.h>
+#include <ariel/applicationwin32.h>
 
 using namespace gs;
 using namespace gs::ariel;
 
 class weditctl:
-    public edit
+    public edit_line
 {
 public:
     weditctl(wsys_manager* m):
-        edit(m)
+        edit_line(m)
     {
     }
     virtual bool create(widget* ptr, const gchar* name, const rect& rc, uint style)
@@ -31,7 +31,7 @@ public:
         img.clear(color(0, 0, 0, 60));
         auto* rsys = scene::get_singleton_ptr()->get_rendersys();
         assert(rsys);
-        auto* tex = rsys->create_texture2d(img, 1, D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0);
+        auto* tex = rsys->create_texture2d(img, 1, D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0, 0);
         assert(tex);
         _bkgnd.attach(tex);
         set_bkground(tex);
@@ -50,14 +50,20 @@ public:
     wflttext(wsys_manager* m):
         widget(m), _animtimer(m)
     {
-        connect_notify(&_animtimer, timer::on_timer, this, on_animation, 4);
+        connect_notify(&_animtimer, &timer::on_timer, this, &wflttext::on_animation, 4);
     }
     virtual ~wflttext()
     {
     }
     virtual void draw(painter* cvs)
     {
-        cvs->draw_image(_cpytext.get(), 0, 0);
+        int w = 0, h = 0;
+        textureop::get_texture_dimension(_cpytext.get(), w, h);
+        float cw = (float)(w - 2);
+        float ch = (float)(h - 2);
+        w = get_width();
+        h = get_height();
+        cvs->draw_image(_cpytext.get(), rectf(0.f, 0.f, cw, ch), rectf(1.f, 1.f, cw, ch));
     }
     void on_animation(uint)
     {
@@ -81,11 +87,13 @@ public:
         font ft(_t("¿¬Ìå"), 12);
         pfs->set_font(ft);
         int w, h;
-        pfs->get_size(str, w, h);
-        pfs->create_text_texture(&_text, str, 0, 0, color(200,20,20));
+        pfs->query_size(str, w, h);
+        pfs->create_text_texture(&_text, str, 1, color(200,20,20));
+        int tw, th;
+        textureop::get_texture_dimension(_text.get(), tw, th);
         rendersys* rsys = scene::get_singleton_ptr()->get_rendersys();
         assert(rsys);
-        _cpytext.attach(rsys->create_texture2d(tw, th, DXGI_FORMAT_R8G8B8A8_UNORM, 1, D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS, 0));
+        _cpytext.attach(rsys->create_texture2d(tw, th, DXGI_FORMAT_R8G8B8A8_UNORM, 1, D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE | D3D11_BIND_UNORDERED_ACCESS, 0, 0));
         textureop(rsys).copy_rect(_cpytext.get(), _text.get(), 0, 0, 0, 0, tw, th);
         _alpha = 1.0f;
         _fadeby = 0.02f;
@@ -137,24 +145,24 @@ public:
             return false;
         rendersys* rsys = scene::get_singleton_ptr()->get_rendersys();
         assert(rsys);
-        auto* p1 = rsys->create_texture2d(bkgnd, 1, D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0);
+        auto* p1 = rsys->create_texture2d(bkgnd, 1, D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0, 0);
         assert(p1);
         _bkgnd.attach(p1);
-
+       
         /* create sub-widgets */
-       _editptr = _manager->add_widget<weditctl>(this, _t("edit"), rect(36,20,150,18), sm_hitable|sm_visible);
-       assert(_editptr);
-       _editptr->set_text(_t("ÇëÊäÈë..."));
-       
-       _btn = _manager->add_widget<button>(this, _t("clickme"), rect(195,12,0,0), sm_hitable|sm_visible);
-       assert(_btn);
-       image btn_image;
-       btn_image.load(_t("button.png"));
-       _btn_image.attach(rsys->create_texture2d(btn_image, 1, D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0));
-       
-       _btn->set_image(_btn_image.get());
-       
-       connect_notify(_btn, button::on_click, this, on_btn_clicked, 12);
+        _editptr = _manager->add_widget<weditctl>(this, _t("edit"), rect(36,20,150,18), sm_hitable|sm_visible);
+        assert(_editptr);
+        _editptr->set_text(_t("ÇëÊäÈë..."));
+        
+        _btn = _manager->add_widget<button>(this, _t("clickme"), rect(195,12,0,0), sm_hitable|sm_visible);
+        assert(_btn);
+        image btn_image;
+        btn_image.load(_t("button.png"));
+        _btn_image.attach(rsys->create_texture2d(btn_image, 1, D3D11_USAGE_DEFAULT, D3D11_BIND_SHADER_RESOURCE, 0, 0));
+        
+        _btn->set_image(_btn_image.get());
+        
+        connect_notify(_btn, &button::on_click, this, &wbkground::on_btn_clicked, 12);
 
         return true;
     }
@@ -204,7 +212,7 @@ static float stupid_cubic_length(const vec2 cp[4], int steps)
 {
     vector<vec2> intsps;
     intsps.resize(steps);
-    ariel::cubic_interpolate(&intsps.front(), cp[0], cp[1], cp[2], cp[3], steps);
+    gs::cubic_interpolate(&intsps.front(), cp[0], cp[1], cp[2], cp[3], steps);
     float len = 0.f;
     for(int i = 1; i < steps; i ++)
         len += vec2().sub(intsps.at(i - 1), intsps.at(i)).length();
@@ -230,7 +238,7 @@ static float stupid_cubic_length(const vec2 cp[4], int steps)
 //     wsys_manager* wsys = scene::get_singleton_ptr()->get_ui_system();
 //     painter* ptex = wsys->get_painter();
 //     assert(ptex);
-//     ptex->set_hints(painter::hint_anti_alias, true);
+//     ptex->set_hints(painter::hint_antialias, true);
 //     wbkground* root = wsys->add_widget<wbkground>(
 //         0, _t("wbkground"), rect(0, 0, wsys->get_width(), wsys->get_height()),
 //         sm_hitable|sm_visible
@@ -239,43 +247,86 @@ static float stupid_cubic_length(const vec2 cp[4], int steps)
 //     return framesys::get_framesys()->run();
 // }
 
-int gs_main()
+class my_application:
+    public application
 {
-   wsys_manager* wsys = scene::get_singleton_ptr()->get_ui_system();
-   painter* ptex = wsys->get_painter();
-   ptex->set_hints(painter::hint_anti_alias, true);
+public:
+    virtual bool setup(const app_config& cfg, const app_env& env) override
+    {
+        if(!__super::setup(cfg, env))
+            return false;
 
-   auto* bk = wsys->add_widget<classic_style::background>(
-       nullptr, _t("background"), rect(0, 0, wsys->get_width(), wsys->get_height()),
-       sm_hitable|sm_visible
-       );
-   bk->flush_style();
+        wsys_manager* wsys = scene::get_singleton_ptr()->get_ui_system();
+        painter* pntr = wsys->get_painter();
+        pntr->set_hints(painter::hint_antialias, true);
 
-   auto* btn1 = wsys->add_widget<classic_style::button>(
-       bk, _t("button1"), rect(10, 10, 100, 20), sm_hitable|sm_visible
-       );
-   btn1->set_value(_t("caption"), _t("button1"));
-   btn1->flush_style();
+        auto* bk = wsys->add_widget<classic_style::root_widget>(
+            nullptr, _t("background"), rect(0, 0, wsys->get_width(), wsys->get_height()),
+            sm_hitable | sm_visible
+            );
+        bk->flush_style();
 
-   auto* edit1 = wsys->add_widget<classic_style::edit>(
-       bk, _t("edit1"), rect(10, 40, 100, 20), sm_hitable|sm_visible
-       );
-   edit1->flush_style();
-   
-   auto* menu1 = wsys->add_widget<classic_style::menu>(
-       bk, _t("menu1"), rect(10, 70, 1, 1), sm_hitable|sm_visible
-       );
-   assert(menu1);
-   menu1->flush_style();
-   classic_style::create_menu_from_script(menu1,
-       _t("Menu Test 1,Ctrl+A:@MenuTestCmd1;")
-       _t("[separator];")
-       _t("Menu Test 2, Ctrl+B:{")
-       _t("Menu Test 2-1,:@MenuTestCmd2;")
-       _t("}")
-       );
-   menu1->startup();
+        auto* btn1 = wsys->add_widget<classic_style::button>(
+            bk, _t("button1"), rect(10, 10, 100, 20), sm_hitable | sm_visible
+            );
+        btn1->set_value(_t("caption"), _t("button1"));
+        btn1->flush_style();
 
-   framesys::get_framesys()->refresh();
-   return framesys::get_framesys()->run();
+        auto* edit1 = wsys->add_widget<classic_style::edit_line>(
+            bk, _t("edit1"), rect(10, 40, 100, 20), sm_hitable | sm_visible
+            );
+        edit1->flush_style();
+
+    //    auto* menu1 = wsys->add_widget<classic_style::menu>(
+    //        bk, _t("menu1"), rect(10, 70, 1, 1), sm_hitable|sm_visible
+    //        );
+    //    assert(menu1);
+    //    menu1->flush_style();
+    //    classic_style::create_menu_from_script(menu1,
+    //        _t("Menu Test 1,Ctrl+A:@MenuTestCmd1;")
+    //        _t("[separator];")
+    //        _t("Menu Test 2, Ctrl+B:{")
+    //        _t("Menu Test 2-1,:@MenuTestCmd2;")
+    //        _t("}")
+    //        );
+    //    menu1->startup();
+
+        auto* horihori = wsys->add_widget<classic_style::vertical_scrollbar>(bk, nullptr, rect(300, 300, 18, 100), sm_visible | sm_hitable);
+        horihori->flush_style();
+        horihori->initialize_scrollbar(200);
+
+    //    auto* cont = wsys->add_widget<classic_style::horizontal_layout_container>(bk, nullptr, rect(100, 100, 300, 300), sm_visible|sm_hitable);
+    //    auto* leftw = wsys->add_widget<classic_style::widget>(cont, nullptr, rect(), sm_visible|sm_hitable);
+    //    auto* rightw = wsys->add_widget<classic_style::widget>(cont, nullptr, rect(), sm_visible|sm_hitable);
+    //    leftw->set_value(_t("fill_color"), _t("rgb(255,0,0)"));
+    //    rightw->set_value(_t("fill_color"), _t("rgb(0,255,0)"));
+    //    leftw->flush_style();
+    //    rightw->flush_style();
+    //    cont->set_left_sub_widget(leftw);
+    //    cont->set_right_sub_widget(rightw);
+    //    cont->initialize_container();
+
+
+    //    auto* sb = wsys->add_widget<classic_style::scroll_button>(bk, _t(""), rect(300, 300, 50, 50), sm_hitable|sm_visible);
+    //    sb->set_button_type(classic_style::scroll_button::btn_down);
+    //    sb->flush_style();
+
+        framesys::get_framesys()->refresh();
+
+        return true;
+    }
+};
+
+#ifdef _UNICODE
+int __stdcall wWinMain
+#else
+int __stdcall WinMain
+#endif
+    (HINSTANCE hInstance, HINSTANCE hPrevInstance, LPTSTR lpCmdLine, int nShowCmd)
+{
+    app_config cfg;
+    framesys::set_default_config(cfg);
+    my_application app;
+    app.simple_setup(cfg);
+    return app.run();
 }

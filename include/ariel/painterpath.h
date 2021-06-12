@@ -29,7 +29,6 @@
 #define painterpath_d2d84280_c369_48f2_99f8_28652ad13baa_h
 
 #include <ariel/config.h>
-#include <ariel/image.h>
 #include <gslib/std.h>
 
 __ariel_begin__

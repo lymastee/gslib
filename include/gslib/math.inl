@@ -1643,7 +1643,7 @@ inline matrix* matrotationaxis(matrix* out, const vec3* v, float angle)
     return out;
 }
 
-inline matrix* matrotationquartern(matrix* out, const quat* q)
+inline matrix* matrotationquatern(matrix* out, const quat* q)
 {
     assert(out && q);
     float x = q->x, y = q->y, z = q->z, w = q->w;

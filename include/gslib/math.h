@@ -174,7 +174,7 @@ matrix* matrotation_x(matrix* out, float angle);
 matrix* matrotation_y(matrix* out, float angle); 
 matrix* matrotation_z(matrix* out, float angle);
 matrix* matrotationaxis(matrix* out, const vec3* v, float angle);
-matrix* matrotationquartern(matrix* out, const quat* q);
+matrix* matrotationquatern(matrix* out, const quat* q);
 matrix* matrotationeuler(matrix* out, float yaw, float pitch, float roll);
 matrix* matlookatlh(matrix* out, const vec3* eye, const vec3* at, const vec3* up);
 matrix* matlookatrh(matrix* out, const vec3* eye, const vec3* at, const vec3* up);
@@ -578,7 +578,7 @@ public:
     mat4& rotation_y(float angle) { return *matrotation_y(this, angle); }
     mat4& rotation_z(float angle) { return *matrotation_z(this, angle); }
     mat4& rotation(const vec3& v, float angle) { return *matrotationaxis(this, &v, angle); }
-    mat4& rotation(const quat& q) { return *matrotationquartern(this, &q); }
+    mat4& rotation(const quat& q) { return *matrotationquatern(this, &q); }
     mat4& rotation(float yaw, float pitch, float roll) { return *matrotationeuler(this, yaw, pitch, roll); }
     mat4& lookatlh(const vec3& eye, const vec3& at, const vec3& up) { return *matlookatlh(this, &eye, &at, &up); }
     mat4& lookatrh(const vec3& eye, const vec3& at, const vec3& up) { return *matlookatrh(this, &eye, &at, &up); }

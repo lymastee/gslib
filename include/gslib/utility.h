@@ -58,6 +58,8 @@ extern void hermite_interpolate(vec2 c[], const vec2& p1, const vec2& p2, const 
 extern float linear_reparameterize(const vec2& p1, const vec2& p2, const vec2& p);
 extern float quad_reparameterize(const vec3 para[2], const vec2& p);
 extern float cubic_reparameterize(const vec4 para[2], const vec2& p);
+extern float best_quad_reparameterize(const vec3 para[2], const vec2& p);
+extern float best_cubic_reparameterize(const vec4 para[2], const vec2& p);
 extern bool is_concave_angle(const vec2& p1, const vec2& p2, const vec2& p3);
 extern bool is_concave_angle(const vec2& p1, const vec2& p2, const vec2& p3, bool cw);
 extern bool is_approx_line(const vec2& p1, const vec2& p2, const vec2& p3, float tolerance);
@@ -90,6 +92,7 @@ extern int intersectp_cubic_quad(vec2 ip[6], const vec2 cp1[4], const vec2 cp2[3
 extern int intersectp_cubic_cubic(vec2 ip[9], const vec2 cp1[4], const vec2 cp2[4], float tolerance);
 extern bool get_self_intersection(float ts[2], const vec2& a, const vec2& b, const vec2& c, const vec2& d);
 extern void split_quad_bezier(vec2 c[5], const vec2 p[3], float t);
+extern void split_quad_bezier(vec2 c[7], const vec2 p[3], float t1, float t2);
 extern void split_cubic_bezier(vec2 c[7], const vec2 p[4], float t);
 extern void split_cubic_bezier(vec2 c[10], const vec2 p[4], float t1, float t2);
 extern void offset_cubic_bezier(vec2 c[4], const vec2 p[4], float d);
@@ -112,6 +115,7 @@ extern float get_rotate_angle(const vec2& d1, const vec2& d2);
 extern float get_rotate_angle(const vec2& a, const vec2& b, const vec2& c);
 extern void get_reduce_point(vec2& p, const vec2& a, const vec2& b, const vec2& c, const vec2& d);
 extern bool point_in_triangle(const vec2& p, const vec2& p1, const vec2& p2, const vec2& p3);
+extern int point_in_polygon(const vec2& p, const vector<vec2>& poly);   /* 0: outside; 1 : inside; -1 : coincide */
 extern float get_triangle_area(const vec2& p1, const vec2& p2, const vec2& p3);
 extern vec3 get_barycentric_coords(const vec2& p, const vec2& p1, const vec2& p2, const vec2& p3);
 extern bool clip_line_rect(float t[2], const vec2& p1, const vec2& p2, const rect& clipbox);

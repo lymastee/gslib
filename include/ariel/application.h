@@ -39,6 +39,7 @@ struct app_config
     gs::gchar           window_name[128];
     gs::rect            position;
     addrptr             window_proc;
+    bool                hidden;
     /* more.. */
 };
 

@@ -488,6 +488,7 @@ void framesys::set_default_config(app_config& cfg)
     strtool::copy(cfg.window_name, _countof(cfg.window_name), _t(""));
     cfg.window_proc = frame_window_proc;
     cfg.position = rect(50, 50, 640, 480);
+    cfg.hidden = false;
 }
 
 void framesys::on_app_initialized(const app_env& env)

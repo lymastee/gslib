@@ -3,17 +3,17 @@
  * Contact: lymastee@hotmail.com
  *
  * This file is part of the gslib project.
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in all
  * copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -23,3364 +23,1263 @@
  * SOFTWARE.
  */
 
-#include <gslib/error.h>
 #include <ariel/clip.h>
+#include <gslib/utility.h>
+#include <gslib/error.h>
+
+#undef min
+#undef max
+
+#include <clipper/clipper.hpp>
+#include <clipper/clipper.cpp>
 
 __ariel_begin__
 
-static void trace_patch_or_polygon(clip_result::iterator i)
-{
-    assert(i);
-    auto& p = *i;
-    if(p.is_patch()) {
-        static_cast<clip_patch&>(p).tracing();
-        return;
-    }
-    p.tracing();
-}
+using namespace ClipperLib;
 
-clip_joint* clip_joint::get_prev_joint() const
-{
-    assert(_prev);
-    return _prev->get_joint(0);
-}
+#define int_scale_ratio     1000.f
 
-clip_joint* clip_joint::get_next_joint() const
-{
-    assert(_next);
-    return _next->get_joint(1);
-}
+class clip_edge;
+class clip_point;
+class clipper;
+struct clip_ep_map_key;
+struct clip_ep_map_hash;
+struct clip_ep_map_value;
 
-clip_line* clip_joint::get_prev_above(float y) const
-{
-    auto* prev = get_prev_joint();
-    assert(prev);
-    if(prev->get_point().y > y)
-        return get_prev_line();
-    return nullptr;
-}
+typedef vector<clip_edge*> clip_edges;
+typedef vector<clip_point*> clip_points;
+typedef map<clip_edge*, float> clip_intersect_info_map;
+typedef unordered_map<clip_ep_map_key, clip_ep_map_value, clip_ep_map_hash> clip_ep_map;
+typedef vector<Paths*> PathHoldings;
 
-clip_line* clip_joint::get_next_above(float y) const
-{
-    auto* next = get_next_joint();
-    assert(next);
-    if(next->get_point().y > y)
-        return get_next_line();
-    return nullptr;
-}
+static IntPoint cvt_AJ_point(const vec2& pt) { return IntPoint(round(pt.x * int_scale_ratio), round(pt.y * int_scale_ratio)); }
+static IntPoint cvt_AJ_point(const vec2& pt, clip_point* p) { return IntPoint(round(pt.x * int_scale_ratio), round(pt.y * int_scale_ratio), (cInt)p); }
+static vec2 cvt_point(const IntPoint& pt) { return vec2((float)pt.X / int_scale_ratio, (float)pt.Y / int_scale_ratio); }
+static clip_point* get_clip_point(const IntPoint& pt) { return reinterpret_cast<clip_point*>(pt.Z); }
 
-clip_line* clip_joint::get_prev_below(float y) const
+static void trace_AJ_path(const Path& path)
 {
-    auto* prev = get_prev_joint();
-    assert(prev);
-    if(prev->get_point().y < y)
-        return get_prev_line();
-    return nullptr;
-}
-
-clip_line* clip_joint::get_next_below(float y) const
-{
-    auto* next = get_next_joint();
-    assert(next);
-    if(next->get_point().y < y)
-        return get_next_line();
-    return nullptr;
-}
-
-clip_end_joint::clip_end_joint(const vec2& pt)
-{
-    _point = pt;
-    _info[0] = _info[1] = nullptr;
-}
-
-void clip_end_joint::set_path_info(int i, path_info* pnf)
-{
-    assert(pnf);
-    assert(i == 0 || i == 1);
-    _info[i] = pnf;
-}
-
-clip_interpolate_joint::clip_interpolate_joint(const vec2& pt)
-{
-    _point = pt;
-    _ratio = 0.f;
-    _info = nullptr;
-}
-
-clip_intersect_joint::clip_intersect_joint(const vec2& pt)
-{
-    _point = pt;
-    _orient[0] = _orient[1] = nullptr;
-    _cut[0] = _cut[1] = nullptr;
-    _symmetric = nullptr;
-}
-
-path_info* clip_intersect_joint::get_path_info() const
-{
-    auto* prevline = get_prev_line();
-    assert(prevline);
-    auto* prevj = prevline->get_another_joint(this);
-    assert(prevj);
-    auto t = prevj->get_type();
-    switch(t)
-    {
-    case ct_interpolate_joint:
-        {
-            auto* joint = static_cast<clip_interpolate_joint*>(prevj);
-            return joint->get_path_info();
-        }
-    case ct_end_joint:
-        {
-            auto* joint = static_cast<clip_end_joint*>(prevj);
-            return joint->get_path_info(1);
-        }
-    default:
-        assert(!"unexpected in clip_intersect_joint::get_path_info.");
-        return nullptr;
-    }
-}
-
-clip_joint* clip_line::get_another_joint(const clip_joint* joint) const
-{
-    if(_joint[0] == joint)
-        return _joint[1];
-    else if(_joint[1] == joint)
-        return _joint[0];
-    assert(!"unexpected.");
-    return nullptr;
-}
-
-clip_line* clip_line::get_prev_line() const
-{
-    if(!_joint[0])
-        return nullptr;
-    assert(_joint[0]->get_next_line() == this);
-    return _joint[0]->get_prev_line();
-}
-
-clip_line* clip_line::get_next_line() const
-{
-    if(!_joint[1])
-        return nullptr;
-    assert(_joint[1]->get_prev_line() == this);
-    return _joint[1]->get_next_line();
-}
-
-void clip_line::tracing() const
-{
-    const vec2& p1 = get_point(0);
-    const vec2& p2 = get_point(1);
-    trace(_t("@moveTo %f, %f;"), p1.x, p1.y);
-    trace(_t("@lineTo %f, %f;\n"), p2.x, p2.y);
-}
-
-template<class _node, class _list>
-static void destroy_ptr_list(_list& l)
-{
-    if(l.empty())
-        return;
-    std::for_each(l.begin(), l.end(), [](_list::value_type& ptr) {
-        assert(ptr);
-        delete ptr;
-    });
-    l.clear();
-}
-
-clip_polygon::~clip_polygon()
-{
-    destroy_ptr_list<clip_joint, clip_joints>(_joint_holdings);
-    destroy_ptr_list<clip_line, clip_lines>(_line_holdings);
-    destroy_ptr_list<path_info, clip_path_infos>(_pnf_holdings);
-}
-
-int clip_polygon::create(const painter_path& path, int start)
-{
-    int cap = path.size();
-    if(start >= cap)
-        return cap;
-    int next = create_path_infos(path, start);
-    if(!_pnf_holdings.empty())
-        create_polygon();
-    return next;
-}
-
-void clip_polygon::convert_from(clip_patch& patch)
-{
-    _joint_holdings.swap(patch._joint_holdings);
-    _line_holdings.swap(patch._line_holdings);
-    _pnf_holdings.swap(patch._pnf_holdings);
-    set_line_start(patch.get_line_start());
-}
-
-void clip_polygon::reverse_direction()
-{
-    assert(_line_start);
-    auto reverse_segment = [](clip_line* line)->clip_line* {
-        assert(line);
-        auto* joint = line->get_joint(1);
-        assert(joint);
-        auto* next = joint->get_next_line();
-        joint->reverse();
-        line->reverse();
-        return next;
-    };
-    auto* line = reverse_segment(_line_start);
-    while(line != _line_start)
-        line = reverse_segment(line);
-    /* make sure that the first joint was not a control point */
-    auto* joint1 = _line_start->get_joint(0);
-    assert(joint1);
-    auto t = joint1->get_type();
-    if(t == ct_final_joint) {
-        auto* fj1 = static_cast<clip_final_joint*>(joint1);
-        if(fj1->is_control_point()) {
-            auto* joint2 = _line_start->get_joint(1);
-            assert(joint2 && joint2->get_type() == ct_final_joint);
-            auto* fj2 = static_cast<clip_final_joint*>(joint2);
-            assert(!fj2->is_control_point());
-            _line_start = _line_start->get_next_line();
-        }
-    }
-}
-
-void clip_polygon::tracing() const
-{
-    if(!_line_start)
+    if(path.empty())
         return;
     trace(_t("@!\n"));
-    const clip_line* first = _line_start;
-    assert(first);
-    const vec2& p1 = first->get_point(0);
-    const vec2& p2 = first->get_point(1);
-    trace(_t("@moveTo %f, %f;\n"), p1.x, p1.y);
-    trace(_t("@lineTo %f, %f;\n"), p2.x, p2.y);
-    for(auto* line = first->get_next_line(); line != first; line = line->get_next_line()) {
-        assert(line);
-        const vec2& p = line->get_point(1);
+    vec2 p0 = cvt_point(path.at(0));
+    trace(_t("@moveTo %f, %f;\n"), p0.x, p0.y);
+    for(int i = 1; i < (int)path.size(); i ++) {
+        vec2 p = cvt_point(path.at(i));
         trace(_t("@lineTo %f, %f;\n"), p.x, p.y);
     }
-    trace(_t("@@\n"));
-}
-
-void clip_polygon::trace_segments() const
-{
-    if(!_line_start)
-        return;
-    trace(_t("@!\n"));
-    const clip_line* first = _line_start;
-    assert(first);
-    const vec2& p1 = first->get_point(0);
-    const vec2& p2 = first->get_point(1);
-    trace(_t("@moveTo %f, %f;\n"), p1.x, p1.y);
-    trace(_t("@lineTo %f, %f;\n"), p2.x, p2.y);
-    for(auto* line = first->get_next_line(); line != first; line = line->get_next_line()) {
-        const vec2& p1 = line->get_point(0);
-        const vec2& p2 = line->get_point(1);
-        trace(_t("@moveTo %f, %f;\n"), p1.x, p1.y);
-        trace(_t("@lineTo %f, %f;\n"), p2.x, p2.y);
+    trace(_t("@lineTo %f, %f;\n"), p0.x, p0.y);
+    for(const IntPoint& pt : path) {
+        vec2 p = cvt_point(pt);
+        trace(_t("@dot %f, %f;\n"), p.x, p.y);
     }
     trace(_t("@@\n"));
 }
 
-void clip_polygon::trace_final() const
+static void convert_to_polygons(painter_linestrips& polygons, const Paths& out)
 {
-    assert(_line_start);
-    trace(_t("@!\n"));
-    auto trace_once = [](clip_line* line)->clip_line* {
-        assert(line);
-        auto* joint1 = line->get_joint(0);
-        auto* joint2 = line->get_joint(1);
-        assert(joint1 && joint2);
-        assert(joint1->get_type() == ct_final_joint && joint2->get_type() == ct_final_joint);
-        auto* fj1 = static_cast<clip_final_joint*>(joint1);
-        auto* fj2 = static_cast<clip_final_joint*>(joint2);
-        assert(!fj1->is_control_point());
-        auto& p1 = fj1->get_point();
-        auto& p2 = fj2->get_point();
-        // trace(_t("@moveTo %f, %f;\n"), p1.x, p1.y);
-        if(!fj2->is_control_point()) {
-            trace(_t("@lineTo %f, %f;\n"), p2.x, p2.y);
-            return line->get_next_line();
-        }
-        auto* line2 = line->get_next_line();
-        auto* joint3 = line2->get_joint(1);
-        assert(joint3 && joint3->get_type() == ct_final_joint);
-        auto* fj3 = static_cast<clip_final_joint*>(joint3);
-        auto& p3 = fj3->get_point();
-        if(!fj3->is_control_point()) {
-            trace(_t("@quadTo %f, %f, %f, %f;\n"), p2.x, p2.y, p3.x, p3.y);
-            return line2->get_next_line();
-        }
-        auto* line3 = line2->get_next_line();
-        auto* joint4 = line3->get_joint(1);
-        assert(joint4 && joint4->get_type() == ct_final_joint);
-        auto* fj4 = static_cast<clip_final_joint*>(joint4);
-        auto& p4 = fj4->get_point();
-        assert(!fj4->is_control_point());
-        trace(_t("@cubicTo %f, %f, %f, %f, %f, %f;\n"), p2.x, p2.y, p3.x, p3.y, p4.x, p4.y);
-        return line3->get_next_line();
-    };
-    auto* joint1 = _line_start->get_joint(0);
-    assert(joint1);
-    auto& p = joint1->get_point();
-    trace(_t("@moveTo %f, %f;\n"), p.x, p.y);
-    auto* line = trace_once(_line_start);
-    for(; line != _line_start; line = trace_once(line));
-    trace(_t("@@\n"));
-}
-
-int clip_polygon::create_path_infos(const painter_path& path, int start)
-{
-    int cap = path.size();
-    if(start >= cap)
-        return cap;
-    const painter_node* first = path.get_node(start);
-    assert(first && first->get_tag() == painter_path::pt_moveto);
-    const painter_node* last = first;
-    int i = start + 1;
-    for(; i < cap; i ++) {
-        const painter_node* node = path.get_node(i);
-        assert(node);
-        auto tag = node->get_tag();
-        if(tag == painter_path::pt_moveto)
-            break;
-        _pnf_holdings.push_back(new path_info(last, node));
-        last = node;
-    }
-    assert(first != last && first->get_point() == last->get_point());
-    return i;
-}
-
-void clip_polygon::create_polygon()
-{
-    assert(!_pnf_holdings.empty());
-    int size = (int)_pnf_holdings.size();
-    if(size == 1) {
-        path_info* pnf = _pnf_holdings.front();
-        assert(pnf && pnf->get_order() > 1 && "must be curve.");
-        clip_end_joint* joint = create_end_joint(pnf, pnf);
-        assert(joint);
-        create_segment(joint, pnf, pnf, joint);
-    }
-    else if(size == 2) {
-        path_info* pnf1 = _pnf_holdings.front();
-        path_info* pnf2 = _pnf_holdings.back();
-        assert(pnf1 && pnf2);
-        clip_end_joint* joint1 = create_end_joint(pnf2, pnf1);
-        clip_end_joint* joint2 = create_end_joint(pnf1, pnf2);
-        assert(joint1 && joint2);
-        create_segment(joint1, pnf1, pnf2, joint2);
-        create_segment(joint2, pnf2, pnf1, joint1);
-    }
-    else {
-        auto i = _pnf_holdings.begin(), back = --_pnf_holdings.end();
-        path_info* pnf1 = *i, *pnf2 = *back;
-        assert(pnf1 && pnf2);
-        clip_end_joint* joint1 = create_end_joint(pnf2, pnf1);
-        clip_end_joint* lastj = joint1;
-        while(i != back) {
-            auto j = std::next(i);
-            path_info* pnf = *i;
-            path_info* nextpnf = *j;
-            lastj = create_segment(lastj, pnf, nextpnf);
-            i = j;
-        }
-        create_segment(lastj, pnf2, pnf1, joint1);
-    }
-    if(!_line_holdings.empty())
-        _line_start = _line_holdings.front();
-}
-
-clip_end_joint* clip_polygon::create_end_joint(path_info* pnf1, path_info* pnf2)
-{
-    assert(pnf1 && pnf2);
-    vec2 pt[4];
-    int c = pnf1->get_point_count();
-    assert(c <= 4);
-    pnf1->get_points(pt, c);
-    clip_end_joint* j = new clip_end_joint(pt[c - 1]);
-    assert(j);
-    j->set_path_info(0, pnf1);
-    j->set_path_info(1, pnf2);
-    _joint_holdings.push_back(j);
-    return j;
-}
-
-clip_interpolate_joint* clip_polygon::create_interpolate_joint(path_info* pnf, const vec2& p, float t)
-{
-    assert(pnf);
-    clip_interpolate_joint* j = new clip_interpolate_joint(p);
-    assert(j);
-    j->set_path_info(pnf);
-    j->set_ratio(t);
-    _joint_holdings.push_back(j);
-    return j;
-}
-
-clip_line* clip_polygon::create_line(clip_joint* joint1, clip_joint* joint2)
-{
-    clip_line* e = new clip_line;
-    assert(e);
-    e->set_joint(0, joint1);
-    e->set_joint(1, joint2);
-    if(joint1) joint1->set_next_line(e);
-    if(joint2) joint2->set_prev_line(e);
-    _line_holdings.push_back(e);
-    return e;
-}
-
-clip_end_joint* clip_polygon::create_segment(clip_joint* joint1, path_info* pnf1, path_info* pnf2, clip_joint* joint2)
-{
-    assert(joint1 && pnf1 && pnf2);
-    /* create interpolate segments */
-    clip_joint* lastj = joint1;
-    int order = pnf1->get_order();
-    if(order != 1) {
-        vec2 pt[4];
-        int c = pnf1->get_point_count();
-        assert(c == 3 || c == 4);
-        pnf1->get_points(pt, c);
-        if(c == 3) {
-            vec3 para[2];
-            get_quad_parameter_equation(para, pt[0], pt[1], pt[2]);
-            int step = get_rough_interpolate_step(pt[0], pt[1], pt[2]);
-            float t, chord;
-            t = chord = 1.f / (step - 1);
-            for(int i = 1; i < step - 1; i ++, t += chord) {
-                vec2 p;
-                eval_quad(p, para, t);
-                clip_joint* joint = create_interpolate_joint(pnf1, p, t);
-                assert(joint);
-                create_line(lastj, joint);
-                lastj = joint;
-            }
-        }
-        else {
-            assert(c == 4);
-            vec4 para[2];
-            get_cubic_parameter_equation(para, pt[0], pt[1], pt[2], pt[3]);
-            int step = get_rough_interpolate_step(pt[0], pt[1], pt[2], pt[3]);
-            float t, chord;
-            t = chord = 1.f / (step - 1);
-            for(int i = 1; i < step - 1; i ++, t += chord) {
-                vec2 p;
-                eval_cubic(p, para, t);
-                clip_joint* joint = create_interpolate_joint(pnf1, p, t);
-                assert(joint);
-                create_line(lastj, joint);
-                lastj = joint;
-            }
-        }
-    }
-    /* join end joint */
-    if(!joint2)
-        joint2 = create_end_joint(pnf1, pnf2);
-    assert(joint2);
-    create_line(lastj, joint2);
-    return static_cast<clip_end_joint*>(joint2);
-}
-
-clip_mirror_joint* clip_polygon::create_mirror_joint(clip_joint* joint)
-{
-    assert(joint);
-    clip_mirror_joint* p = new clip_mirror_joint;
-    assert(p);
-    p->set_mirror(joint);
-    _joint_holdings.push_back(p);
-    return p;
-}
-
-clip_final_joint* clip_polygon::create_final_joint(clip_joint* joint)
-{
-    /* joint could be null, which indicates a control point. */
-    clip_final_joint* p = new clip_final_joint;
-    assert(p);
-    p->set_mirror(joint);
-    _joint_holdings.push_back(p);
-    return p;
-}
-
-void clip_polygon::adopt(clip_polygon& poly)
-{
-    _joint_holdings.insert(_joint_holdings.end(), poly._joint_holdings.begin(), poly._joint_holdings.end());
-    _line_holdings.insert(_line_holdings.end(), poly._line_holdings.begin(), poly._line_holdings.end());
-    _pnf_holdings.insert(_pnf_holdings.end(), poly._pnf_holdings.begin(), poly._pnf_holdings.end());
-    poly._joint_holdings.clear();
-    poly._line_holdings.clear();
-    poly._pnf_holdings.clear();
-}
-
-clip_sweep_line::~clip_sweep_line()
-{
-    for(auto* p : _joint_holdings) { delete p; }
-    _sorted_by_x.clear();
-    _joint_holdings.clear();
-}
-
-void clip_sweep_line::add_joint(clip_sweep_joint* joint)
-{
-    assert(joint);
-    _joint_holdings.push_back(joint);
-    _sorted_by_x.insert(joint);
-}
-
-clip_sweep_joint* clip_sweep_line::create_joint(clip_joint* joint)
-{
-    assert(joint);
-    auto* p = new clip_sweep_endpoint(joint);
-    add_joint(p);
-    return p;
-}
-
-static bool clip_range_test_y(clip_line* line, float y)
-{
-    assert(line);
-    auto* p = line->get_joint(0);
-    auto* q = line->get_joint(1);
-    assert(p && q);
-    float m = p->get_point().y;
-    float n = q->get_point().y;
-    if(m < n)
-        return y > m && y < n;
-    return y > n && y < m;
-}
-
-static float calc_sweep_line_x(clip_joint* upside, clip_joint* downside, float y)
-{
-    assert(upside && downside);
-    const vec2& p1 = upside->get_point();
-    const vec2& p2 = downside->get_point();
-    return p2.x - ((p2.y - y) / (p2.y - p1.y)) * (p2.x - p1.x);
-}
-
-clip_sweep_joint* clip_sweep_line::create_joint(clip_line* line, float y)
-{
-    assert(line);
-    if(!clip_range_test_y(line, y))
-        return nullptr;
-    float x = calc_sweep_line_x(line->get_joint(0), line->get_joint(1), y);
-    auto* p = new clip_sweep_relay;
-    p->set_line(line);
-    p->set_point(vec2(x, y));
-    add_joint(p);
-    return p;
-}
-
-clip_sweep_joint* clip_sweep_line::ensure_unique_create(clip_joint* joint)
-{
-    assert(joint);
-    assert(joint->get_type() == ct_end_joint);
-    const vec2& p = joint->get_point();
-    auto f = _sorted_by_x.find(&clip_sweep_key(p));
-    auto end = _sorted_by_x.end();
-    if(f == end)
-        return create_joint(joint);
-    bool found = false;
-    for(; f != end; ++ f) {
-        auto* j = *f;
-        if(j->get_point().x != p.x)
-            break;
-        if(j->get_tag() == cst_endpoint) {
-            auto* k = static_cast<clip_sweep_endpoint*>(j);
-            if(k->get_joint() == joint) {
-                found = true;
-                break;
-            }
-        }
-    }
-    return found ? nullptr : create_joint(joint);
-}
-
-const vec2& clip_sweeper::get_another_point() const
-{
-    auto tag = joint->get_tag();
-    if(tag == cst_endpoint) {
-        auto* p = static_cast<clip_sweep_endpoint*>(joint);
-        auto* j = p->get_joint();
-        auto* r = line->get_another_joint(j);
-        assert(r);
-        return r->get_point();
-    }
-    else if(tag == cst_relay) {
-        assert(line);
-        auto* p = line->get_joint(0);
-        return p->get_point();
-    }
-    else {
-        assert(!"unexpected.");
-        static const vec2 p;
-        return p;
-    }
-}
-
-void clip_sweeper::tracing() const
-{
-    assert(line);
-    line->tracing();
-    assert(joint);
-    const vec2& p = joint->get_point();
-    trace(_t("@dot %f, %f;\n"), p.x, p.y);
-}
-
-clip_mirror_joint* clip_patch::create_assumed_mj(const clip_sweeper& sweeper)
-{
-    if(sweeper.joint->get_tag() == cst_endpoint) {
-        auto* j = static_cast<clip_sweep_endpoint*>(sweeper.joint)->get_joint();
-        assert(j);
-        return create_mirror_joint(j);
-    }
-    return nullptr;
-}
-
-clip_line* clip_patch::fix_line_front(clip_line* line, clip_mirror_joint* mj)
-{
-    assert(line && line->get_joint(1));
-    if(auto* j = line->get_joint(0))
-        return create_line(mj, j);
-    if(mj) {
-        line->set_joint(0, mj);
-        mj->set_next_line(line);
-    }
-    return line;
-}
-
-clip_line* clip_patch::fix_line_back(clip_line* line, clip_mirror_joint* mj)
-{
-    assert(line && line->get_joint(0));
-    if(auto* j = line->get_joint(1))
-        return create_line(j, mj);
-    if(mj) {
-        line->set_joint(1, mj);
-        mj->set_prev_line(line);
-    }
-    return line;
-}
-
-void clip_patch::reverse_direction()
-{
-    auto* line1 = _line_start;
-    auto* line2 = _line_end;
-    auto sweeper1 = _start_point;
-    auto sweeper2 = _end_point;
-    auto* line = line1;
-    if(auto* joint = line->get_joint(0))
-        joint->reverse();
-    for(;;) {
-        auto* next = line->get_next_line();
-        auto* joint = line->get_joint(1);
-        line->reverse();
-        if(joint)
-            joint->reverse();
-        if(line == line2)
-            break;
-        line = next;
-    }
-    set_line_start(line2);
-    set_line_end(line1);
-    set_start_point(sweeper2);
-    set_end_point(sweeper1);
-}
-
-void clip_patch::finish_patch()
-{
-    auto* line1 = _line_start;
-    auto* line2 = _line_end;
-    assert(line1 && line2);
-    auto* j0 = line1->get_joint(0);
-    auto* j1 = line2->get_joint(1);
-    if(!j0 || !j1)
-        return;     // todo: why?
-    assert(j0 && j1);
-    if(j0 != j1) {
-        assert(!j0->get_prev_line() && !j1->get_next_line());
-        create_line(j1, j0);
-    }
-}
-
-void clip_patch::tracing() const
-{
-    if(!_line_start)
-        return;
-    trace(_t("@!\n"));
-    auto* first = _line_start;
-    assert(first);
-    auto* firstj = first->get_joint(0);
-    if(firstj) {
-        const vec2& p1 = firstj->get_point();
-        trace(_t("@moveTo %f, %f;\n"), p1.x, p1.y);
-    }
-    else {
-        const vec2& p1 = first->get_point(1);
-        trace(_t("@moveTo %f, %f;\n"), p1.x, p1.y);
-        first = first->get_next_line();
-    }
-    for(auto* line = first; line && line != _line_end; line = line->get_next_line()) {
-        const vec2& p = line->get_point(1);
-        trace(_t("@lineTo %f, %f;\n"), p.x, p.y);
-    }
-    auto* joint = _line_end->get_joint(1);
-    if(joint) {
-        const vec2& p = joint->get_point();
-        trace(_t("@lineTo %f, %f;\n"), p.x, p.y);
-    }
-    auto& p1 = _start_point.get_point();
-    auto& p2 = _end_point.get_point();
-    trace(_t("@cross %f, %f;\n"), p1.x, p1.y);
-    trace(_t("@cross %f, %f;\n"), p2.x, p2.y);
-    trace(_t("@@\n"));
-}
-
-clip_sweep_line_algorithm::clip_sweep_line_algorithm()
-{
-    _clip_tag = cp_exclude;
-}
-
-void clip_sweep_line_algorithm::destroy()
-{
-    for(auto* p : _sweep_lines) { delete p; }
-    _sweep_lines.clear();
-    destroy_ptr_list<clip_joint, clip_joints>(_joint_holdings);
-    destroy_ptr_list<clip_line, clip_lines>(_line_holdings);
-    _sorted_by_y.clear();
-    _intersections.clear();
-}
-
-void clip_sweep_line_algorithm::add_polygon(clip_polygon* polygon)
-{
-    assert(polygon);
-    auto& joints = polygon->get_joints();
-    for(auto* p : joints)
-        _sorted_by_y.insert(p);
-}
-
-void clip_sweep_line_algorithm::proceed()
-{
-    prepare_sweep_lines();
-    proceed_overlapped_intersections();
-    proceed_intersections();
-    finish_intersections();
-}
-
-static bool is_clockwise(const clip_polygon* poly)
-{
-    assert(poly);
-    float x = -FLT_MAX;
-    clip_joint* detectp = nullptr;
-    auto* line1 = poly->get_line_start();
-    assert(line1);
-    auto* joint1 = line1->get_joint(0);
-    assert(joint1);
-    auto& p1 = joint1->get_point();
-    if(p1.x > x) {
-        x = p1.x;
-        detectp = joint1;
-    }
-    for(auto* line = line1->get_next_line(); line != line1; line = line->get_next_line()) {
-        auto* joint = line->get_joint(0);
-        assert(joint);
-        auto& p = joint->get_point();
-        if(p.x > x) {
-            x = p.x;
-            detectp = joint;
-        }
-    }
-    assert(detectp);
-    auto& d1 = detectp->get_prev_joint()->get_point();
-    auto& d2 = detectp->get_point();
-    auto& d3 = detectp->get_next_joint()->get_point();
-    return !is_concave_angle(d1, d2, d3);
-}
-
-void fix_clockwise(clip_result::iterator p);
-void fix_count_clockwise(clip_result::iterator p);
-
-static void fix_clockwise(clip_result::iterator p)
-{
-    assert(p);
-    auto* poly = &*p;
-    assert(poly);
-    if(!is_clockwise(poly))
-        poly->reverse_direction();
-    for(auto i = p.child(); i; i.to_next())
-        fix_count_clockwise(i);
-}
-
-static void fix_count_clockwise(clip_result::iterator p)
-{
-    assert(p);
-    auto* poly = &*p;
-    assert(poly);
-    if(is_clockwise(poly))
-        poly->reverse_direction();
-    for(auto i = p.child(); i; i.to_next())
-        fix_clockwise(i);
-}
-
-static void fix_clockwise_logics(clip_result& result)
-{
-    auto r = result.get_root();
-    assert(r);
-    for(auto i = r.child(); i; i.to_next())
-        fix_clockwise(i);
-}
-
-void clip_sweep_line_algorithm::output(clip_result& result)
-{
-    switch(get_clip_tag())
-    {
-    case cp_union:
-        output_union(result);
-        break;
-    case cp_intersect:
-        output_intersect(result);
-        break;
-    case cp_exclude:
-        output_exclude(result);
-        break;
-    default:
-        assert(!"output failed: unexpected.");
-        return;
-    }
-
-//     trace(_t("@@@@@@@@@@@@@@@@@@@@@@@!\n"));
-//     result.preorder_traversal([](clip_result_wrapper* w) {
-//         assert(w);
-//         if(!w->parent())
-//             return;
-//         w->get_ptr()->tracing();
-//     });
-
-    assert(_splitters.empty());
-    create_splitters();
-    replace_curves(result);
-    fix_clockwise_logics(result);
-}
-
-void clip_sweep_line_algorithm::prepare_sweep_lines()
-{
-    if(_sorted_by_y.empty())
-        return;
-    assert(_sorted_by_y.size() >= 2);
-    auto i = _sorted_by_y.begin();
-    auto* last = create_sweep_line(*i);
-    for(++ i; i != _sorted_by_y.end(); ++ i) {
-        auto y = (*i)->get_point().y;
-        if(abs(y - last->get_y()) < 1e-5f)
-            last->ensure_unique_create(*i);
-        else {
-            auto* curr = create_sweep_line(*i);
-            proceed_sweep_line(last, curr);
-            last = curr;
+    for(auto i = out.begin(); i != out.end(); ++i) {
+        if(!i->empty()) {
+            polygons.push_back(painter_linestrip());
+            painter_linestrip& ls = polygons.back();
+            for(int j = (int)i->size() - 1; j >= 0; j--)
+                ls.add_point(cvt_point(i->at(j)));
         }
     }
 }
 
-void clip_sweep_line_algorithm::proceed_overlapped_intersections()
+static void convert_to_paths(painter_paths& paths, const Paths& out)
 {
-    if(_sweep_lines.empty())
-        return;
-    for(auto* p : _sweep_lines)
-        proceed_overlapped_intersection(p);
-}
-
-void clip_sweep_line_algorithm::proceed_intersections()
-{
-    if(_sweep_lines.empty())
-        return;
-    assert(_sweep_lines.size() >= 2);
-    auto i = _sweep_lines.begin();
-    auto j = std::next(i);
-    for(; j != _sweep_lines.end(); i = j ++)
-        proceed_intersection(i, j);
-}
-
-void clip_sweep_line_algorithm::finish_intersections()
-{
-    for(auto* p : _joint_holdings) {
-        assert(p && (p->get_type() == ct_intersect_joint));
-        finish_intersection(static_cast<clip_intersect_joint*>(p));
-    }
-}
-
-void clip_sweep_line_algorithm::trace_sweep_lines() const
-{
-    if(_sweep_lines.empty())
-        return;
-    trace(_t("@!\n"));
-    for(auto* p : _sweep_lines)
-        trace_sweep_line(p);
-    trace(_t("@@\n"));
-}
-
-void clip_sweep_line_algorithm::trace_sweep_line(const clip_sweep_line* line) const
-{
-    assert(line);
-    auto& joints = line->const_sorted_joints();
-    if(joints.empty())
-        return;
-    for(auto i = joints.begin();;) {
-        assert(i != joints.end());
-        auto j = std::next(i);
-        if(j == joints.end())
-            break;
-        auto& p = (*i)->get_point();
-        auto& q = (*j)->get_point();
-        trace(_t("@moveTo %f, %f;\n"), p.x, p.y);
-        trace(_t("@lineTo %f, %f;\n"), q.x, q.y);
-        i = j;
-    }
-}
-
-void clip_sweep_line_algorithm::trace_sweep_lines(const mat3& m) const
-{
-    if(_sweep_lines.empty())
-        return;
-    trace(_t("@!\n"));
-    for(auto* p : _sweep_lines)
-        trace_sweep_line(p, m);
-    trace(_t("@@\n"));
-}
-
-void clip_sweep_line_algorithm::trace_sweep_line(const clip_sweep_line* line, const mat3& m) const
-{
-    assert(line);
-    auto& joints = line->const_sorted_joints();
-    if(joints.empty())
-        return;
-    painter_path path;
-    for(auto i = joints.begin();;) {
-        assert(i != joints.end());
-        auto j = std::next(i);
-        if(j == joints.end())
-            break;
-        auto& p = (*i)->get_point();
-        auto& q = (*j)->get_point();
-        path.move_to(p);
-        path.line_to(q);
-        i = j;
-    }
-    path.transform(m);
-    path.tracing();
-}
-
-void clip_sweep_line_algorithm::trace_intersections() const
-{
-    for(auto* p : _intersections) {
-        const vec2& pt = p->get_point();
-        trace(_t("@dot %f, %f;\n"), pt.x, pt.y);
-    }
-}
-
-clip_sweep_line* clip_sweep_line_algorithm::create_sweep_line(clip_joint* joint)
-{
-    assert(joint);
-    assert(joint->get_prev_line() && joint->get_next_line());
-    auto* prev = joint->get_prev_line();
-    auto* next = joint->get_next_line();
-    assert(prev && next);
-    auto* line = new clip_sweep_line(joint->get_point().y);
-    line->create_joint(joint);
-    _sweep_lines.push_back(line);
-    return line;
-}
-
-void clip_sweep_line_algorithm::proceed_sweep_line(clip_sweep_line* last, clip_sweep_line* curr)
-{
-    assert(last && curr);
-    auto& csj = curr->const_sorted_joints();
-    assert(csj.size() == 1);
-    auto* fst = *csj.begin();
-    assert(fst && (fst->get_tag() == cst_endpoint));
-    auto* fstep = static_cast<clip_sweep_endpoint*>(fst);
-    auto* fstc = fstep->get_joint();
-    assert(fstc);
-    auto& sorted_joints = last->get_sorted_joints();
-    for(auto* p : sorted_joints) {
-        assert(p);
-        auto tag = p->get_tag();
-        if(tag == cst_endpoint) {
-            auto* ptr = static_cast<clip_sweep_endpoint*>(p);
-            auto* joint = ptr->get_joint();
-            assert(joint);
-            float y = curr->get_y();
-            if(auto* prev = joint->get_prev_above(y))
-                curr->create_joint(prev, y);
-            if(auto* next = joint->get_next_above(y))
-                curr->create_joint(next, y);
-        }
-        else if(tag == cst_relay) {
-            auto* ptr = static_cast<clip_sweep_relay*>(p);
-            auto* line = ptr->get_line();
-            auto* a = line->get_joint(0);
-            auto* b = line->get_joint(1);
-            auto& p1 = a->get_point();
-            auto& p2 = b->get_point();
-            float y = curr->get_y();
-            if(abs(p1.y - y) < 1e-5f) {
-                if(fstc != a)
-                    curr->create_joint(a);
-            }
-            else if(abs(p2.y - y) < 1e-5f) {
-                if(fstc != b)
-                    curr->create_joint(b);
-            }
-            else
-                curr->create_joint(line, y);
-        }
-        else {
-            assert(!"unexpected.");
+    for(auto i = out.begin(); i != out.end(); ++i) {
+        if(!i->empty()) {
+            paths.push_back(painter_path());
+            painter_path& path = paths.back();
+            path.move_to(cvt_point(i->front()));
+            for(int j = (int)i->size() - 1; j > 0; j--)
+                path.line_to(cvt_point(i->at(j)));
+            path.close_path();
         }
     }
 }
 
-void clip_sweep_line_algorithm::proceed_sweep_line(clip_sweep_line* line, clip_sweepers::iterator from, clip_sweepers::iterator to)
+static void convert_to_clipper_paths(Paths& paths, const painter_linestrip& ls)
 {
-    assert(line);
-    float y = line->get_y();
-    for(auto i = from; i != to; ++ i)
-        line->create_joint(i->line, y);
-}
-
-void clip_sweep_line_algorithm::proceed_overlapped_intersection(clip_sweep_line* line)
-{
-    assert(line);
-    // todo:
-    // no x-coincide points in sweep lines
-    // replace them with clip_sl_pivot
-}
-
-static bool is_upside_corner(clip_sweep_joint* joint)
-{
-    assert(joint);
-    auto tag = joint->get_tag();
-    if(tag == cst_relay)
-        return false;
-    else if(tag == cst_endpoint) {
-        auto* p = static_cast<clip_sweep_endpoint*>(joint);
-        auto* q = p->get_joint();
-        assert(q);
-        float y = q->get_point().y;
-        auto* i = q->get_prev_joint();
-        auto* j = q->get_next_joint();
-        assert(i && j);
-        return (i->get_point().y > y) && (j->get_point().y > y);
-    }
-    else {
-        assert(!"unexpected.");
-        return false;
+    int s = ls.get_size();
+    if(s > 0) {
+        paths.push_back(Path());
+        Path& cp = paths.back();
+        for(auto i = 0; i < s; i++)
+            cp.push_back(cvt_AJ_point(ls.get_point(i)));
     }
 }
 
-static bool is_downside_corner(clip_sweep_joint* joint)
+static void convert_to_clipper_paths(Paths& paths, const painter_linestrips& lss)
 {
-    assert(joint);
-    auto tag = joint->get_tag();
-    if(tag == cst_relay)
-        return false;
-    else if(tag == cst_endpoint) {
-        auto* p = static_cast<clip_sweep_endpoint*>(joint);
-        auto* q = p->get_joint();
-        assert(q);
-        float y = q->get_point().y;
-        auto* i = q->get_prev_joint();
-        auto* j = q->get_next_joint();
-        assert(i && j);
-        return (i->get_point().y < y) && (j->get_point().y < y);
-    }
-    else {
-        assert(!"unexpected.");
-        return false;
-    }
+    for(auto i = lss.begin(); i != lss.end(); ++i)
+        convert_to_clipper_paths(paths, *i);
 }
 
-static void create_upside_endpoint(clip_sweepers& sweepers, float y0, float y1, clip_sweep_endpoint* joint, clip_joint* raw)
+enum clip_edge_type
 {
-    assert(joint && raw);
-    auto* m = raw->get_prev_joint();
-    auto* n = raw->get_next_joint();
-    assert(m && n);
-    if(m->get_point().y > y0) {
-        if(n->get_point().y > y0) {
-            float yy = (y0 + y1) * 0.5f;
-            float x1 = calc_sweep_line_x(raw, m, yy);
-            float x2 = calc_sweep_line_x(raw, n, yy);
-            if(x1 > x2) {
-                sweepers.push_back(clip_sweeper(joint, raw->get_next_line()));
-                sweepers.push_back(clip_sweeper(joint, raw->get_prev_line()));
-            }
-            else {
-                sweepers.push_back(clip_sweeper(joint, raw->get_prev_line()));
-                sweepers.push_back(clip_sweeper(joint, raw->get_next_line()));
-            }
-        }
-        else {
-            sweepers.push_back(clip_sweeper(joint, raw->get_prev_line()));
-        }
-    }
-    else if(n->get_point().y > y0)
-        sweepers.push_back(clip_sweeper(joint, raw->get_next_line()));
-}
-
-static void create_upside_endpoint(clip_sweepers& sweepers, float y0, float y1, clip_sweep_endpoint* joint, clip_intersect_joint* raw)
-{
-    assert(joint && raw);
-    auto* symm = raw->get_symmetric();
-    assert(symm);
-    auto* m1 = raw->get_prev_joint();
-    auto* m2 = raw->get_next_joint();
-    auto* n1 = symm->get_prev_joint();
-    auto* n2 = symm->get_next_joint();
-    assert(m1 && m2 && n1 && n2);
-    clip_sweeper swp1, swp2;
-    if(m1->get_point().y > y0) {
-        assert(m2->get_point().y < y0);
-        swp1.joint = joint;
-        swp1.line = raw->get_prev_line();
-    }
-    else {
-        assert(m2->get_point().y > y0);
-        swp1.joint = joint;
-        swp1.line = raw->get_next_line();
-    }
-    if(n1->get_point().y > y0) {
-        assert(n2->get_point().y < y0);
-        swp2.joint = joint;
-        swp2.line = symm->get_prev_line();
-    }
-    else {
-        assert(n2->get_point().y > y0);
-        swp2.joint = joint;
-        swp2.line = symm->get_next_line();
-    }
-    float y = (y0 + y1) * 0.5f;
-    float x1 = calc_sweep_line_x(m1, m2, y);
-    float x2 = calc_sweep_line_x(n1, n2, y);
-    if(x1 < x2) {
-        sweepers.push_back(swp1);
-        sweepers.push_back(swp2);
-    }
-    else {
-        sweepers.push_back(swp2);
-        sweepers.push_back(swp1);
-    }
-}
-
-static void create_upside_endpoint(clip_sweepers& sweepers, float y0, float y1, clip_sweep_endpoint* joint)
-{
-    assert(joint);
-    auto* p = joint->get_joint();
-    auto tag = p->get_type();
-    switch(tag)
-    {
-    case ct_end_joint:
-    case ct_interpolate_joint:
-        create_upside_endpoint(sweepers, y0, y1, joint, p);
-        break;
-    case ct_intersect_joint:
-        create_upside_endpoint(sweepers, y0, y1, joint, static_cast<clip_intersect_joint*>(p));
-        break;
-    default:
-        assert(!"todo pivot.");
-    }
-}
-
-static void create_upside_relay(clip_sweepers& sweepers, clip_sweep_relay* joint)
-{
-    assert(joint);
-    sweepers.push_back(clip_sweeper(joint, joint->get_line()));
-}
-
-static void create_upside_sweeper(clip_sweepers& sweepers, float y0, float y1, clip_sweep_joint* joint)
-{
-    assert(joint);
-    if(is_downside_corner(joint))
-        return;
-    auto tag = joint->get_tag();
-    switch(tag)
-    {
-    case cst_endpoint:
-        create_upside_endpoint(sweepers, y0, y1, static_cast<clip_sweep_endpoint*>(joint));
-        break;
-    case cst_relay:
-        create_upside_relay(sweepers, static_cast<clip_sweep_relay*>(joint));
-        break;
-    default:
-        assert(!"unexpected.");
-    }
-}
-
-static void create_upside_sweepers(clip_sweepers& sweepers, clip_sweep_line* line, clip_sweep_line* other)
-{
-    assert(line && other);
-    auto& joints = line->get_sorted_joints();
-    float y0 = line->get_y();
-    float y1 = other->get_y();
-    std::for_each(joints.begin(), joints.end(), [&](clip_sweep_joint* joint) {
-        create_upside_sweeper(sweepers, y0, y1, joint);
-    });
-}
-
-static void create_downside_endpoint(clip_sweepers& sweepers, float y0, float y1, clip_sweep_endpoint* joint, clip_joint* raw)
-{
-    assert(joint && raw);
-    auto* m = raw->get_prev_joint();
-    auto* n = raw->get_next_joint();
-    assert(m && n);
-    if(m->get_point().y < y0) {
-        if(n->get_point().y < y0) {
-            float yy = (y0 + y1) * 0.5f;
-            float x1 = calc_sweep_line_x(raw, m, yy);
-            float x2 = calc_sweep_line_x(raw, n, yy);
-            if(x1 > x2) {
-                sweepers.push_back(clip_sweeper(joint, raw->get_next_line()));
-                sweepers.push_back(clip_sweeper(joint, raw->get_prev_line()));
-            }
-            else {
-                sweepers.push_back(clip_sweeper(joint, raw->get_prev_line()));
-                sweepers.push_back(clip_sweeper(joint, raw->get_next_line()));
-            }
-        }
-        else {
-            sweepers.push_back(clip_sweeper(joint, raw->get_prev_line()));
-        }
-    }
-    else if(n->get_point().y < y0)
-        sweepers.push_back(clip_sweeper(joint, raw->get_next_line()));
-}
-
-static void create_downside_endpoint(clip_sweepers& sweepers, float y0, float y1, clip_sweep_endpoint* joint, clip_intersect_joint* raw)
-{
-    assert(joint && raw);
-    auto* symm = raw->get_symmetric();
-    assert(symm);
-    auto* m1 = raw->get_prev_joint();
-    auto* m2 = raw->get_next_joint();
-    auto* n1 = symm->get_prev_joint();
-    auto* n2 = symm->get_next_joint();
-    assert(m1 && m2 && n1 && n2);
-    clip_sweeper swp1, swp2;
-    if(m1->get_point().y < y0) {
-        assert(m2->get_point().y > y0);
-        swp1.joint = joint;
-        swp1.line = raw->get_prev_line();
-    }
-    else {
-        assert(m2->get_point().y < y0);
-        swp1.joint = joint;
-        swp1.line = raw->get_next_line();
-    }
-    if(n1->get_point().y < y0) {
-        assert(n2->get_point().y > y0);
-        swp2.joint = joint;
-        swp2.line = symm->get_prev_line();
-    }
-    else {
-        assert(n2->get_point().y < y0);
-        swp2.joint = joint;
-        swp2.line = symm->get_next_line();
-    }
-    float y = (y0 + y1) * 0.5f;
-    float x1 = calc_sweep_line_x(m1, m2, y);
-    float x2 = calc_sweep_line_x(n1, n2, y);
-    if(x1 < x2) {
-        sweepers.push_back(swp1);
-        sweepers.push_back(swp2);
-    }
-    else {
-        sweepers.push_back(swp2);
-        sweepers.push_back(swp1);
-    }
-}
-
-static void create_downside_endpoint(clip_sweepers& sweepers, float y0, float y1, clip_sweep_endpoint* joint)
-{
-    assert(joint);
-    auto* p = joint->get_joint();
-    auto tag = p->get_type();
-    switch(tag)
-    {
-    case ct_end_joint:
-    case ct_interpolate_joint:
-        create_downside_endpoint(sweepers, y0, y1, joint, p);
-        break;
-    case ct_intersect_joint:
-        create_downside_endpoint(sweepers, y0, y1, joint, static_cast<clip_intersect_joint*>(p));
-        break;
-    default:
-        assert(!"todo pivot");
-    }
-}
-
-static void create_downside_relay(clip_sweepers& sweepers, clip_sweep_relay* joint)
-{
-    assert(joint);
-    sweepers.push_back(clip_sweeper(joint, joint->get_line()));
-}
-
-static void create_downside_sweeper(clip_sweepers& sweepers, float y0, float y1, clip_sweep_joint* joint)
-{
-    assert(joint);
-    if(is_upside_corner(joint))
-        return;
-    auto tag = joint->get_tag();
-    switch(tag)
-    {
-    case cst_endpoint:
-        create_downside_endpoint(sweepers, y0, y1, static_cast<clip_sweep_endpoint*>(joint));
-        break;
-    case cst_relay:
-        create_downside_relay(sweepers, static_cast<clip_sweep_relay*>(joint));
-        break;
-    default:
-        assert(!"unexpected.");
-    }
-}
-
-static void create_downside_sweepers(clip_sweepers& sweepers, clip_sweep_line* line, clip_sweep_line* other)
-{
-    assert(line && other);
-    auto& joints = line->get_sorted_joints();
-    float y0 = line->get_y();
-    float y1 = other->get_y();
-    std::for_each(joints.begin(), joints.end(), [&](clip_sweep_joint* joint) {
-        create_downside_sweeper(sweepers, y0, y1, joint);
-    });
-}
-
-static void trace_sweepers(const clip_sweepers& sweepers)
-{
-    trace(_t("@!\n"));
-    trace(_t("#tracing sweepers.\n"));
-    for(auto& p : sweepers)
-        p.tracing();
-    trace(_t("@@\n"));
-}
-
-static void trace_sweepers(clip_sweep_line* line1, clip_sweep_line* line2)
-{
-    assert(line1 && line2);
-    clip_sweepers up, down;
-    create_upside_sweepers(up, line1, line2);
-    create_downside_sweepers(down, line2, line1);
-    trace_sweepers(up);
-    trace_sweepers(down);
-}
-
-static void trace_sweepers(clip_sweep_lines& sweeplines)
-{
-    if(sweeplines.empty())
-        return;
-    auto last = sweeplines.begin();
-    auto i = std::next(last);
-    for(; i != sweeplines.end(); last = i ++)
-        trace_sweepers(*last, *i);
-}
-
-void clip_sweep_line_algorithm::proceed_intersection(iterator a, iterator b)
-{
-    assert(b == std::next(a));
-    assert(b != _sweep_lines.end());
-    clip_sweepers up, down;
-    create_upside_sweepers(up, *a, *b);
-    create_downside_sweepers(down, *b, *a);
-    auto i = up.begin();
-    auto j = down.begin();
-    for(; i != up.end() && j != down.end(); ++ i, ++ j) {
-        if(i->line != j->line) {
-            auto line = insert_sweep_line(a, b);
-            proceed_intersection(*line, *i, *j, a, b);
-            proceed_sweep_line(*line, up.begin(), i);
-            proceed_sweep_line(*line, std::next(i), up.end());
-            proceed_overlapped_intersection(*line);
-            proceed_intersection(a, line);
-            proceed_intersection(line, b);
-            break;
-        }
-    }
-}
-
-class clip_front_tracer
-{
-public:
-    typedef clip_sweep_lines::iterator iterator;
-    clip_front_tracer() {}
-    clip_front_tracer(iterator f, iterator t): _from(f), _to(t) {}
-    clip_sweep_line* get_line() const { return *_from; }
-    template<class _lamb>
-    void run(_lamb lamb) const
-    {
-        for(auto i = _from;; -- i) {
-            if(!lamb(*i) || i == _to)
-                break;
-        }
-    }
-
-protected:
-    iterator        _from, _to;
+    et_linear,
+    et_quad,
+    et_cubic,
 };
 
-class clip_back_tracer
+class __gs_novtable clip_edge abstract
 {
 public:
-    typedef clip_sweep_lines::iterator iterator;
-    clip_back_tracer() {}
-    clip_back_tracer(iterator f, iterator t): _from(f), _to(t) {}
-    clip_sweep_line* get_line() const { return _from == _to ? nullptr : *_from; }
-    template<class _lamb>
-    void run(_lamb lamb) const
-    {
-        for(auto i = _from; i != _to; ++ i) {
-            if(!lamb(*i))
-                break;
-        }
-    }
+    typedef clip_edge_type type;
 
-protected:
-    iterator        _from, _to;
+public:
+    virtual ~clip_edge() {}
+    virtual type get_type() const = 0;
+    virtual int get_point_count() const = 0;
+    virtual const vec2& get_point(int i) const = 0;
+    const vec2& get_last_point() const { return get_point(get_point_count() - 1); }
 };
 
-static void clip_connect(clip_joint* joint, clip_line* line)
+template<clip_edge_type _type, int _count>
+class clip_edge_tpl :
+    public clip_edge
 {
-    assert(joint && line);
-    joint->set_next_line(line);
-    line->set_joint(0, joint);
-}
-
-static void clip_connect(clip_line* line, clip_joint* joint)
-{
-    assert(joint && line);
-    joint->set_prev_line(line);
-    line->set_joint(1, joint);
-}
-
-static void clip_connect(clip_joint* joint1, clip_line* line, clip_joint* joint2)
-{
-    assert(joint1 && line && joint2);
-    joint1->set_next_line(line);
-    joint2->set_prev_line(line);
-    line->set_joint(0, joint1);
-    line->set_joint(1, joint2);
-}
-
-static void clip_connect(clip_line* line1, clip_joint* joint, clip_line* line2)
-{
-    assert(line1 && joint && line2);
-    joint->set_prev_line(line1);
-    joint->set_next_line(line2);
-    line1->set_joint(1, joint);
-    line2->set_joint(0, joint);
-}
-
-static bool clip_replace_line(clip_sweep_line* line, clip_line* from, clip_line* to)
-{
-    assert(line && from && to);
-    float x = calc_sweep_line_x(from->get_joint(0), from->get_joint(1), line->get_y());
-    auto& m = line->get_sorted_joints();
-    auto lb = m.lower_bound(&clip_sweep_key(vec2(x - 1e-3f, 0.f)));
-    auto ub = m.upper_bound(&clip_sweep_key(vec2(x + 1e-3f, 0.f)));
-    if(ub != m.end())
-        ++ ub;
-    for(auto i = lb; i != ub; ++ i) {
-        auto tag = (*i)->get_tag();
-        if(tag == cst_relay) {
-            auto* ptr = static_cast<clip_sweep_relay*>(*i);
-            if(ptr->get_line() == from) {
-                ptr->set_line(to);
-                return true;
-            }
-        }
+public:
+    virtual type get_type() const override { return _type; }
+    virtual int get_point_count() const override { return _count; }
+    virtual const vec2& get_point(int i) const override
+    {
+        assert(i >= 0 && i < _count);
+        return _pt[i];
     }
-    return false;
-}
-
-static void clip_insert(clip_line* org, clip_joint* insj, clip_line* insl)
-{
-    assert(org && insj && insl);
-    auto* orgj1 = org->get_joint(0);
-    auto* orgj2 = org->get_joint(1);
-    assert(orgj1 && orgj2);
-    clip_connect(orgj1, org, insj);
-    clip_connect(insj, insl, orgj2);
-}
-
-static void clip_insert(clip_sweeper& sweeper, clip_joint* insj, clip_line* insl, clip_front_tracer& ftracer, clip_back_tracer& btracer)
-{
-    assert(insj && insl);
-    clip_line* replace_from = sweeper.line;
-    clip_line* replace_to = insl;
-    clip_sweep_line* line1 = ftracer.get_line();
-    clip_sweep_line* line2 = btracer.get_line();
-    auto tag = sweeper.joint->get_tag();
-    auto* line = sweeper.line;
-    const vec2& p1 = line->get_point(0);
-    const vec2& p2 = line->get_point(1);
-    assert((fuzzy_less_inclusive(p1.y, line1->get_y(), 1e-5f) && fuzzy_greater_inclusive(p2.y, line2->get_y(), 1e-5f)) ||
-        (fuzzy_less_inclusive(p2.y, line1->get_y(), 1e-5f) && fuzzy_greater_inclusive(p1.y, line2->get_y(), 1e-5f))
-        );
-    bool replace_upward = p1.y > p2.y;
-    clip_insert(sweeper.line, insj, insl);
-    if(replace_upward) {
-        ftracer.run([&replace_from, &replace_to](clip_sweep_line* line)->bool {
-            return clip_replace_line(line, replace_from, replace_to);
-        });
+    void set_point(int i, const vec2& p)
+    {
+        assert(i >= 0 && i < _count);
+        _pt[i] = p;
     }
-    else {
-        btracer.run([&replace_from, &replace_to](clip_sweep_line* line)->bool {
-            return clip_replace_line(line, replace_from, replace_to);
-        });
+
+private:
+    vec2                _pt[_count];
+};
+
+struct clip_ep_map_key
+{
+    clip_point*         p1 = nullptr;
+    clip_point*         p2 = nullptr;
+
+    clip_ep_map_key(clip_point* cp1, clip_point* cp2)
+    {
+        assert(cp1 != cp2);
+        p1 = cp1, p2 = cp2;
     }
-}
-
-static void clip_setup_intersect_info(clip_intersect_joint* joint, clip_intersect_joint* symm, clip_line* line_j, clip_line* line_s)
-{
-    assert(joint && symm && line_j && line_s);
-    auto* j1 = line_j->get_joint(0);
-    auto* j2 = line_j->get_joint(1);
-    auto* s1 = line_s->get_joint(0);
-    auto* s2 = line_s->get_joint(1);
-    assert(j1 && j2 && s1 && s2);
-    joint->set_orient(0, j1);
-    joint->set_orient(1, j2);
-    joint->set_cut(0, s1);
-    joint->set_cut(1, s2);
-    symm->set_orient(0, s1);
-    symm->set_orient(1, s2);
-    symm->set_cut(0, j1);
-    symm->set_cut(1, j2);
-}
-
-void clip_sweep_line_algorithm::proceed_intersection(clip_sweep_line* line, clip_sweeper& sweeper1, clip_sweeper& sweeper2, iterator a, iterator b)
-{
-    assert(line);
-    assert((a != _sweep_lines.end()) && (b != _sweep_lines.end()));
-    vec2 p[2], q[2];
-    p[0] = sweeper1.get_point();
-    p[1] = sweeper1.get_another_point();
-    q[0] = sweeper2.get_point();
-    q[1] = sweeper2.get_another_point();
-    vec2 d[2];
-    d[0].sub(p[1], p[0]);
-    d[1].sub(q[1], q[0]);
-    vec2 ip;
-    intersectp_linear_linear(ip, p[0], q[0], d[0], d[1]);
-    line->set_y(ip.y);
-    auto* joint = new clip_intersect_joint(ip);
-    auto* symm = new clip_intersect_joint(ip);
-    assert(joint && symm);
-    _joint_holdings.push_back(joint);
-    _joint_holdings.push_back(symm);
-    joint->set_symmetric(symm);
-    symm->set_symmetric(joint);
-    _sorted_by_y.insert(joint);
-    _intersections.push_back(joint);
-    line->create_joint(joint);
-    auto* hand1 = new clip_line;
-    auto* hand2 = new clip_line;
-    assert(hand1 && hand2);
-    _line_holdings.push_back(hand1);
-    _line_holdings.push_back(hand2);
-    clip_setup_intersect_info(joint, symm, sweeper1.line, sweeper2.line);
-    clip_insert(sweeper1, joint, hand1, clip_front_tracer(a, _sweep_lines.begin()), clip_back_tracer(b, _sweep_lines.end()));
-    clip_insert(sweeper2, symm, hand2, clip_front_tracer(a, _sweep_lines.begin()), clip_back_tracer(b, _sweep_lines.end()));
-}
-
-clip_sweep_line_algorithm::iterator clip_sweep_line_algorithm::insert_sweep_line(iterator i, iterator j)
-{
-    clip_sweep_line* line = new clip_sweep_line;
-    assert(line);
-    return _sweep_lines.insert(j, line);
-}
-
-static clip_joint* clip_find_prev(clip_joint* joint)
-{
-    assert(joint);
-    auto tag = joint->get_type();
-    if((tag != ct_intersect_joint) && (tag != ct_pivot_joint))
-        return joint;
-    for(auto* j = joint->get_prev_joint(); j && j != joint; j = j->get_prev_joint()) {
-        auto tag = j->get_type();
-        if((tag != ct_intersect_joint) && (tag != ct_pivot_joint))
-            return j;
+    bool operator==(const clip_ep_map_key& k) const
+    {
+        return p1 == k.p1 && p2 == k.p2;
     }
-    return nullptr;
-}
+};
 
-static clip_joint* clip_find_next(clip_joint* joint)
+struct clip_ep_map_hash
 {
-    assert(joint);
-    auto tag = joint->get_type();
-    if((tag != ct_intersect_joint) && (tag != ct_pivot_joint))
-        return joint;
-    for(auto* j = joint->get_next_joint(); j && j != joint; j = j->get_next_joint()) {
-        auto tag = j->get_type();
-        if((tag != ct_intersect_joint) && (tag != ct_pivot_joint))
-            return j;
+    size_t operator()(const clip_ep_map_key& k) const
+    {
+        assert(sizeof(clip_ep_map_key) == 8);
+        return hash_bytes((const byte*)&k, sizeof(clip_ep_map_key));
     }
-    return nullptr;
-}
+};
 
-void clip_sweep_line_algorithm::finish_intersection(clip_intersect_joint* joint)
+struct clip_ep_map_value
 {
-    assert(joint);
-    auto* j1 = clip_find_prev(joint->get_orient(0));
-    auto* j2 = clip_find_next(joint->get_orient(1));
-    assert(j1 && j2);
-    joint->set_orient(0, j1);
-    joint->set_orient(1, j2);
-    auto* s1 = clip_find_prev(joint->get_cut(0));
-    auto* s2 = clip_find_next(joint->get_cut(1));
-    assert(s1 && s2);
-    joint->set_cut(0, s1);
-    joint->set_cut(1, s2);
-    auto* symm = joint->get_symmetric();
-    assert(symm);
-    symm->set_orient(0, s1);
-    symm->set_orient(1, s2);
-    symm->set_cut(0, j1);
-    symm->set_cut(1, j2);
-}
+    clip_edge*          edge = nullptr;
+    bool                reversed = false;
 
-static bool is_neighbour_joint(clip_joint* i, clip_joint* j)
-{
-    assert(i && j);
-    if(i == j)
-        return true;
-    if((i->get_type() == ct_intersect_joint) && (j->get_type() == ct_intersect_joint)) {
-        auto* p1 = static_cast<clip_intersect_joint*>(i);
-        auto* p2 = static_cast<clip_intersect_joint*>(j);
-        if(p1->get_symmetric() == p2)
-            return true;
+    clip_ep_map_value() { assert(!"error."); }
+    clip_ep_map_value(clip_edge* e, bool r)
+    {
+        edge = e;
+        reversed = r;
     }
-    auto* l1 = i->get_next_line();
-    auto* l2 = j->get_prev_line();
-    auto* l3 = i->get_prev_line();
-    auto* l4 = j->get_next_line();
-    return l1 == l2 || l3 == l4 || l1 == l3 || l2 == l4;
-}
+};
 
-static bool is_neighbour_joint(clip_sweep_joint* i, clip_sweep_joint* j)
+typedef clip_edge_tpl<et_linear, 2> clip_linear_edge;
+typedef clip_edge_tpl<et_quad, 3> clip_quad_edge;
+typedef clip_edge_tpl<et_cubic, 4> clip_cubic_edge;
+
+enum clip_point_type
 {
-    assert(i && j);
-    if((i->get_tag() == cst_relay) || (j->get_tag() == cst_relay))
-        return false;
-    auto* p1 = static_cast<clip_sweep_endpoint*>(i);
-    auto* p2 = static_cast<clip_sweep_endpoint*>(j);
+    pt_end_point,
+    pt_interpolate_point,
+    pt_intersect_point,
+};
+
+class __gs_novtable clip_point abstract
+{
+public:
+    typedef clip_point_type type;
+
+public:
+    virtual ~clip_point() {}
+    virtual type get_type() const = 0;
+
+protected:
+    vec2                _pt;
+
+public:
+    void set_point(const vec2& pt) { _pt = pt; }
+    const vec2& get_point() const { return _pt; }
+};
+
+class clip_end_point:
+    public clip_point
+{
+public:
+    virtual type get_type() const override { return pt_end_point; }
+
+private:
+    clip_edge*          _prev_edge = nullptr;
+    clip_edge*          _next_edge = nullptr;
+
+public:
+    void set_prev_edge(clip_edge* e) { _prev_edge = e; }
+    void set_next_edge(clip_edge* e) { _next_edge = e; }
+    clip_edge* get_prev_edge() const { return _prev_edge; }
+    clip_edge* get_next_edge() const { return _next_edge; }
+};
+
+class clip_interpolate_point:
+    public clip_point
+{
+public:
+    virtual type get_type() const override { return pt_interpolate_point; }
+
+private:
+    clip_edge*          _edge = nullptr;
+    float               _ratio = 0.f;
+
+public:
+    void set_edge(clip_edge* e) { _edge = e; }
+    clip_edge* get_edge() const { return _edge; }
+    void set_ratio(float r) { _ratio = r; }
+    float get_ratio() const { return _ratio; }
+};
+
+class clip_intersect_point:
+    public clip_point
+{
+public:
+    typedef clip_intersect_info_map intersect_info_map;
+    typedef typename intersect_info_map::iterator intersect_iter;
+
+public:
+    virtual type get_type() const override { return pt_intersect_point; }
+
+private:
+    intersect_info_map  _itrs_map;
+
+public:
+    void add_intersect_info(clip_edge* e, float r) { _itrs_map.emplace(e, r); }
+    const intersect_info_map& get_intersect_info_map() const { return _itrs_map; }
+};
+
+static clipper*  __current_clipper = nullptr;
+
+static clip_edge* determine_edge(const clip_point* p1, const clip_point* p2)
+{
     assert(p1 && p2);
-    return is_neighbour_joint(p1->get_joint(), p2->get_joint());
-}
-
-void clip_sweep_line_algorithm::output_exclude(clip_result& result)
-{
-    assert(!_sweep_lines.empty());
-    clip_path_router_exclude path_router(result);
-    path_router.proceed(_sweep_lines);
-}
-
-void clip_sweep_line_algorithm::output_union(clip_result& result)
-{
-    assert(!_sweep_lines.empty());
-    clip_path_router_union path_router(result);
-    path_router.proceed(_sweep_lines);
-}
-
-void clip_sweep_line_algorithm::output_intersect(clip_result& result)
-{
-    assert(!_sweep_lines.empty());
-    clip_path_router_intersect path_router(result);
-    path_router.proceed(_sweep_lines);
-}
-
-void clip_sweep_line_algorithm::destroy_splitters()
-{
-    for(auto& p : _splitters)
-        delete p.second;
-    _splitters.clear();
-}
-
-void clip_sweep_line_algorithm::destroy_fixed_points()
-{
-    if(!_fixed_points.empty())
-        _fixed_points.clear();
-}
-
-static path_info* retrieve_path_info(clip_joint* joint1, clip_joint* joint2)
-{
-    assert(joint1 && joint2);
-    auto t1 = joint1->get_type();
-    auto t2 = joint2->get_type();
-    if(t1 == ct_interpolate_joint) {
-        auto* p = static_cast<clip_interpolate_joint*>(joint1);
-        return p->get_path_info();
+    auto t1 = p1->get_type();
+    auto t2 = p2->get_type();
+    if(t1 == pt_interpolate_point)
+        return static_cast<const clip_interpolate_point*>(p1)->get_edge();
+    else if(t2 == pt_interpolate_point)
+        return static_cast<const clip_interpolate_point*>(p2)->get_edge();
+    else if(t1 == pt_end_point && t2 == pt_end_point) {
+        auto ep1 = static_cast<const clip_end_point*>(p1);
+        auto ep2 = static_cast<const clip_end_point*>(p2);
+        if(ep1->get_next_edge() == ep2->get_prev_edge())
+            return ep1->get_next_edge();
+        else {
+            assert(ep1->get_prev_edge() == ep2->get_next_edge());
+            return ep1->get_prev_edge();
+        }
     }
-    else if(t2 == ct_interpolate_joint) {
-        auto* p = static_cast<clip_interpolate_joint*>(joint2);
-        return p->get_path_info();
+    else if(t1 == pt_end_point && t2 == pt_intersect_point) {
+        auto ep1 = static_cast<const clip_end_point*>(p1);
+        auto ip2 = static_cast<const clip_intersect_point*>(p2);
+        const clip_intersect_info_map& iim = ip2->get_intersect_info_map();
+        auto f1 = iim.find(ep1->get_next_edge());
+        if(f1 != iim.end())
+            return ep1->get_next_edge();
+        assert(iim.find(ep1->get_prev_edge()) != iim.end());
+        return ep1->get_prev_edge();
     }
-    else if(t1 == ct_end_joint && t2 == ct_end_joint) {
-        auto* p1 = static_cast<clip_end_joint*>(joint1);
-        auto* p2 = static_cast<clip_end_joint*>(joint2);
-        if((p1->get_path_info(1) == p2->get_path_info(0)) || (p1->get_path_info(1) == p2->get_path_info(1)))
-            return p1->get_path_info(1);
-        else if((p1->get_path_info(0) == p2->get_path_info(1)) || (p1->get_path_info(0) == p2->get_path_info(0)))
-            return p1->get_path_info(0);
+    else if(t1 == pt_intersect_point && t2 == pt_end_point) {
+        auto ip1 = static_cast<const clip_intersect_point*>(p1);
+        auto ep2 = static_cast<const clip_end_point*>(p2);
+        const clip_intersect_info_map& iim = ip1->get_intersect_info_map();
+        auto f1 = iim.find(ep2->get_next_edge());
+        if(f1 != iim.end())
+            return ep2->get_next_edge();
+        assert(iim.find(ep2->get_prev_edge()) != iim.end());
+        return ep2->get_prev_edge();
+    }
+    else if(t1 == pt_intersect_point && t2 == pt_intersect_point) {
+        auto ip1 = static_cast<const clip_intersect_point*>(p1);
+        auto ip2 = static_cast<const clip_intersect_point*>(p2);
+        const clip_intersect_info_map& iim1 = ip1->get_intersect_info_map();
+        const clip_intersect_info_map& iim2 = ip2->get_intersect_info_map();
+        for(const auto& p : iim1) {
+            if(p.first->get_type() == et_linear) {  /* no footprint, means linear first. */
+                auto f = iim2.find(p.first);
+                if(f != iim2.end())
+                    return p.first;
+            }
+        }
+        for(const auto& p : iim1) {
+            auto f = iim2.find(p.first);
+            if(f != iim2.end())
+                return p.first;
+        }
     }
     assert(!"unexpected situation.");
     return nullptr;
 }
 
-void clip_sweep_line_algorithm::create_splitters()
+class clipper
 {
-    assert(_splitters.empty());
-    for(auto* p : _intersections) {
-        assert(p->get_type() == ct_intersect_joint);
-        auto* ptr = static_cast<clip_intersect_joint*>(p);
-        auto* pnf1 = retrieve_path_info(ptr->get_orient(0), ptr->get_orient(1));
-        auto* pnf2 = retrieve_path_info(ptr->get_cut(0), ptr->get_cut(1));
-        create_splitter(ptr, pnf1, pnf2);
+    friend void clip_zfill(IntPoint&, IntPoint&, IntPoint&, IntPoint&, IntPoint&);
+
+public:
+    clipper()
+    {
+        _AJ_clipper.StrictlySimple(true);
+        _AJ_clipper.ZFillFunction(&clip_zfill);
+        __current_clipper = this;
     }
-}
-
-static int select_map_point(vec2 pt[], int c, clip_intersect_joint* p)
-{
-    assert(pt && p);
-    auto& chk = p->get_point();
-    float d = FLT_MAX;
-    int r = -1;
-    for(int i = 0; i < c; i ++) {
-        vec2 v;
-        v.sub(pt[i], chk);
-        float d1 = sqrtf(v.x * v.x + v.y * v.y);
-        if(d1 < d)
-            d = d1, r = i;
+    ~clipper()
+    {
+        for(auto* p : _edges)   delete p;
+        for(auto* p : _points)  delete p;
+        for(auto* p : _AJ_holdings) delete p;
+        _edges.clear();
+        _points.clear();
+        _AJ_holdings.clear();
+        __current_clipper = nullptr;
     }
-    return r;
-}
-
-static curve_splitter* query_or_create_splitter(curve_splitter_map& csm, path_info* pnf)
-{
-    assert(pnf);
-    auto*& splitter = csm[pnf];
-    if(!splitter)
-        splitter = curve_helper::create_splitter(pnf);
-    return splitter;
-}
-
-static void create_splitter_curve_straight(curve_splitter_map& csm, clip_fixed_points& fps, clip_intersect_joint* p, path_info* pnf1, path_info* pnf2)
-{
-    assert(p && pnf1 && pnf2);
-    assert(p->get_path_info() == pnf1);
-    auto* s = p->get_symmetric();
-    assert(s);
-    assert(pnf1->get_order() > 1 && pnf2->get_order() == 1);
-    vec2 line[2];
-    vec2 curve[4];
-    pnf1->get_points(curve, _countof(curve));
-    pnf2->get_points(line, _countof(line));
-    vec3 linear;
-    vec2 d;
-    get_linear_coefficient(linear, line[0], d.sub(line[1], line[0]));
-    int o = pnf1->get_order();
-    float t[3];
-    vec2 pt[3];
-    int sel = -1;
-    if(o == 2) {
-        vec3 para[2];
-        get_quad_parameter_equation(para, curve[0], curve[1], curve[2]);
-        int c = intersection_quad_linear(t, para, linear);
-        for(int i = 0; i < c; i ++)
-            eval_quad(pt[i], para, t[i]);
-        sel = select_map_point(pt, c, p);
+    void add_path(const painter_path& path, PolyType poly_type)
+    {
+        _AJ_paths = new Paths;
+        _AJ_holdings.push_back(_AJ_paths);
+        painter_paths paths;
+        path.to_sub_paths(paths);
+        for(painter_path& sp : paths)
+            add_sub_path(sp);
+        _AJ_clipper.AddPaths(*_AJ_paths, poly_type, true);
+        _AJ_paths = nullptr;
     }
-    else if(o == 3) {
-        vec4 para[2];
-        get_cubic_parameter_equation(para, curve[0], curve[1], curve[2], curve[3]);
-        int c = intersection_cubic_linear(t, para, linear);
-        for(int i = 0; i < c; i ++)
-            eval_cubic(pt[i], para, t[i]);
-        sel = select_map_point(pt, c, p);
-    }
-    else {
-        assert(!"unexpected curve order.");
-        return;
-    }
-    assert(sel >= 0);
-    auto* splitter1 = query_or_create_splitter(csm, pnf1);
-    assert(splitter1);
-    curve_helper::create_next_splitter(vec2(), splitter1, t[sel]);
-    fps.insert(std::make_pair(static_cast<clip_joint*>(p), pt[sel]));
-    fps.insert(std::make_pair(static_cast<clip_joint*>(p->get_symmetric()), pt[sel]));
-}
-
-static void create_splitter_quad_quad(curve_splitter_map& csm, clip_fixed_points& fps, clip_intersect_joint* p, path_info* pnf1, path_info* pnf2)
-{
-    assert(p && pnf1 && pnf2);
-    assert(pnf1->get_order() == 2 && pnf2->get_order() == 2);
-    vec3 para1[2], para2[2];
-    vec2 quad1[3], quad2[3];
-    float ts[4][2];
-    vec2 pt[4];
-    pnf1->get_points(quad1, _countof(quad1));
-    pnf2->get_points(quad2, _countof(quad2));
-    get_quad_parameter_equation(para1, quad1[0], quad1[1], quad1[2]);
-    get_quad_parameter_equation(para2, quad2[0], quad2[1], quad2[2]);
-    int c = intersection_quad_quad(ts, para1, para2);
-    for(int i = 0; i < c; i ++)
-        eval_quad(pt[i], para1, ts[i][0]);
-    int sel = select_map_point(pt, c, p);
-    assert(sel >= 0);
-    auto* splitter1 = query_or_create_splitter(csm, pnf1);
-    auto* splitter2 = query_or_create_splitter(csm, pnf2);
-    assert(splitter1 && splitter2);
-    curve_helper::create_next_splitter(vec2(), splitter1, ts[sel][0]);
-    curve_helper::create_next_splitter(vec2(), splitter2, ts[sel][1]);
-    fps.insert(std::make_pair(static_cast<clip_joint*>(p), pt[sel]));
-    fps.insert(std::make_pair(static_cast<clip_joint*>(p->get_symmetric()), pt[sel]));
-}
-
-static void create_splitter_cubic_cubic(curve_splitter_map& csm, clip_fixed_points& fps, clip_intersect_joint* p, path_info* pnf1, path_info* pnf2)
-{
-    assert(p && pnf1 && pnf2);
-    assert(pnf1->get_order() == 3 && pnf2->get_order() == 3);
-    vec2 cubic1[4], cubic2[4];
-    vec2 pt[9];
-    pnf1->get_points(cubic1, _countof(cubic1));
-    pnf2->get_points(cubic2, _countof(cubic2));
-    int c = intersectp_cubic_cubic(pt, cubic1, cubic2, 0.2f);
-    int sel = select_map_point(pt, c, p);
-    assert(sel >= 0);
-    auto* splitter1 = query_or_create_splitter(csm, pnf1);
-    auto* splitter2 = query_or_create_splitter(csm, pnf2);
-    assert(splitter1 && splitter2);
-    float t = splitter1->reparameterize(pt[sel]);
-    float s = splitter2->reparameterize(pt[sel]);
-    curve_helper::create_next_splitter(vec2(), splitter1, t);
-    curve_helper::create_next_splitter(vec2(), splitter2, s);
-    fps.insert(std::make_pair(static_cast<clip_joint*>(p), pt[sel]));
-    fps.insert(std::make_pair(static_cast<clip_joint*>(p->get_symmetric()), pt[sel]));
-}
-
-static void create_splitter_quad_cubic(curve_splitter_map& csm, clip_fixed_points& fps, clip_intersect_joint* p, path_info* pnf1, path_info* pnf2)
-{
-    assert(p && pnf1 && pnf2);
-    assert(pnf1->get_order() == 2 && pnf2->get_order() == 3);
-    vec2 quad[3], cubic[4];
-    vec2 pt[6];
-    pnf1->get_points(quad, _countof(quad));
-    pnf2->get_points(cubic, _countof(cubic));
-    int c = intersectp_cubic_quad(pt, cubic, quad, 0.2f);
-    int sel = select_map_point(pt, c, p);
-    assert(sel >= 0);
-    auto* splitter1 = query_or_create_splitter(csm, pnf1);
-    auto* splitter2 = query_or_create_splitter(csm, pnf2);
-    assert(splitter1 && splitter2);
-    float t = splitter1->reparameterize(pt[sel]);
-    float s = splitter2->reparameterize(pt[sel]);
-    curve_helper::create_next_splitter(vec2(), splitter1, t);
-    curve_helper::create_next_splitter(vec2(), splitter2, s);
-    fps.insert(std::make_pair(static_cast<clip_joint*>(p), pt[sel]));
-    fps.insert(std::make_pair(static_cast<clip_joint*>(p->get_symmetric()), pt[sel]));
-}
-
-static void create_splitter_curve_curve(curve_splitter_map& csm, clip_fixed_points& fps, clip_intersect_joint* p, path_info* pnf1, path_info* pnf2)
-{
-    assert(p && pnf1 && pnf2);
-    assert(p->get_path_info() == pnf1);
-    auto* s = p->get_symmetric();
-    assert(s);
-    int o1 = pnf1->get_order();
-    int o2 = pnf2->get_order();
-    assert(o1 > 1 && o2 > 1);
-    if(o1 == 2) {
-        return o2 == 2 ? create_splitter_quad_quad(csm, fps, p, pnf1, pnf2) :
-            create_splitter_quad_cubic(csm, fps, p, pnf1, pnf2);
-    }
-    else {
-        assert(o1 == 3);
-        return o2 == 2 ? create_splitter_quad_cubic(csm, fps, s, pnf2, pnf1) :
-            create_splitter_cubic_cubic(csm, fps, p, pnf1, pnf2);
-    }
-}
-
-void clip_sweep_line_algorithm::create_splitter(clip_intersect_joint* p, path_info* pnf1, path_info* pnf2)
-{
-    assert(p && pnf1 && pnf2);
-    int o1 = pnf1->get_order();
-    int o2 = pnf2->get_order();
-    bool p1_is_curve = (o1 > 1);
-    bool p2_is_curve = (o2 > 1);
-    if(!p1_is_curve && !p2_is_curve)
-        return;
-    else if(p1_is_curve && !p2_is_curve)
-        return create_splitter_curve_straight(_splitters, _fixed_points, p, pnf1, pnf2);
-    else if(!p1_is_curve && p2_is_curve)
-        return create_splitter_curve_straight(_splitters, _fixed_points, p->get_symmetric(), pnf2, pnf1);
-    return create_splitter_curve_curve(_splitters, _fixed_points, p, pnf1, pnf2);
-}
-
-void clip_sweep_line_algorithm::replace_curves(clip_result& result)
-{
-    auto r = result.get_root();
-    assert(r);
-    if(r.is_leaf()) /* empty path */
-        return;
-    for(auto i = r.child();; i.to_next()) {
-        replace_curves(result, i);
-        if(i == r.last_child())
-            break;
-    }
-}
-
-void clip_sweep_line_algorithm::replace_curves(clip_result& result, clip_result::iterator p)
-{
-    assert(p);
-    replace_curves(*p);
-    if(p.is_leaf())
-        return;
-    for(auto i = p.child();; i.to_next()) {
-        replace_curves(result, i);
-        if(i == p.last_child())
-            break;
-    }
-}
-
-template<class _lambda>
-static bool is_mirror_specific_joint(clip_joint* joint, _lambda lamb)
-{
-    assert(joint);
-    auto t = joint->get_type();
-    if(t != ct_mirror_joint)
-        return false;
-    auto* mj = static_cast<clip_mirror_joint*>(joint);
-    auto* m = mj->get_mirror();
-    assert(m);
-    return lamb(m);
-}
-
-template<class _lambda>
-static clip_joint* find_next_mirror_specific_joint(clip_joint* joint, clip_joint* endofsearch, _lambda lamb)
-{
-    assert(joint && endofsearch);
-    for(; joint != endofsearch; joint = joint->get_next_joint()) {
-        if(is_mirror_specific_joint(joint, lamb))
-            return joint;
-    }
-    return nullptr;
-}
-
-void clip_sweep_line_algorithm::replace_curves(clip_polygon& poly)
-{
-    auto* linestart = poly.get_line_start();
-    assert(linestart);
-    auto* startj = linestart->get_joint(0);
-    assert(startj);
-    auto is_end_or_intersected = [](clip_joint* p)-> bool {
-        assert(p);
-        auto t = p->get_type();
-        return t == ct_end_joint || t == ct_intersect_joint;
-    };
-    if(!is_mirror_specific_joint(startj, is_end_or_intersected)) {
-        auto* f = find_next_mirror_specific_joint(linestart->get_joint(1), startj, is_end_or_intersected);
-        if(!f)  /* why? */
+    void add_sub_path(const painter_path& path)
+    {
+        if(path.size() < 2)
             return;
-        startj = f;
-    }
-    auto* nextj = find_next_mirror_specific_joint(startj->get_next_joint(), startj, is_end_or_intersected);
-    if(!nextj) {
-        replace_curve(poly, startj, startj);
-        return;
-    }
-    replace_curve(poly, startj, nextj);
-    auto* joint = nextj;
-    for(;;) {
-        nextj = find_next_mirror_specific_joint(joint->get_next_joint(), startj, is_end_or_intersected);
-        if(!nextj)
-            break;
-        replace_curve(poly, joint, nextj);
-        joint = nextj;
-    }
-    replace_curve(poly, joint, startj);
-    poly.set_line_start(startj->get_next_line());
-}
-
-static clip_joint* strip_off(clip_joint* joint)
-{
-    assert(joint);
-    auto t = joint->get_type();
-    switch(t)
-    {
-    case ct_mirror_joint:
-        return static_cast<clip_mirror_joint*>(joint)->get_mirror();
-    case ct_final_joint:
-        return static_cast<clip_final_joint*>(joint)->get_mirror();
-    default:
-        assert(!"unexpected.");
-        return nullptr;
-    }
-}
-
-void clip_sweep_line_algorithm::replace_curve(clip_polygon& poly, clip_joint*& src1, clip_joint*& src2)
-{
-    assert(src1 && src2);
-    auto* joint1 = src1;
-    auto* joint2 = src2;
-    auto* m1 = strip_off(joint1);
-    auto* m2 = strip_off(joint2);
-    assert(m1 && m2);
-    auto t = joint1->get_type();
-    assert(t == ct_mirror_joint || t == ct_final_joint);
-    auto* fj1 = (t == ct_final_joint) ? static_cast<clip_final_joint*>(joint1) :
-        poly.create_final_joint(m1);
-    clip_final_joint* fj2 = nullptr;
-    if(joint1 == joint2)
-        fj2 = fj1;
-    else {
-        t = joint2->get_type();
-        assert(t == ct_mirror_joint || t == ct_final_joint);
-        fj2 = (t == ct_final_joint) ? static_cast<clip_final_joint*>(joint2) :
-            poly.create_final_joint(m2);
-    }
-    /* output the final joint */
-    src1 = fj1;
-    src2 = fj2;
-    auto mt1 = m1->get_type();
-    auto mt2 = m2->get_type();
-    auto replace_line = [&fj1, &fj2, &joint1, &joint2]() {
-        fj1->set_point(joint1->get_point());
-        fj2->set_point(joint2->get_point());
-        clip_connect(joint1->get_prev_line(), fj1);
-        clip_connect(fj1, joint1->get_next_line(), fj2);
-        clip_connect(fj2, joint2->get_next_line());
-    };
-    curve_splitter* csp = nullptr;
-    const vec2* p1 = nullptr;
-    const vec2* p2 = nullptr;
-    if(mt1 == ct_end_joint && mt2 == ct_end_joint) {
-        /* a straight line or a curve needn't be splitted. */
-        auto* mj1 = static_cast<clip_end_joint*>(m1);
-        auto* mj2 = static_cast<clip_end_joint*>(m2);
-        auto* pnf11 = mj1->get_path_info(0);
-        auto* pnf12 = mj1->get_path_info(1);
-        auto* pnf21 = mj2->get_path_info(0);
-        auto* pnf22 = mj2->get_path_info(1);
-        auto* pnf = ((pnf11 == pnf21) || (pnf11 == pnf22)) ? pnf11 : pnf12;
-        assert(pnf);
-        int o = pnf->get_order();
-        if(o == 1)
-            replace_line();
-        else if(o == 2) {
-            vec2 cp[3];
-            pnf->get_points(cp, _countof(cp));
-            auto* c1 = poly.create_final_joint(0);
-            assert(c1);
-            bool is_reversed = (src1->get_point() != cp[0]);
-            if(!is_reversed) {
-                c1->set_point(cp[1]);
-                fj1->set_point(cp[0]);
-                fj2->set_point(cp[2]);
-            }
-            else {
-                c1->set_point(cp[1]);
-                fj1->set_point(cp[2]);
-                fj2->set_point(cp[0]);
-            }
-            clip_connect(joint1->get_prev_line(), fj1);
-            clip_connect(fj1, joint1->get_next_line(), fj2);
-            poly.create_line(fj1, c1);
-            poly.create_line(c1, fj2);
-        }
-        else if(o == 3) {
-            vec2 cp[4];
-            pnf->get_points(cp, _countof(cp));
-            auto* c1 = poly.create_final_joint(0);
-            auto* c2 = poly.create_final_joint(0);
-            assert(c1 && c2);
-            bool is_reversed = (src1->get_point() != cp[0]);
-            if(!is_reversed) {
-                c1->set_point(cp[1]);
-                c2->set_point(cp[2]);
-                fj1->set_point(cp[0]);
-                fj2->set_point(cp[3]);
-            }
-            else {
-                c1->set_point(cp[2]);
-                c2->set_point(cp[1]);
-                fj1->set_point(cp[3]);
-                fj2->set_point(cp[0]);
-            }
-            clip_connect(joint1->get_prev_line(), fj1);
-            clip_connect(fj1, joint1->get_next_line(), fj2);
-            poly.create_line(fj1, c1);
-            poly.create_line(c1, c2);
-            poly.create_line(c2, fj2);
-        }
-        else {
-            assert(!"unexpected order of curve.");
-            return;
-        }
-        return;
-    }
-    else if(mt1 == ct_intersect_joint && mt2 == ct_end_joint) {
-        auto* mj1 = static_cast<clip_intersect_joint*>(m1);
-        auto* mj2 = static_cast<clip_end_joint*>(m2);
-        auto* pnf11 = retrieve_path_info(mj1->get_orient(0), mj1->get_orient(1));
-        auto* pnf12 = retrieve_path_info(mj1->get_cut(0), mj1->get_cut(1));
-        auto* pnf21 = mj2->get_path_info(0);
-        auto* pnf22 = mj2->get_path_info(1);
-        auto* pnf = ((pnf11 == pnf21) || (pnf11 == pnf22)) ? pnf11 : pnf12;
-        assert(pnf);
-        if(pnf->get_order() == 1)
-            return replace_line();
-        csp = _splitters.find(pnf)->second;
-        p1 = &_fixed_points.find(m1)->second;
-        p2 = &m2->get_point();
-    }
-    else if(mt1 == ct_end_joint && mt2 == ct_intersect_joint) {
-        auto* mj1 = static_cast<clip_end_joint*>(m1);
-        auto* mj2 = static_cast<clip_intersect_joint*>(m2);
-        auto* pnf11 = retrieve_path_info(mj2->get_orient(0), mj2->get_orient(1));
-        auto* pnf12 = retrieve_path_info(mj2->get_cut(0), mj2->get_cut(1));
-        auto* pnf21 = mj1->get_path_info(0);
-        auto* pnf22 = mj1->get_path_info(1);
-        auto* pnf = ((pnf11 == pnf21) || (pnf11 == pnf22)) ? pnf11 : pnf12;
-        assert(pnf);
-        if(pnf->get_order() == 1)
-            return replace_line();
-        csp = _splitters.find(pnf)->second;
-        p1 = &_fixed_points.find(m2)->second;
-        p2 = &m1->get_point();
-    }
-    else {
-        assert(mt1 == ct_intersect_joint && mt2 == ct_intersect_joint);
-        auto* mj1 = static_cast<clip_intersect_joint*>(m1);
-        auto* mj2 = static_cast<clip_intersect_joint*>(m2);
-        auto* pnf11 = retrieve_path_info(mj1->get_orient(0), mj1->get_orient(1));
-        auto* pnf12 = retrieve_path_info(mj1->get_cut(0), mj1->get_cut(1));
-        auto* pnf21 = retrieve_path_info(mj2->get_orient(0), mj2->get_orient(1));
-        auto* pnf22 = retrieve_path_info(mj2->get_cut(0), mj2->get_cut(1));
-        auto* pnf = ((pnf11 == pnf21) || (pnf11 == pnf22)) ? pnf11 : pnf12;
-        assert(pnf);
-        if(pnf->get_order() == 1)
-            return replace_line();
-        csp = _splitters.find(pnf)->second;
-        p1 = &_fixed_points.find(m1)->second;
-        p2 = &_fixed_points.find(m2)->second;
-    }
-    assert(csp && p1 && p2);
-    auto* fsp = curve_helper::query_splitter(csp, *p1, *p2);
-    assert(fsp && fsp->is_leaf());
-    clip_connect(joint1->get_prev_line(), fj1);
-    clip_connect(fj2, joint2->get_next_line());
-    vec2 cp[4];
-    int cnt = fsp->get_point_count();
-    fsp->get_points(cp, _countof(cp));
-    assert(cnt == 3 || cnt == 4);
-    vec2 d1, d2;
-    d1.sub(cp[0], m1->get_point());
-    d2.sub(cp[cnt - 1], m1->get_point());
-    bool is_reversed = d1.lengthsq() > d2.lengthsq();
-    if(cnt == 3) {
-        auto* c1 = poly.create_final_joint(0);
-        assert(c1);
-        c1->set_point(cp[1]);
-        if(!is_reversed) {
-            fj1->set_point(cp[0]);
-            fj2->set_point(cp[2]);
-        }
-        else {
-            fj1->set_point(cp[2]);
-            fj2->set_point(cp[0]);
-        }
-        poly.create_line(fj1, c1);
-        poly.create_line(c1, fj2);
-    }
-    else {
-        assert(cnt == 4);
-        auto* c1 = poly.create_final_joint(0);
-        auto* c2 = poly.create_final_joint(0);
-        assert(c1 && c2);
-        if(!is_reversed) {
-            fj1->set_point(cp[0]);
-            c1->set_point(cp[1]);
-            c2->set_point(cp[2]);
-            fj2->set_point(cp[3]);
-        }
-        else {
-            fj1->set_point(cp[3]);
-            c1->set_point(cp[2]);
-            c2->set_point(cp[1]);
-            fj2->set_point(cp[0]);
-        }
-        poly.create_line(fj1, c1);
-        poly.create_line(c1, c2);
-        poly.create_line(c2, fj2);
-    }
-}
-
-void clip_path_router::trace_route_nodes() const
-{
-    for(const auto& node : _nodes) {
-        switch(node.get_tag())
-        {
-        case rnt_sweeper:
+        auto* first = path.get_node(0);
+        assert(first && first->get_tag() == painter_path::pt_moveto);
+        auto* last = first;
+        if(path.size() == 2) {
+            auto* node = path.get_node(1);
+            assert(node);
+            if(node->get_tag() == painter_path::pt_moveto
+                || node->get_tag() == painter_path::pt_lineto
+                )
+                return;
+            switch(node->get_tag())
             {
-                const auto& n = node.to_const_class1();
-                n.get_up_sweeper()->tracing();
-                n.get_down_sweeper()->tracing();
-                break;
-            }
-        case rnt_point:
-            {
-                const auto& n = node.to_const_class2();
-                n.get_sweeper()->tracing();
-                break;
-            }
-        case rnt_patch:
-        default:
-            break;
-        }
-    }
-}
-
-void clip_path_router::install_sweepers(clip_sweep_line* line1, clip_sweep_line* line2)
-{
-    assert(line1 && line2);
-    if(!_upside.empty())
-        _upside.clear();
-    if(!_downside.empty())
-        _downside.clear();
-    create_upside_sweepers(_upside, line1, line2);
-    create_downside_sweepers(_downside, line2, line1);
-    assert(_upside.size() == _downside.size());
-}
-
-static const clip_sweeper& get_route_sweeper(const clip_route_node& node)
-{
-    static clip_sweeper bad_sweeper;
-    auto t = node.get_tag();
-    switch(t)
-    {
-    case rnt_sweeper:
-        return *node.to_const_class1().get_up_sweeper();
-    case rnt_point:
-        return *node.to_const_class2().get_sweeper();
-    default:
-        assert(!"unexpected route node.");
-        return bad_sweeper;
-    }
-}
-
-static const vec2& get_route_node_point(const clip_route_node& node)
-{
-    static vec2 bad_point;
-    auto t = node.get_tag();
-    switch(t)
-    {
-    case rnt_sweeper:
-        return node.to_const_class1().get_up_sweeper()->get_point();
-    case rnt_point:
-        return node.to_const_class2().get_sweeper()->get_point();
-    case rnt_patch:
-        return node.to_const_class3().get_point();
-    default:
-        assert(!"unexpected route node.");
-        return bad_point;
-    }
-}
-
-static clip_joint* get_route_bind_joint(const clip_route_node& node)
-{
-    if(node.get_tag() != rnt_sweeper)
-        return nullptr;
-    auto& c1 = node.to_const_class1();
-    auto* s = c1.get_up_sweeper();
-    assert(s && s->joint);
-    auto* sj = s->joint;
-    if(sj->get_tag() != cst_endpoint)
-        return nullptr;
-    auto* ep = static_cast<clip_sweep_endpoint*>(sj);
-    return ep->get_joint();
-}
-
-static clip_joint* get_route_dual_joint(const clip_route_node& node)
-{
-    if(node.get_tag() != rnt_point)
-        return nullptr;
-    auto& c2 = node.to_const_class2();
-    auto* s = c2.get_sweeper();
-    assert(s && s->joint);
-    auto* sj = s->joint;
-    if(sj->get_tag() != cst_endpoint)
-        return nullptr;
-    auto* ep = static_cast<clip_sweep_endpoint*>(sj);
-    return ep->get_joint();
-}
-
-static void emplace_route_node(clip_route_nodes& nodes, const clip_route_node& node)
-{
-    auto f = std::lower_bound(nodes.begin(), nodes.end(), node, [](const clip_route_node& node1, const clip_route_node& node2)->bool {
-        auto& p1 = get_route_node_point(node1);
-        auto& p2 = get_route_node_point(node2);
-        assert(p1.y == p2.y);
-        return p1.x < p2.x;
-    });
-    nodes.insert(f, node);
-}
-
-static void emplace_route_nodes(clip_route_nodes& nodes, clip_result_iter p)
-{
-    assert(p.is_valid());
-    for(auto i = p.child(); i.is_valid(); i.to_next()) {
-        if(!i->is_patch())
-            continue;
-        auto& patch = static_cast<clip_patch&>(*i);
-        clip_route_node left(rnt_point), right(rnt_point);
-        auto& lcls = left.to_class2();
-        auto& rcls = right.to_class2();
-        lcls.set_patch_iter(i);
-        rcls.set_patch_iter(i);
-        lcls.set_sweeper(&patch.get_end_point());
-        rcls.set_sweeper(&patch.get_start_point());
-        emplace_route_node(nodes, left);
-        emplace_route_node(nodes, right);
-        if(!i.is_leaf())
-            emplace_route_nodes(nodes, i);
-    }
-}
-
-void clip_path_router::prepare_route_nodes()
-{
-    if(!_nodes.empty())
-        _nodes.clear();
-    /* 1.create route nodes from sweepers */
-    assert(_upside.size() == _downside.size());
-    auto i = _upside.begin();
-    auto j = _downside.begin();
-    auto end = _upside.end();
-    for(; i != end; ++ i, ++ j) {
-        clip_route_node node(rnt_sweeper);
-        auto& sweeper = node.to_class1();
-        sweeper.set_up_sweeper(&(*i));
-        sweeper.set_down_sweeper(&(*j));
-        _nodes.push_back(node);
-    }
-    /* 2.emplace the patches end points to the suitable position */
-    auto r = _result.get_root();
-    assert(r.is_valid());
-    emplace_route_nodes(_nodes, r);
-}
-
-clip_result_iter clip_path_router::close_patch(iterator i, const clip_route_sweeper_node& node1, const clip_route_sweeper_node& node2)
-{
-    assert(i && i->is_patch());
-    auto n = _result.insert<clip_polygon>(i);
-    auto& patch = static_cast<clip_patch&>(*i);
-    assert(is_neighbour_joint(node1.get_down_sweeper()->joint, node2.get_down_sweeper()->joint));
-    auto& left_o = patch.get_end_point();
-    auto& right_o = patch.get_start_point();
-    auto& left_u = *node1.get_up_sweeper();
-    auto& right_u = *node2.get_up_sweeper();
-    auto& left_d = *node1.get_down_sweeper();
-    auto& right_d = *node2.get_down_sweeper();
-    if(left_o.joint != left_u.joint) {
-        auto* p = patch.create_assumed_mj(left_u);
-        patch.fix_line_back(patch.get_line_end(), p);
-    }
-    if(right_o.joint != right_u.joint) {
-        auto* p = patch.create_assumed_mj(right_u);
-        patch.fix_line_front(patch.get_line_start(), p);
-    }
-    clip_mirror_joint* left = nullptr;
-    clip_mirror_joint* right = nullptr;
-    if(left_d.get_point() == right_d.get_point())
-        left = right = patch.create_assumed_mj(left_d);
-    else {
-        left = patch.create_assumed_mj(left_d);
-        right = patch.create_assumed_mj(right_d);
-        patch.create_line(left, right);
-    }
-    assert(left && right);
-    auto* line1 = patch.fix_line_back(patch.get_line_end(), left);
-    auto* line2 = patch.fix_line_front(patch.get_line_start(), right);
-    assert(line1 && line2);
-    patch.set_line_end(line1);
-    patch.set_line_start(line2);
-    n->convert_from(patch);
-    n.get_wrapper()->swap_children(*i.get_wrapper());
-    _result.erase(i);
-    return n;
-}
-
-clip_result_iter clip_path_router::close_patch(iterator i, iterator j)
-{
-    assert(i && i->is_patch() && j && j->is_patch());
-    auto n = _result.insert<clip_patch>(i);
-    auto& patch1 = static_cast<clip_patch&>(*i);
-    auto& patch2 = static_cast<clip_patch&>(*j);
-    assert(is_neighbour_joint(patch1.get_start_point().joint, patch2.get_start_point().joint) &&
-        is_neighbour_joint(patch1.get_end_point().joint, patch2.get_end_point().joint)
-        );
-    patch2.reverse_direction();
-    patch1.adopt(patch2);
-    auto* line1 = patch1.get_line_end();
-    auto* line2 = patch2.get_line_start();
-    auto* line3 = patch2.get_line_end();
-    auto* line4 = patch1.get_line_start();
-    assert(line1 && line2 && line3 && line4);
-    (line1->get_point(1) == line2->get_point(0)) ? clip_connect(line1->get_joint(1), line2) :
-        patch1.create_line(line1->get_joint(1), line2->get_joint(0));
-    (line3->get_point(1) == line4->get_point(0)) ? clip_connect(line3->get_joint(1), line4) :
-        patch1.create_line(line3->get_joint(1), line4->get_joint(0));
-    for(auto c = j.child(); c.is_valid();) {
-        auto next = c.next();
-        clip_result t;
-        _result.detach(t, c);
-        _result.attach(t, _result.insert(i));
-        c = next;
-    }
-    n->convert_from(patch1);
-    _result.erase(j);
-    n.get_wrapper()->swap_children(*i.get_wrapper());
-    _result.erase(i);
-    return n;
-}
-
-void clip_path_router::connect_to_patch1(iterator piter1, iterator piter2, clip_sweeper& sweeper1, clip_sweeper& sweeper2)
-{
-    assert(piter1 && piter2);
-    assert(piter1->is_patch() && piter2->is_patch());
-    auto& patch1 = static_cast<clip_patch&>(*piter1);
-    auto& patch2 = static_cast<clip_patch&>(*piter2);
-    assert(&patch1.get_start_point() == &sweeper1 &&
-        &patch2.get_end_point() == &sweeper2
-        );
-    patch1.adopt(patch2);
-    auto* line2 = patch1.get_line_start();
-    auto* line1 = patch2.get_line_end();
-    assert(line2 && line1);
-    (sweeper1.get_point() == sweeper2.get_point()) ? clip_connect(line1->get_joint(1), line2) :
-        patch1.create_line(line1->get_joint(1), line2->get_joint(0));
-    patch1.set_line_start(patch2.get_line_start());
-    patch1.set_start_point(patch2.get_start_point());
-    for(auto c = piter2.child(); c.is_valid();) {
-        auto next = c.next();
-        clip_result t;
-        _result.detach(t, c);
-        _result.attach(t, _result.birth_tail(piter1));
-        c = next;
-    }
-    _result.erase(piter2);
-}
-
-void clip_path_router::connect_to_patch2(iterator piter1, iterator piter2, clip_sweeper& sweeper1, clip_sweeper& sweeper2)
-{
-    assert(piter1 && piter2);
-    assert(piter1->is_patch() && piter2->is_patch());
-    auto& patch1 = static_cast<clip_patch&>(*piter1);
-    auto& patch2 = static_cast<clip_patch&>(*piter2);
-    assert(&patch1.get_start_point() == &sweeper1 &&
-        &patch2.get_end_point() == &sweeper2
-        );
-    patch2.adopt(patch1);
-    auto* line2 = patch1.get_line_start();
-    auto* line1 = patch2.get_line_end();
-    assert(line2 && line1);
-    (sweeper1.get_point() == sweeper2.get_point()) ? clip_connect(line1->get_joint(1), line2) :
-        patch2.create_line(line1->get_joint(1), line2->get_joint(0));
-    patch2.set_line_end(patch1.get_line_end());
-    patch2.set_end_point(patch1.get_end_point());
-    for(auto c = piter1.child(); c.is_valid();) {
-        auto next = c.next();
-        clip_result t;
-        _result.detach(t, c);
-        _result.attach(t, _result.birth_tail(piter2));
-        c = next;
-    }
-    _result.erase(piter1);
-}
-
-void clip_path_router::merge_patch_head(iterator piter1, iterator piter2, clip_sweeper& sweeper1, clip_sweeper& sweeper2)
-{
-    assert(piter1 && piter2);
-    assert(piter1->is_patch() && piter2->is_patch());
-    auto& patch1 = static_cast<clip_patch&>(*piter1);
-    auto& patch2 = static_cast<clip_patch&>(*piter2);
-    assert(&patch1.get_end_point() == &sweeper1 &&
-        &patch2.get_end_point() == &sweeper2
-        );
-    patch2.reverse_direction();
-    patch1.adopt(patch2);
-    auto* line1 = patch1.get_line_end();
-    auto* line2 = patch2.get_line_start();
-    assert(line1 && line2);
-    (sweeper1.get_point() == sweeper2.get_point()) ? clip_connect(line1->get_joint(1), line2) :
-        patch1.create_line(line1->get_joint(1), line2->get_joint(0));
-    patch1.set_line_end(patch2.get_line_end());
-    patch1.set_end_point(patch2.get_end_point());
-    for(auto c = piter2.child(); c.is_valid();) {
-        auto next = c.next();
-        clip_result t;
-        _result.detach(t, c);
-        _result.attach(t, _result.insert(piter1));
-        c = next;
-    }
-    _result.erase(piter2);
-}
-
-void clip_path_router::merge_patch_tail(iterator piter1, iterator piter2, clip_sweeper& sweeper1, clip_sweeper& sweeper2)
-{
-    assert(piter1 && piter2);
-    assert(piter1->is_patch() && piter2->is_patch());
-    auto& patch1 = static_cast<clip_patch&>(*piter1);
-    auto& patch2 = static_cast<clip_patch&>(*piter2);
-    assert(&patch1.get_start_point() == &sweeper1 &&
-        &patch2.get_start_point() == &sweeper2
-        );
-    patch2.reverse_direction();
-    patch1.adopt(patch2);
-    auto* line1 = patch2.get_line_end();
-    auto* line2 = patch1.get_line_start();
-    assert(line1 && line2);
-    (sweeper1.get_point() == sweeper2.get_point()) ? clip_connect(line1->get_joint(1), line2) :
-        patch1.create_line(line1->get_joint(1), line2->get_joint(0));
-    patch1.set_line_start(patch2.get_line_start());
-    patch1.set_start_point(patch2.get_start_point());
-    auto ipos = piter1;
-    for(auto c = piter2.child(); c.is_valid();) {
-        auto next = c.next();
-        clip_result t;
-        _result.detach(t, c);
-        _result.attach(t, _result.insert_after(ipos));
-        ipos.to_next();
-        c = next;
-    }
-    _result.erase(piter2);
-}
-
-static bool is_sample_joint(clip_joint* joint)
-{
-    assert(joint);
-    auto t = joint->get_type();
-    switch(t)
-    {
-    case ct_end_joint:
-    case ct_interpolate_joint:
-        return true;
-    case ct_intersect_joint:
-    case ct_pivot_joint:
-        return false;
-    case ct_mirror_joint:
-    case ct_final_joint:
-        return is_sample_joint(strip_off(joint));
-    default:
-        assert(!"unexpected.");
-        return false;
-    }
-}
-
-static bool is_point_inside_polygon(clip_polygon* poly, const vec2& pt)
-{
-    assert(poly);
-    auto is_xplus_clipped = [](clip_line* line, const vec2& pt)->bool {
-        assert(line);
-        auto* j1 = line->get_joint(0);
-        auto* j2 = line->get_joint(1);
-        assert(j1 && j2);
-        auto& p1 = j1->get_point();
-        auto& p2 = j2->get_point();
-        if((pt.y > p1.y && pt.y > p2.y) || (pt.y < p1.y && pt.y < p2.y))
-            return false;
-        vec2 d;
-        vec3 coef;
-        d.sub(p2, p1);
-        get_linear_coefficient(coef, p1, d);
-        if(fuzzy_zero(coef.x))
-            return fuzzy_zero(pt.y - p1.y);
-        float x = (-coef.z - coef.y * pt.y) / coef.x;
-        return pt.x > x;
-    };
-    int c = 0;
-    auto* line1 = poly->get_line_start();
-    assert(line1);
-    if(is_xplus_clipped(line1, pt))
-        c ++;
-    for(auto* line = line1->get_next_line(); line != line1; line = line->get_next_line()) {
-        assert(line);
-        if(is_xplus_clipped(line, pt))
-            c ++;
-    }
-    return c % 2 == 1;
-}
-
-static bool is_polygon_inside_polygon(clip_polygon* poly, clip_polygon* inner)
-{
-    assert(poly && inner && !poly->is_patch() && !inner->is_patch());
-    auto* line1 = inner->get_line_start();
-    assert(line1);
-    auto* p1 = line1->get_joint(0);
-    assert(p1);
-    if(is_sample_joint(p1))
-        return is_point_inside_polygon(poly, p1->get_point());
-    auto* p2 = line1->get_joint(1);
-    assert(p2);
-    if(is_sample_joint(p2))
-        return is_point_inside_polygon(poly, p2->get_point());
-    vec2 p;
-    p.add(p1->get_point(), p2->get_point());
-    p.scale(0.5f);
-    return is_point_inside_polygon(poly, p);
-}
-
-void clip_path_router::split_patch(iterator piter, clip_joint* sp1, clip_joint* sp2)
-{
-    assert(piter && sp1 && sp2);
-    assert(piter->is_patch());
-    auto& patch = static_cast<clip_patch&>(*piter);
-    auto* line1 = patch.get_line_start();
-    auto* line2 = patch.get_line_end();
-    assert(line1 && line2);
-    auto* sp1_prev = sp1->get_prev_line();
-    auto* sp1_next = sp1->get_next_line();
-    auto* sp2_prev = sp2->get_prev_line();
-    auto* sp2_next = sp2->get_next_line();
-    assert(sp2_prev && sp1_next);
-    assert(sp1_prev || sp2_next);
-    auto i = _result.birth<clip_polygon>(piter.parent());
-    assert(i);
-    auto& poly = *i;
-    clip_connect(sp2_prev, sp1);
-    clip_connect(sp1_prev, sp2);
-    poly.set_line_start(sp1->get_next_line());
-    if(sp1_prev && !sp2_next)
-        patch.set_line_end(sp1_prev);
-    else if(!sp1_prev && sp2_next)
-        patch.set_line_start(sp2_next);
-    for(auto j = piter.child(); j;) {
-        auto k = j.next();
-        if(!j->is_patch() && is_polygon_inside_polygon(&poly, &*j)) {
-            clip_result t;
-            _result.detach(t, j);
-            _result.attach(t, _result.birth_tail(i));
-        }
-        j = k;
-    }
-}
-
-static bool is_same_joint(clip_joint* joint1, clip_joint* joint2)
-{
-    assert(joint1 && joint2);
-    auto t1 = joint1->get_type();
-    auto t2 = joint2->get_type();
-    if(t1 == ct_intersect_joint && t2 == ct_intersect_joint) {
-        auto* j1 = static_cast<clip_intersect_joint*>(joint1);
-        auto* j2 = static_cast<clip_intersect_joint*>(joint2);
-        return j1 == j2 || j1->get_symmetric() == j2;
-    }
-    return false;
-}
-
-bool clip_path_router::try_split_patch(iterator piter)
-{
-    assert(piter && piter->is_patch());
-    auto& patch = static_cast<clip_patch&>(*piter);
-    auto* line1 = patch.get_line_start();
-    auto* line2 = patch.get_line_end();
-    assert(line1 && line2);
-    vector<clip_joint*> sel_joints;
-    auto is_select_joint = [](clip_joint* p)->bool {
-        assert(p);
-        auto* m = strip_off(p);
-        if(m == nullptr)
-            return false;
-        auto t = m->get_type();
-        return t == ct_intersect_joint || t == ct_pivot_joint;
-    };
-    if(auto* joint = line1->get_joint(0)) {
-        if(is_select_joint(joint))
-            sel_joints.push_back(joint);
-    }
-    for(auto* line = line1; line != line2; line = line->get_next_line()) {
-        auto* joint = line->get_joint(1);
-        assert(joint);
-        if(is_select_joint(joint))
-            sel_joints.push_back(joint);
-    }
-    if(auto* joint = line2->get_joint(1)) {
-        if(is_select_joint(joint))
-            sel_joints.push_back(joint);
-    }
-    int cap = (int)sel_joints.size();
-    if(cap <= 1)
-        return false;
-    clip_joint *sp1 = nullptr, *sp2 = nullptr;
-    for(int c = 0; c < cap; c ++) {
-        sp1 = sel_joints.at(c);
-        for(int i = c + 1; i < cap; i ++) {
-            auto* j = sel_joints.at(i);
-            if(is_same_joint(strip_off(sp1), strip_off(j))) {
-                sp2 = j;
-                break;
+            case painter_path::pt_moveto:
+            case painter_path::pt_lineto:
+                return;
+            case painter_path::pt_quadto:
+                add_single_quad_segment(last, static_cast<const painter_path::quad_to_node*>(node));
+                return;
+            case painter_path::pt_cubicto:
+                add_single_cubic_segment(last, static_cast<const painter_path::cubic_to_node*>(node));
+                return;
             }
         }
-        if(sp2 != nullptr)
-            break;
-    }
-    if(!sp2)
-        return false;
-    assert(sp1 && sp2);
-    split_patch(piter, sp1, sp2);
-    return true;
-}
-
-clip_path_router::iterator clip_path_router::try_connect_patch_forward(iterator i, route_iterator former)
-{
-    assert(i && i->is_patch());
-    assert(former->get_tag() == rnt_sweeper);
-    if(former == _nodes.begin())
-        return iterator(nullptr);
-    auto fr = std::prev(former);
-    if(fr->get_tag() != rnt_patch)
-        return iterator(nullptr);
-    clip_route_sweeper_node& snode = former->to_class1();
-    clip_route_patch_node& pnode = fr->to_class3();
-    clip_patch& ip = static_cast<clip_patch&>(*i);
-    assert(snode.get_down_sweeper()->joint == ip.get_end_point().joint);
-    auto j = pnode.get_patch_iter();
-    clip_patch& jp = static_cast<clip_patch&>(*j);
-    if(is_neighbour_joint(ip.get_start_point().joint, jp.get_end_point().joint)) {
-        connect_to_patch1(j, i, jp.get_end_point(), ip.get_start_point());
-        return j;
-    }
-    return iterator(nullptr);
-}
-
-clip_path_router::iterator clip_path_router::try_connect_patch_backward(iterator i, route_iterator latter)
-{
-    /* [sweeper1, sweeper2 as @latter] [sweeper3 as next patch @lr]
-     * [new patch as @i {host}]
-     */
-    assert(i && i->is_patch());
-    assert(latter->get_tag() == rnt_sweeper);
-    if(latter == _nodes.end())
-        return iterator(nullptr);
-    auto lr = std::next(latter);
-    if(lr == _nodes.end() || lr->get_tag() != rnt_patch)
-        return iterator(nullptr);
-    clip_route_sweeper_node& snode = latter->to_class1();
-    clip_route_patch_node& pnode = lr->to_class3();
-    clip_patch& ip = static_cast<clip_patch&>(*i);
-    assert(snode.get_down_sweeper()->joint == ip.get_start_point().joint);
-    auto j = pnode.get_patch_iter();
-    clip_patch& jp = static_cast<clip_patch&>(*j);
-    if(is_neighbour_joint(ip.get_start_point().joint, jp.get_end_point().joint)) {
-        connect_to_patch1(i, j, ip.get_start_point(), jp.get_end_point());
-        return i;
-    }
-    return iterator(nullptr);
-}
-
-clip_path_router::iterator clip_path_router::try_connect_patch_backward2(iterator i, route_iterator latter)
-{
-    assert(i && i->is_patch());
-    assert(latter->get_tag() == rnt_sweeper);
-    if(latter == _nodes.end())
-        return iterator(nullptr);
-    auto lr = std::next(latter);
-    if(lr == _nodes.end() || lr->get_tag() != rnt_patch)
-        return iterator(nullptr);
-    clip_route_sweeper_node& snode = latter->to_class1();
-    clip_route_patch_node& pnode = lr->to_class3();
-    clip_patch& ip = static_cast<clip_patch&>(*i);
-    assert(snode.get_down_sweeper()->joint == ip.get_start_point().joint);
-    auto j = pnode.get_patch_iter();
-    clip_patch& jp = static_cast<clip_patch&>(*j);
-    if(is_neighbour_joint(ip.get_start_point().joint, jp.get_end_point().joint)) {
-        connect_to_patch2(i, j, ip.get_start_point(), jp.get_end_point());
-        return j;
-    }
-    return iterator(nullptr);
-}
-
-void clip_path_router::create_patch(clip_patch& patch, const clip_sweeper& up1, const clip_sweeper& up2, const clip_sweeper& down1, const clip_sweeper& down2)
-{
-    clip_mirror_joint *t1, *t2, *b1, *b2;
-    t1 = patch.create_assumed_mj(up1);
-    if(up1.joint == up2.joint)
-        t2 = t1;
-    else {
-        t2 = patch.create_assumed_mj(up2);
-        patch.create_line(t2, t1);
-    }
-    b1 = patch.create_assumed_mj(down1);
-    b2 = (down1.joint == down2.joint) ? b1 : patch.create_assumed_mj(down2);
-    assert(t1 && t2);
-    auto* line1 = patch.create_line(b2, t2);
-    auto* line2 = patch.create_line(t1, b1);
-    patch.set_line_start(line1);
-    patch.set_line_end(line2);
-    patch.set_start_point(down2);
-    patch.set_end_point(down1);
-}
-
-void clip_path_router::proceed_patch(clip_patch& patch, const clip_route_sweeper_node& node1, const clip_route_sweeper_node& node2)
-{
-    auto& left_o = patch.get_end_point();
-    auto& right_o = patch.get_start_point();
-    auto& left_u = *node1.get_up_sweeper();
-    auto& right_u = *node2.get_up_sweeper();
-    auto& left_d = *node1.get_down_sweeper();
-    auto& right_d = *node2.get_down_sweeper();
-    if(left_o.joint != left_u.joint) {
-        auto* p = patch.create_assumed_mj(left_u);
-        patch.fix_line_back(patch.get_line_end(), p);
-    }
-    if(right_o.joint != right_u.joint) {
-        auto* p = patch.create_assumed_mj(right_u);
-        patch.fix_line_front(patch.get_line_start(), p);
-    }
-    auto* left = patch.create_assumed_mj(left_d);
-    auto* right = patch.create_assumed_mj(right_d);
-    auto* line1 = patch.fix_line_back(patch.get_line_end(), left);
-    auto* line2 = patch.fix_line_front(patch.get_line_start(), right);
-    patch.set_line_end(line1);
-    patch.set_line_start(line2);
-    patch.set_start_point(right_d);
-    patch.set_end_point(left_d);
-}
-
-clip_path_router_exclude::clip_path_router_exclude(clip_result& result):
-    clip_path_router(result)
-{
-}
-
-void clip_path_router_exclude::proceed(clip_sweep_lines& sweeplines)
-{
-    /* feed an empty root to achieve the multi top entries. */
-    assert(!_result.is_valid());
-    auto r = _result.birth<clip_polygon>(clip_result_iter(nullptr));
-    assert(r);
-    assert(sweeplines.size() >= 2);
-    auto i = sweeplines.begin();
-    auto j = std::next(i);
-    auto end = sweeplines.end();
-    for(; j != end; i = j ++)
-        proceed(*i, *j);
-}
-
-void clip_path_router_exclude::proceed(clip_sweep_line* line1, clip_sweep_line* line2)
-{
-    assert(line1 && line2);
-    install_sweepers(line1, line2);
-    prepare_route_nodes();
-    proceed_patches();
-    proceed_sweepers();
-    finish_proceed_sub_patches(_result.get_root());
-}
-
-static clip_route_nodes::iterator find_route_node(clip_route_nodes& nodes, clip_patch* patch, clip_sweeper* sweeper)
-{
-    assert(patch && sweeper);
-    float x = sweeper->get_point().x;
-    auto f = std::lower_bound(nodes.begin(), nodes.end(), x, [](const clip_route_node& node, float x)->bool {
-        auto& p = get_route_node_point(node);
-        return p.x < x;
-    });
-    if(f == nodes.end())
-        return f;
-    if(f->get_tag() == rnt_point) {
-        auto& cp =  f->to_class2();
-        auto iter = cp.get_patch_iter();
-        assert(iter && iter->is_patch());
-        if(static_cast<clip_patch*>(&*iter) == patch)
-            return f;
-    }
-    /* test the codes below! */
-    auto f1 = f, f2 = f;
-    for(; f1 != nodes.begin() && get_route_node_point(*f1).x == x; -- f1);
-    for(; f2 != nodes.end() && get_route_node_point(*f2).x == x; ++ f2);
-    if(get_route_node_point(*f1).x != x)
-        ++ f1;
-    for(auto i = f1; i != f2; ++ i) {
-        if(i->get_tag() == rnt_point) {
-            auto& cp = i->to_class2();
-            auto iter = cp.get_patch_iter();
-            assert(iter && iter->is_patch());
-            if(static_cast<clip_patch*>(&*iter) == patch)
-                return i;
-        }
-    }
-    assert(!"unexpected situation in find route node.");
-    return nodes.end();
-}
-
-static clip_route_nodes::iterator find_route_related_node(clip_route_nodes& nodes, clip_route_nodes::iterator i)
-{
-    assert(i != nodes.end());
-    assert(i->get_tag() == rnt_point);
-    auto& p_node = i->to_class2();
-    auto* sweeper = p_node.get_sweeper();
-    assert(sweeper);
-    float x = sweeper->get_point().x;
-    auto f1 = i, f2 = i;
-    for(; f1 != nodes.begin() && get_route_node_point(*f1).x == x; -- f1);
-    for(; f2 != nodes.end() && get_route_node_point(*f2).x == x; ++ f2);
-    if(get_route_node_point(*f1).x != x)
-        ++ f1;
-    for(auto j = f1; j != f2; ++ j) {
-        if(j->get_tag() == rnt_sweeper)
-            return j;
-    }
-    /* maybe there was a horizontal linkage. */
-    auto* sj = sweeper->joint;
-    if(sj->get_tag() == cst_endpoint) {
-        auto* ep = static_cast<clip_sweep_endpoint*>(sj);
-        auto* oj = ep->get_joint();
-        assert(oj);
-        auto* prevj = oj->get_prev_joint();
-        auto* nextj = oj->get_next_joint();
-        assert(prevj && nextj);
-        clip_joint* f = nullptr;
-        if(prevj->get_point().y == oj->get_point().y)
-            f = prevj;
-        else if(nextj->get_point().y == oj->get_point().y)
-            f = nextj;
-        if(f) {
-            float x = f->get_point().x;
-            auto fd = std::lower_bound(nodes.begin(), nodes.end(), x, [](const clip_route_node& node, float x)->bool {
-                auto& p = get_route_node_point(node);
-                return p.x < x;
-            });
-            if(fd != nodes.end()) {
-                auto f1 = fd, f2 = fd;
-                for(; f1 != nodes.begin() && get_route_node_point(*f1).x == x; -- f1);
-                for(; f2 != nodes.end() && get_route_node_point(*f2).x == x; ++ f2);
-                if(get_route_node_point(*f1).x != x)
-                    ++ f1;
-                for(auto j = f1; j != f2; ++ j) {
-                    if(get_route_bind_joint(*j) == f)
-                        return j;
+        else if(path.size() == 3) {
+            auto* node2 = path.get_node(2);
+            assert(node2);
+            if(fuzz_cmp(last->get_point(), node2->get_point()) < 0.1f) {    /* closed situation */
+                auto* node1 = path.get_node(1);
+                assert(node1);
+                if(node1->get_tag() == painter_path::pt_lineto) {
+                    if(node2->get_tag() == painter_path::pt_lineto)
+                        return; /* area 0 */
+                    Path& ajp = begin_create_AJ_path();
+                    auto* p1 = create_end_point(ajp, last->get_point());
+                    auto* p2 = create_end_point(ajp, node1->get_point());
+                    assert(p1 && p2);
+                    add_linear_edge(p1, p2);
+                    auto* p3 = split_curve_segment(ajp, p2, node1, node2);
+                    assert(p3);
+                    add_curve_edge(p3, p3->get_next_edge(), p1);
+                    end_create_AJ_path(ajp);
                 }
-            }
-        }
-    }
-    return nodes.end();
-}
-
-static clip_route_nodes::iterator find_route_dual_node(clip_route_nodes& nodes, clip_route_nodes::iterator i)
-{
-    assert(i != nodes.end());
-    assert(i->get_tag() == rnt_point);
-    auto& p_node = i->to_class2();
-    auto* sweeper = p_node.get_sweeper();
-    assert(sweeper);
-    float x = sweeper->get_point().x;
-    auto f1 = i, f2 = i;
-    for(; f1 != nodes.begin() && get_route_node_point(*f1).x == x; -- f1);
-    for(; f2 != nodes.end() && get_route_node_point(*f2).x == x; ++ f2);
-    if(get_route_node_point(*f1).x != x)
-        ++ f1;
-    for(auto j = f1; j != f2; ++ j) {
-        if(j != i && j->get_tag() == rnt_point)
-            return j;
-    }
-    auto* sj = sweeper->joint;
-    if(sj->get_tag() == cst_endpoint) {
-        auto* ep = static_cast<clip_sweep_endpoint*>(sj);
-        auto* oj = ep->get_joint();
-        assert(oj);
-        auto* prevj = oj->get_prev_joint();
-        auto* nextj = oj->get_next_joint();
-        assert(prevj && nextj);
-        clip_joint* f = nullptr;
-        if(prevj->get_point().y == oj->get_point().y)
-            f = prevj;
-        else if(nextj->get_point().y == oj->get_point().y)
-            f = nextj;
-        if(f) {
-            float x = f->get_point().x;
-            auto fd = std::lower_bound(nodes.begin(), nodes.end(), x, [](const clip_route_node& node, float x)->bool {
-                auto& p = get_route_node_point(node);
-                return p.x < x;
-            });
-            if(fd != nodes.end()) {
-                auto f1 = fd, f2 = fd;
-                for(; f1 != nodes.begin() && get_route_node_point(*f1).x == x; -- f1);
-                for(; f2 != nodes.end() && get_route_node_point(*f2).x == x; ++ f2);
-                if(get_route_node_point(*f1).x != x)
-                    ++ f1;
-                for(auto j = f1; j != f2; ++ j) {
-                    if(j->get_tag() == rnt_point) {
-                        auto& sp = j->to_const_class2();
-                        if(sp.get_patch_iter() != p_node.get_patch_iter() && get_route_dual_joint(*j) == f)
-                            return j;
+                else if(node2->get_tag() == painter_path::pt_lineto) {
+                    Path& ajp = begin_create_AJ_path();
+                    auto* p1 = create_end_point(ajp, last->get_point());
+                    assert(p1);
+                    auto* p2 = split_curve_segment(ajp, p1, last, node1);
+                    auto* p3 = create_end_point(ajp, node1->get_point());
+                    assert(p2 && p3);
+                    add_curve_edge(p2, p2->get_next_edge(), p3);
+                    add_linear_edge(p3, p1);
+                    end_create_AJ_path(ajp);
+                }
+                else {  /* they are all curves, split the longer one. */
+                    auto calc_control_length = [](const painter_node* last, const painter_node* node)-> float {
+                        assert(last && node);
+                        if(node->get_tag() == painter_path::pt_quadto) {
+                            auto qnode = static_cast<const painter_path::quad_to_node*>(node);
+                            return quad_control_length(last->get_point(), qnode->get_control(), qnode->get_point());
+                        }
+                        else if(node->get_tag() == painter_path::pt_cubicto) {
+                            auto qnode = static_cast<const painter_path::cubic_to_node*>(node);
+                            return cubic_control_length(last->get_point(), qnode->get_control1(), qnode->get_control2(), qnode->get_point());
+                        }
+                        return 0.f;
+                    };
+                    float len1 = calc_control_length(last, node1);
+                    float len2 = calc_control_length(node1, node2);
+                    Path& ajp = begin_create_AJ_path();
+                    if(len1 >= len2) {
+                        auto* p1 = create_end_point(ajp, last->get_point());
+                        assert(p1);
+                        auto* p2 = split_curve_segment(ajp, p1, last, node1);
+                        auto* p3 = create_end_point(ajp, node1->get_point());
+                        assert(p2 && p3);
+                        add_curve_edge(p2, p2->get_next_edge(), p3);
+                        auto* e2 = create_curve_edge(node1, node2);
+                        assert(e2);
+                        create_curve_points(ajp, e2);
+                        add_curve_edge(p3, e2, p1);
                     }
+                    else {
+                        auto* p1 = create_end_point(ajp, last->get_point());
+                        auto* e1 = create_curve_edge(last, node1);
+                        assert(p1 && e1);
+                        create_curve_points(ajp, e1);
+                        auto* p2 = create_end_point(ajp, node1->get_point());
+                        assert(p2);
+                        add_curve_edge(p1, e1, p2);
+                        auto* p3 = split_curve_segment(ajp, p2, node1, node2);
+                        assert(p3);
+                        add_curve_edge(p3, p3->get_next_edge(), p1);
+                    }
+                    end_create_AJ_path(ajp);
+                }
+                return;
+            }
+        }
+        auto& ajp = begin_create_AJ_path();
+        auto firstep = create_end_point(ajp, last->get_point());
+        assert(firstep);
+        auto lastep = firstep;
+        for(int i = 1; i < path.size(); i ++) {
+            auto* node = path.get_node(i);
+            assert(node);
+            switch(node->get_tag())
+            {
+            case painter_path::pt_lineto:
+                {
+                    auto ep = create_end_point(ajp, node->get_point());
+                    assert(ep);
+                    add_linear_edge(lastep, ep);
+                    lastep = ep;
+                    break;
+                }
+            case painter_path::pt_quadto:
+                {
+                    auto e = create_quad_edge(last, static_cast<const painter_path::quad_to_node*>(node));
+                    assert(e);
+                    create_quad_points(ajp, e);
+                    auto ep = create_end_point(ajp, node->get_point());
+                    assert(ep);
+                    add_curve_edge(lastep, e, ep);
+                    lastep = ep;
+                    break;
+                }
+            case painter_path::pt_cubicto:
+                {
+                    auto e = create_cubic_edge(last, static_cast<const painter_path::cubic_to_node*>(node));
+                    assert(e);
+                    create_cubic_points(ajp, e);
+                    auto ep = create_end_point(ajp, node->get_point());
+                    assert(ep);
+                    add_curve_edge(lastep, e, ep);
+                    lastep = ep;
+                    break;
                 }
             }
+            last = node;
+        }
+        assert(last);
+        if(fuzz_cmp(last->get_point(), first->get_point()) >= 0.1f)
+            add_linear_edge(lastep, firstep);
+        end_create_AJ_path(ajp);
+    }
+    void simplify(clip_result& result)
+    {
+        PolyTree polys;
+        _AJ_clipper.Execute(ctUnion, polys);
+        convert_output(result, polys);
+    }
+    void do_union(clip_result& result)
+    {
+        PolyTree polys;
+        _AJ_clipper.Execute(ctUnion, polys);
+        convert_output(result, polys);
+    }
+    void do_intersect(clip_result& result)
+    {
+        PolyTree polys;
+        _AJ_clipper.Execute(ctIntersection, polys);
+        convert_output(result, polys);
+    }
+    void do_substract(clip_result& result)
+    {
+        PolyTree polys;
+        _AJ_clipper.Execute(ctDifference, polys);
+        convert_output(result, polys);
+    }
+    void do_exclude(clip_result& result)
+    {
+        PolyTree polys;
+        _AJ_clipper.Execute(ctXor, polys);
+        convert_output(result, polys);
+    }
+    void trace_AJ_paths() const
+    {
+        for(const Paths* paths : _AJ_holdings) {
+            assert(paths);
+            for(const Path& path : *paths)
+                trace_AJ_path(path);
         }
     }
-    return nodes.end();
-}
 
-static bool is_patch_closed(const clip_route_sweeper_node& node1, const clip_route_sweeper_node& node2)
-{
-    auto* s1 = node1.get_down_sweeper();
-    auto* s2 = node2.get_down_sweeper();
-    assert(s1 && s2);
-    return is_neighbour_joint(s1->joint, s2->joint);
-}
+private:
+    Clipper         _AJ_clipper;
+    PathHoldings    _AJ_holdings;
+    Paths*          _AJ_paths = nullptr;            /* it's damn stupid vector<vector<ctor>>! */
+    Path            _path_to_add;
+    bool            _path_taken = false;
+    clip_edges      _edges;
+    clip_points     _points;
+    clip_ep_map     _ep_map;
 
-void clip_path_router_exclude::proceed_patches()
-{
-    auto i = _nodes.begin();
-    auto end = _nodes.end();
-    while(i != end) {
-        if(i->get_tag() != rnt_point) {
-            ++ i;
-            continue;
+private:
+    Path& begin_create_AJ_path()
+    {
+        if(_path_taken) {
+            assert(!"error.");
+            static Path bad_path;
+            return bad_path;
         }
-        auto& left = i->to_class2();
-        auto patch_iter = left.get_patch_iter();
-        assert(patch_iter && patch_iter->is_patch());
-        auto* patch = static_cast<clip_patch*>(&*patch_iter);
-        assert(patch && (&patch->get_end_point() == left.get_sweeper()));
-        auto f = find_route_node(_nodes, patch, &patch->get_start_point());
-        auto sweeper_l = find_route_related_node(_nodes, i);
-        auto sweeper_r = find_route_related_node(_nodes, f);
-        assert(sweeper_l != _nodes.end());
-        if(sweeper_r == _nodes.end()) {
-            auto dual = find_route_dual_node(_nodes, f);
-            assert(dual != _nodes.end());
-            auto& c2 = dual->to_class2();
-            auto* patch2 = static_cast<clip_patch*>(&*c2.get_patch_iter());
-            auto m = find_route_node(_nodes, patch2, &patch2->get_start_point());
-            assert(m != _nodes.end() && m->get_tag() == rnt_point);
-            connect_to_patch1(f->to_const_class2(), dual->to_const_class2());
-            _nodes.erase(f);
-            _nodes.erase(dual);
-            m->to_class2().set_patch_iter(patch_iter);
-            continue;
-        }
-        auto& s1 = sweeper_l->to_const_class1();
-        auto& s2 = sweeper_r->to_const_class1();
-        if(is_patch_closed(s1, s2))
-            close_patch(patch_iter, s1, s2);
-        else {
-            proceed_patch(*patch, s1, s2);
-            /* repair nodes */
-            clip_route_node node1(rnt_patch), node2(rnt_patch);
-            auto& l = node1.to_class3();
-            auto& r = node2.to_class3();
-            l.set_patch_iter(patch_iter);
-            r.set_patch_iter(patch_iter);
-            l.set_point(get_route_node_point(*sweeper_l));
-            r.set_point(get_route_node_point(*sweeper_r));
-            _nodes.insert(sweeper_l, node1);
-            _nodes.insert(sweeper_r, node2);
-        }
-        auto next = _nodes.erase(i);
-        (next == f) ? (next = _nodes.erase(f)): _nodes.erase(f);
-        (next == sweeper_l) ? (next = _nodes.erase(sweeper_l)) : _nodes.erase(sweeper_l);
-        (next == sweeper_r) ? (next = _nodes.erase(sweeper_r)) : _nodes.erase(sweeper_r);
-        i = next;
+        _path_taken = true;
+        assert(_path_to_add.empty());
+        return _path_to_add;
     }
-}
-
-void clip_path_router_exclude::proceed_sweepers()
-{
-    if(!_iter_st.empty())
-        _iter_st.swap(iterator_stack());
-    if(_nodes.empty())
-        return;
-    _last_sib = iterator(nullptr);
-    auto r = _result.get_root();
-    assert(r);
-    _iter_st.push(r);
-    auto i = _nodes.begin();
-    auto end = _nodes.end();
-    while(i != end) {
-        auto t = i->get_tag();
-        assert(t != rnt_point);
-        if(t == rnt_patch) {
-            auto& p = i->to_class3();
-            auto patch_iter = p.get_patch_iter();
-            assert(patch_iter);
-            if(_iter_st.top() == patch_iter) {
-                _last_sib = patch_iter;
-                _iter_st.pop();
-            }
-            else {
-                _last_sib = iterator(nullptr);
-                _iter_st.push(patch_iter);
-            }
-            ++ i;
-            continue;
+    void end_create_AJ_path(Path& path)
+    {
+        if(!_path_taken) {
+            assert(!"no path has been taken.");
+            return;
         }
-        assert(t == rnt_sweeper);
-        auto j = std::next(i);
-        assert(j != end && (j->get_tag() == rnt_sweeper));
-        auto parent = _iter_st.top();
-        auto p = _last_sib ? _result.insert_after<clip_patch>(_last_sib) : _result.birth_tail<clip_patch>(parent);
-        assert(p && p->is_patch());
-        auto& patch = static_cast<clip_patch&>(*p);
-        auto& s1 = i->to_class1();
-        auto& s2 = j->to_class1();
-        create_patch(patch, *s1.get_up_sweeper(), *s2.get_up_sweeper(), *s1.get_down_sweeper(), *s2.get_down_sweeper());
-        auto cf = try_connect_patch_forward(p, i);
-        if(cf.is_valid()) {
-            auto r = try_connect_patch_backward(cf, j);
-            i = !r ? std::next(j) : std::next(std::next(j));
+        if(&_path_to_add != &path) {
+            assert(!"path mismatch.");
+            return;
         }
-        else {
-            try_connect_patch_backward2(p, j);
-            i = std::next(j);
+        if(!_path_to_add.empty()) {
+            assert(_AJ_paths);
+            _AJ_paths->push_back(_path_to_add);
+            _path_to_add.swap(Path());
         }
+        _path_taken = false;
     }
-}
-
-static clip_joint* detect_ring_joint(clip_patch& patch)
-{
-    auto* line1 = patch.get_line_start();
-    auto* line2 = patch.get_line_end();
-    assert(line1 && line2);
-    if(line1 == line2)
-        return nullptr;
-    auto* joint1 = line1->get_joint(0);
-    if(!joint1) {
-        line1 = line1->get_next_line();
-        if(line1 == line2)
+    void add_single_quad_segment(const painter_node* last, const painter_path::quad_to_node* node)
+    {
+        assert(last && node);
+        bool is_closed = fuzz_cmp(last->get_point(), node->get_point()) < 0.1f;
+        is_closed ? add_close_single_quad_segment(node) :
+            add_open_single_quad_segment(last, node);
+    }
+    void add_single_cubic_segment(const painter_node* last, const painter_path::cubic_to_node* node)
+    {
+        assert(last && node);
+        bool is_closed = fuzz_cmp(last->get_point(), node->get_point()) < 0.1f;
+        is_closed ? add_close_single_cubic_segment(node) :
+            add_open_single_cubic_segment(last, node);
+    }
+    void add_open_single_quad_segment(const painter_node* last, const painter_path::quad_to_node* node)
+    {
+        assert(last && node);
+        auto& ajp = begin_create_AJ_path();
+        auto p1 = create_end_point(ajp, last->get_point());
+        assert(p1);
+        auto p2 = split_quad_segment(ajp, p1, last, node);
+        auto p3 = create_end_point(ajp, node->get_point());
+        assert(p2 && p3);
+        add_curve_edge(p2, p2->get_next_edge(), p3);
+        add_linear_edge(p3, p1);
+        end_create_AJ_path(ajp);
+    }
+    void add_close_single_quad_segment(const painter_path::quad_to_node* node)
+    {
+        /* nothing to add. */
+    }
+    void add_open_single_cubic_segment(const painter_node* last, const painter_path::cubic_to_node* node)
+    {
+        assert(last && node);
+        auto& ajp = begin_create_AJ_path();
+        auto p1 = create_end_point(ajp, last->get_point());
+        assert(p1);
+        auto p2 = split_cubic_segment(ajp, p1, last, node);
+        auto p3 = create_end_point(ajp, node->get_point());
+        assert(p2 && p3);
+        add_curve_edge(p2, p2->get_next_edge(), p3);
+        add_linear_edge(p3, p1);
+        end_create_AJ_path(ajp);
+    }
+    void add_close_single_cubic_segment(const painter_path::cubic_to_node* node)
+    {
+        assert(node);
+        vec2 cpts[4] = { node->get_point(), node->get_control1(), node->get_control2(), node->get_point() }, spts[7];
+        split_cubic_bezier(spts, cpts, 1.f / 3.f);
+        auto e1 = create_cubic_edge(spts[0], spts[1], spts[2], spts[3]);
+        assert(e1);
+        memcpy_s(cpts, sizeof(cpts), &spts[3], sizeof(cpts));
+        split_cubic_bezier(spts, cpts, 0.5f);
+        auto e2 = create_cubic_edge(spts[0], spts[1], spts[2], spts[3]);
+        auto e3 = create_cubic_edge(spts[3], spts[4], spts[5], spts[6]);
+        assert(e2 && e3);
+        auto& ajp = begin_create_AJ_path();
+        auto p1 = create_end_point(ajp, e1->get_point(0));
+        assert(p1);
+        create_cubic_points(ajp, e1);
+        auto p2 = create_end_point(ajp, e2->get_point(0));
+        assert(p2);
+        create_cubic_points(ajp, e2);
+        auto p3 = create_end_point(ajp, e3->get_point(0));
+        assert(p3);
+        create_cubic_points(ajp, e3);
+        add_curve_edge(p1, e1, p2);
+        add_curve_edge(p2, e2, p3);
+        add_curve_edge(p3, e3, p1);
+        end_create_AJ_path(ajp);
+    }
+    void split_quad_segment(clip_quad_edge* spe[2], const painter_node* last, const painter_path::quad_to_node* node)
+    {
+        assert(spe && last && node);
+        vec2 qpts[3] = { last->get_point(), node->get_control(), node->get_point() }, spts[5];
+        split_quad_bezier(spts, qpts, 0.5f);
+        spe[0] = create_quad_edge(spts[0], spts[1], spts[2]);
+        spe[1] = create_quad_edge(spts[2], spts[3], spts[4]);
+    }
+    void split_cubic_segment(clip_cubic_edge* spe[2], const painter_node* last, const painter_path::cubic_to_node* node)
+    {
+        assert(spe && last && node);
+        vec2 cpts[4] = { last->get_point(), node->get_control1(), node->get_control2(), node->get_point() }, spts[7];
+        split_cubic_bezier(spts, cpts, 0.5f);
+        spe[0] = create_cubic_edge(spts[0], spts[1], spts[2], spts[3]);
+        spe[1] = create_cubic_edge(spts[3], spts[4], spts[5], spts[6]);
+    }
+    clip_end_point* split_quad_segment(Path& path, clip_end_point* p0, const painter_node* last, const painter_path::quad_to_node* node)
+    {
+        assert(p0 && last && node);
+        clip_quad_edge* spe[2];
+        split_quad_segment(spe, last, node);
+        create_quad_points(path, spe[0]);
+        auto* p1 = create_end_point(path, spe[1]->get_point(0));
+        assert(p1);
+        add_curve_edge(p0, spe[0], p1);
+        create_quad_points(path, spe[1]);
+        p1->set_next_edge(spe[1]);
+        return p1;
+    }
+    clip_end_point* split_cubic_segment(Path& path, clip_end_point* p0, const painter_node* last, const painter_path::cubic_to_node* node)
+    {
+        assert(p0 && last && node);
+        clip_cubic_edge* spe[2];
+        split_cubic_segment(spe, last, node);
+        create_cubic_points(path, spe[0]);
+        auto* p1 = create_end_point(path, spe[1]->get_point(0));
+        assert(p1);
+        add_curve_edge(p0, spe[0], p1);
+        create_cubic_points(path, spe[1]);
+        p1->set_next_edge(spe[1]);
+        return p1;
+    }
+    clip_end_point* split_curve_segment(Path& path, clip_end_point* p0, const painter_node* last, const painter_node* node)
+    {
+        assert(p0 && last && node);
+        switch(node->get_tag())
+        {
+        case painter_path::pt_quadto:
+            return split_quad_segment(path, p0, last, static_cast<const painter_path::quad_to_node*>(node));
+        case painter_path::pt_cubicto:
+            return split_cubic_segment(path, p0, last, static_cast<const painter_path::cubic_to_node*>(node));
+        default:
+            assert(!"must be curve.");
             return nullptr;
-        joint1 = line1->get_joint(0);
+        }
     }
-    assert(joint1);
-    auto* joint2 = line2->get_joint(1);
-    if(!joint2) {
-        line2 = line2->get_prev_line();
-        if(line1 == line2)
+    clip_linear_edge* create_linear_edge(clip_end_point* p1, clip_end_point* p2)
+    {
+        assert(p1 && p2);
+        return create_linear_edge(p1->get_point(), p2->get_point());
+    }
+    clip_linear_edge* create_linear_edge(const painter_node* last, const painter_path::line_to_node* node)
+    {
+        assert(last && node);
+        return create_linear_edge(last->get_point(), node->get_point());
+    }
+    clip_quad_edge* create_quad_edge(const painter_node* last, const painter_path::quad_to_node* node)
+    {
+        assert(last && node);
+        return create_quad_edge(last->get_point(), node->get_control(), node->get_point());
+    }
+    clip_cubic_edge* create_cubic_edge(const painter_node* last, const painter_path::cubic_to_node* node)
+    {
+        assert(last && node);
+        return create_cubic_edge(last->get_point(), node->get_control1(), node->get_control2(), node->get_point());
+    }
+    clip_edge* create_curve_edge(const painter_node* last, const painter_node* node)
+    {
+        assert(last && node);
+        switch(node->get_tag())
+        {
+        case painter_path::pt_quadto:
+            return create_quad_edge(last, static_cast<const painter_path::quad_to_node*>(node));
+        case painter_path::pt_cubicto:
+            return create_cubic_edge(last, static_cast<const painter_path::cubic_to_node*>(node));
+        default:
+            assert(!"must be curve.");
             return nullptr;
-        joint2 = line2->get_joint(1);
-    }
-    assert(joint2);
-    auto& p1 = joint1->get_point();
-    auto& p2 = joint2->get_point();
-    for(auto* line = line1; line != line2; line = line->get_next_line()) {
-        assert(line);
-        auto* joint = line->get_joint(1);
-        assert(joint);
-        auto& p = joint->get_point();
-        if(p == p1 || p == p2)
-            return joint;
-    }
-    return nullptr;
-}
-
-void clip_path_router_exclude::finish_proceed_patches(iterator p)
-{
-    assert(p.is_valid());
-    if(!p->is_patch())
-        return;
-    finish_proceed_sub_patches(p);
-    if(p.is_leaf()) {
-        /* finish leaf patch if needed */
-        assert(p->is_patch());
-        static_cast<clip_patch&>(*p).finish_patch();
-        return;
-    }
-    auto& patch = static_cast<clip_patch&>(*p);
-    auto c1 = p.child();
-    auto c2 = p.last_child();
-    assert(c1 && c2);
-    bool c1_is_patch = c1->is_patch();
-    bool c2_is_patch = c2->is_patch();
-    if(!c1_is_patch && !c2_is_patch)
-        return;
-    if(!c1_is_patch) {
-        auto& patch2 = static_cast<clip_patch&>(*c2);
-        if(is_neighbour_joint(patch.get_start_point().joint, patch2.get_start_point().joint)) {
-            merge_patch_tail(p, c2, patch.get_start_point(), patch2.get_start_point());
-            try_split_patch(p);
         }
     }
-    else if(!c2_is_patch) {
-        auto& patch1 = static_cast<clip_patch&>(*c1);
-        if(is_neighbour_joint(patch.get_end_point().joint, patch1.get_end_point().joint)) {
-            merge_patch_head(p, c1, patch.get_end_point(), patch1.get_end_point());
-            try_split_patch(p);
+    clip_linear_edge* create_linear_edge(const vec2& p1, const vec2& p2)
+    {
+        auto* edge = new clip_linear_edge;
+        assert(edge);
+        _edges.push_back(edge);
+        edge->set_point(0, p1);
+        edge->set_point(1, p2);
+        return edge;
+    }
+    clip_quad_edge* create_quad_edge(const vec2& p1, const vec2& p2, const vec2& p3)
+    {
+        auto* edge = new clip_quad_edge;
+        assert(edge);
+        _edges.push_back(edge);
+        edge->set_point(0, p1);
+        edge->set_point(1, p2);
+        edge->set_point(2, p3);
+        return edge;
+    }
+    clip_cubic_edge* create_cubic_edge(const vec2& p1, const vec2& p2, const vec2& p3, const vec2& p4)
+    {
+        auto* edge = new clip_cubic_edge;
+        assert(edge);
+        _edges.push_back(edge);
+        edge->set_point(0, p1);
+        edge->set_point(1, p2);
+        edge->set_point(2, p3);
+        edge->set_point(3, p4);
+        return edge;
+    }
+    clip_end_point* create_end_point(Path& path, const vec2& p)
+    {
+        auto ep = new clip_end_point;
+        assert(ep);
+        _points.push_back(ep);
+        path.push_back(cvt_AJ_point(p, ep));
+        ep->set_point(p);
+        return ep;
+    }
+    clip_intersect_point* create_intersect_point(const vec2& p)
+    {
+        auto ip = new clip_intersect_point;
+        assert(ip);
+        _points.push_back(ip);
+        ip->set_point(p);
+        return ip;
+    }
+    int create_quad_points(Path& path, clip_quad_edge* edge)
+    {
+        assert(edge);
+        vec3 para[2];
+        get_quad_parameter_equation(para, edge->get_point(0), edge->get_point(1), edge->get_point(2));
+        int step = get_rough_interpolate_step(edge->get_point(0), edge->get_point(1), edge->get_point(2));
+        float t, chord;
+        t = chord = 1.f / (step - 1);
+        for(int i = 1; i < step - 1; i ++, t += chord) {
+            vec2 p;
+            eval_quad(p, para, t);
+            auto* ip = new clip_interpolate_point;
+            assert(ip);
+            _points.push_back(ip);
+            path.push_back(cvt_AJ_point(p, ip));
+            ip->set_point(p);
+            ip->set_edge(edge);
+            ip->set_ratio(t);
+        }
+        return _points.size();
+    }
+    int create_cubic_points(Path& path, clip_cubic_edge* edge)
+    {
+        assert(edge);
+        vec4 para[2];
+        get_cubic_parameter_equation(para, edge->get_point(0), edge->get_point(1), edge->get_point(2), edge->get_point(3));
+        int step = get_rough_interpolate_step(edge->get_point(0), edge->get_point(1), edge->get_point(2), edge->get_point(3));
+        float t, chord;
+        t = chord = 1.f / (step - 1);
+        for(int i = 1; i < step - 1; i ++, t += chord) {
+            vec2 p;
+            eval_cubic(p, para, t);
+            auto* ip = new clip_interpolate_point;
+            assert(ip);
+            _points.push_back(ip);
+            path.push_back(cvt_AJ_point(p, ip));
+            ip->set_point(p);
+            ip->set_edge(edge);
+            ip->set_ratio(t);
+        }
+        return _points.size();
+    }
+    int create_curve_points(Path& path, clip_edge* edge)
+    {
+        assert(edge);
+        switch(edge->get_type())
+        {
+        case et_quad:
+            return create_quad_points(path, static_cast<clip_quad_edge*>(edge));
+        case et_cubic:
+            return create_cubic_points(path, static_cast<clip_cubic_edge*>(edge));
+        }
+        return 0;
+    }
+    void add_ep_map(clip_point* p1, clip_point* p2, clip_edge* edge)
+    {
+        assert(p1 && p2 && edge);
+        _ep_map.emplace(clip_ep_map_key(p1, p2), clip_ep_map_value(edge, false));
+        _ep_map.emplace(clip_ep_map_key(p2, p1), clip_ep_map_value(edge, true));
+    }
+    void add_linear_edge(clip_end_point* p1, clip_end_point* p2)
+    {
+        assert(p1 && p2);
+        auto* edge = create_linear_edge(p1, p2);
+        assert(edge);
+        add_curve_edge(p1, edge, p2);
+    }
+    void add_curve_edge(clip_end_point* p1, clip_edge* edge, clip_end_point* p2)
+    {
+        assert(p1 && edge && p2);
+        p1->set_next_edge(edge);
+        p2->set_prev_edge(edge);
+        add_ep_map(p1, p2, edge);
+    }
+    void convert_output(clip_result& result, PolyTree& poly_tree)
+    {
+        convert_output(result, result.birth(nullptr), &poly_tree);
+    }
+    void convert_output(painter_paths& output, Paths& paths)
+    {
+        for(Path& path : paths) {
+            if(path.empty())
+                continue;
+            output.push_back(painter_path());
+            painter_path& out_path = output.back();
+            convert_output(out_path, path);
         }
     }
-    else {
-        auto& patch1 = static_cast<clip_patch&>(*c1);
-        auto& patch2 = static_cast<clip_patch&>(*c2);
-        bool p1_linked = is_neighbour_joint(patch.get_end_point().joint, patch1.get_end_point().joint);
-        bool p2_linked = is_neighbour_joint(patch.get_start_point().joint, patch2.get_start_point().joint);
-        if(p1_linked && p2_linked) {
-            if(c1 == c2)
-                close_patch(p, c1);
-            else {
-                merge_patch_head(p, c1, patch.get_end_point(), patch1.get_end_point());
-                merge_patch_tail(p, c2, patch.get_start_point(), patch2.get_start_point());
+    void convert_output(clip_result& result, clip_result_iter iter, PolyNode* poly)
+    {
+        assert(poly);
+        Path& path = poly->Contour;
+        if(!path.empty())
+            convert_output(*iter, path);
+        if(poly->ChildCount() <= 0)
+            return;
+        auto r = result.birth_tail(iter);
+        assert(r);
+        auto node = poly->Childs.front();
+        assert(node);
+        convert_output(result, r, node);
+        for(node = node->GetNext(); node; node = node->GetNext()) {
+            r = result.insert_after(r);
+            convert_output(result, r, node);
+        }
+    }
+    void convert_output(painter_path& output, Path& path)
+    {
+        assert(!path.empty());
+        ReversePath(path);
+        auto skip_interpolate_points = [&path](int s)-> int {
+            int len = (int)path.size();
+            assert(s < len);
+            for(int i = 0; i < len; ++ i, ++ s) {
+                auto cp = get_clip_point(path.at(s));
+                assert(cp);
+                if(cp->get_type() != pt_interpolate_point)
+                    return s;
             }
+            assert(!"error.");
+            return -1;
+        };
+        clip_edge* footprint = nullptr;
+        auto skip_interpolate_points_till = [&path, &footprint](int s, int& c)-> int {
+            int len = (int)path.size();
+            assert(s < len);
+            for(; c < len; ++ c, ++ s %= len) {
+                auto cp = get_clip_point(path.at(s));
+                assert(cp);
+                if(cp->get_type() != pt_interpolate_point)
+                    return s;
+                footprint = static_cast<const clip_interpolate_point*>(cp)->get_edge();
+            }
+            return s;
+        };
+        int s = skip_interpolate_points(0);
+        if(s < 0) {
+            assert(!"unexpected.");
+            return;
         }
-        else if(p1_linked) {
-            merge_patch_head(p, c1, patch.get_end_point(), patch1.get_end_point());
-            try_split_patch(p);
+        auto first = get_clip_point(path.at(s));
+        assert(first);
+        int start = output.size();
+        output.move_to(first->get_point());
+        int c = 0, last = s;
+        for(;;) {
+            footprint = nullptr;
+            int n = skip_interpolate_points_till((last + 1) % path.size(), c);
+            auto p1 = get_clip_point(path.at(last));
+            auto p2 = get_clip_point(path.at(n));
+            assert(p1 && p2);
+            auto r = _ep_map.find(clip_ep_map_key(p1, p2));
+            if(r != _ep_map.end())
+                append_output(output, r->second.edge, r->second.reversed);
+            else {
+                if(!footprint)
+                    footprint = determine_edge(p1, p2);
+                assert(footprint);
+                cut_edge(output, footprint, p1, p2);
+            }
+            if(n == s)
+                break;
+            last = n;
         }
-        else if(p2_linked) {
-            merge_patch_tail(p, c2, patch.get_start_point(), patch2.get_start_point());
-            try_split_patch(p);
-        }
+        fix_ending(output, output.get_node(start));
     }
-}
-
-void clip_path_router_exclude::finish_proceed_sub_patches(iterator p)
-{
-    assert(p.is_valid());
-    for(auto c = p.child(); c.is_valid(); ) {
-        auto next = c.next();
-        if(c->is_patch())
-            finish_proceed_patches(c);
-        c = next;
-    }
-    for(auto c = p.child(); c.is_valid();) {
-        if(!c->is_patch()) {
-            c.to_next();
-            continue;
-        }
-        auto c2 = c.next();
-        if(!c2)
+    void fix_ending(painter_path& path, const painter_node* start)
+    {
+        assert(start);
+        painter_node* last = path.get_node(path.size() - 1);
+        assert(last);
+        switch(last->get_tag())
+        {
+        case painter_path::pt_lineto:
+        case painter_path::pt_quadto:
+        case painter_path::pt_cubicto:
+            last->set_point(start->get_point());
             break;
-        if(!c2->is_patch()) {
-            c = c2.next();
-            continue;
         }
-        auto& patch1 = static_cast<clip_patch&>(*c);
-        auto& patch2 = static_cast<clip_patch&>(*c2);
-        auto& sweeper1 = patch1.get_start_point();
-        auto& sweeper2 = patch2.get_end_point();
-        is_neighbour_joint(sweeper1.joint, sweeper2.joint) ? connect_to_patch1(c, c2, sweeper1, sweeper2) : c = c2;
     }
+    void append_output(painter_path& output, const clip_edge* edge, bool reversed)
+    {
+        assert(edge);
+        switch(edge->get_type())
+        {
+        case et_linear:
+            reversed ? output.line_to(edge->get_point(0)) : output.line_to(edge->get_point(1));
+            break;
+        case et_quad:
+            reversed ? output.quad_to(edge->get_point(1), edge->get_point(0)) : output.quad_to(edge->get_point(1), edge->get_point(2));
+            break;
+        case et_cubic:
+            reversed ? output.cubic_to(edge->get_point(2), edge->get_point(1), edge->get_point(0)) : output.cubic_to(edge->get_point(1), edge->get_point(2), edge->get_point(3));
+            break;
+        }
+    }
+    void cut_edge(painter_path& output, clip_edge* edge, clip_point* p1, clip_point* p2)
+    {
+        assert(edge && p1 && p2);
+        if(edge->get_type() == et_linear) {
+            output.line_to(p2->get_point());
+            return;
+        }
+        float t1 = 0.f, t2 = 0.f;
+        bool is_end1 = false, is_end2 = false;
+        if(p1->get_type() == pt_end_point) {
+            is_end1 = true;
+            t1 = fuzz_cmp(edge->get_point(0), p1->get_point()) < 0.1f ? 0.f : 1.f;
+        }
+        else {
+            assert(p1->get_type() == pt_intersect_point);
+            auto p = static_cast<const clip_intersect_point*>(p1);
+            t1 = p->get_intersect_info_map().find(edge)->second;
+        }
+        if(p2->get_type() == pt_end_point) {
+            is_end2 = true;
+            t2 = fuzz_cmp(edge->get_last_point(), p2->get_point()) < 0.1f ? 1.f : 0.f;
+        }
+        else {
+            assert(p2->get_type() == pt_intersect_point);
+            auto p = static_cast<const clip_intersect_point*>(p2);
+            t2 = p->get_intersect_info_map().find(edge)->second;
+        }
+        bool reversed = false;
+        if(t1 > t2) {
+            gs_swap(p1, p2);
+            gs_swap(t1, t2);
+            gs_swap(is_end1, is_end2);
+            reversed = true;
+        }
+        assert(!(is_end1 && is_end2));
+        if(is_end1) {
+            auto e = split_front_part(edge, t2);
+            assert(e);
+            append_output(output, e, reversed);
+        }
+        else if(is_end2) {
+            auto e = split_back_part(edge, t1);
+            assert(e);
+            append_output(output, e, reversed);
+        }
+        else {
+            auto e = split_middle_part(edge, t1, t2);
+            assert(e);
+            append_output(output, e, reversed);
+        }
+    }
+    clip_edge* split_front_part(clip_edge* edge, float t)
+    {
+        assert(edge);
+        switch(edge->get_type())
+        {
+        case et_linear:
+            {
+                auto e = create_linear_edge(edge->get_point(0), vec2().lerp(edge->get_point(0), edge->get_point(1), t));
+                assert(e);
+                return e;
+            }
+        case et_quad:
+            {
+                vec2 qpts[3] = { edge->get_point(0), edge->get_point(1), edge->get_point(2) }, spts[5];
+                split_quad_bezier(spts, qpts, t);
+                auto e = create_quad_edge(spts[0], spts[1], spts[2]);
+                assert(e);
+                return e;
+            }
+        case et_cubic:
+            {
+                vec2 cpts[4] = { edge->get_point(0), edge->get_point(1), edge->get_point(2), edge->get_point(3) }, spts[7];
+                split_cubic_bezier(spts, cpts, t);
+                auto e = create_cubic_edge(spts[0], spts[1], spts[2], spts[3]);
+                assert(e);
+                return e;
+            }
+        }
+        return nullptr;
+    }
+    clip_edge* split_back_part(clip_edge* edge, float t)
+    {
+        assert(edge);
+        switch(edge->get_type())
+        {
+        case et_linear:
+            {
+                auto e = create_linear_edge(vec2().lerp(edge->get_point(0), edge->get_point(1), t), edge->get_point(1));
+                assert(e);
+                return e;
+            }
+        case et_quad:
+            {
+                vec2 qpts[3] = { edge->get_point(0), edge->get_point(1), edge->get_point(2) }, spts[5];
+                split_quad_bezier(spts, qpts, t);
+                auto e = create_quad_edge(spts[2], spts[3], spts[4]);
+                assert(e);
+                return e;
+            }
+        case et_cubic:
+            {
+                vec2 cpts[4] = { edge->get_point(0), edge->get_point(1), edge->get_point(2), edge->get_point(3) }, spts[7];
+                split_cubic_bezier(spts, cpts, t);
+                auto e = create_cubic_edge(spts[3], spts[4], spts[5], spts[6]);
+                assert(e);
+                return e;
+            }
+        }
+        return nullptr;
+    }
+    clip_edge* split_middle_part(clip_edge* edge, float t1, float t2)
+    {
+        assert(edge);
+        assert(t1 < t2);
+        switch(edge->get_type())
+        {
+        case et_linear:
+            {
+                auto e = create_linear_edge(vec2().lerp(edge->get_point(0), edge->get_point(1), t1), vec2().lerp(edge->get_point(0), edge->get_point(1), t2));
+                assert(e);
+                return e;
+            }
+        case et_quad:
+            {
+                vec2 qpts[3] = { edge->get_point(0), edge->get_point(1), edge->get_point(2) }, spts[7];
+                split_quad_bezier(spts, qpts, t1, t2);
+                auto e = create_quad_edge(spts[2], spts[3], spts[4]);
+                assert(e);
+                return e;
+            }
+        case et_cubic:
+            {
+                vec2 cpts[4] = { edge->get_point(0), edge->get_point(1), edge->get_point(2), edge->get_point(3) }, spts[10];
+                split_cubic_bezier(spts, cpts, t1, t2);
+                auto e = create_cubic_edge(spts[3], spts[4], spts[5], spts[6]);
+                assert(e);
+                return e;
+            }
+        }
+        return nullptr;
+    }
+};
+
+static float correct_intersection(vec2& correctpt, const vec2& pt, const clip_edge* e)
+{
+    assert(e);
+    switch(e->get_type())
+    {
+    case et_linear:
+        {
+            float t = linear_reparameterize(e->get_point(0), e->get_point(1), pt);
+            correctpt.lerp(e->get_point(0), e->get_point(1), t);
+            return t;
+        }
+    case et_quad:
+        {
+            vec3 para[2];
+            get_quad_parameter_equation(para, e->get_point(0), e->get_point(1), e->get_point(2));
+            float t = best_quad_reparameterize(para, pt);
+            eval_quad(correctpt, para, t);
+            return t;
+        }
+    case et_cubic:
+        {
+            vec4 para[2];
+            get_cubic_parameter_equation(para, e->get_point(0), e->get_point(1), e->get_point(2), e->get_point(3));
+            float t = best_cubic_reparameterize(para, pt);
+            eval_cubic(correctpt, para, t);
+            return t;
+        }
+    }
+    assert(!"error.");
+    return 0.f;
 }
 
-clip_path_router_union::clip_path_router_union(clip_result& result):
-    clip_path_router(result)
+static void clip_zfill(IntPoint& e1bot, IntPoint& e1top, IntPoint& e2bot, IntPoint& e2top, IntPoint& pt)
 {
-}
-
-void clip_path_router_union::proceed(clip_sweep_lines& sweeplines)
-{
-    assert(!_result.is_valid());
-    auto r = _result.birth<clip_polygon>(clip_result_iter(nullptr));
-    assert(r);
-    assert(sweeplines.size() >= 2);
-    auto i = sweeplines.begin();
-    auto j = std::next(i);
-    auto end = sweeplines.end();
-    for(; j != end; i = j ++)
-        proceed(*i, *j);
-}
-
-void clip_path_router_union::proceed(clip_sweep_line* line1, clip_sweep_line* line2)
-{
-}
-
-clip_path_router_intersect::clip_path_router_intersect(clip_result& result):
-    clip_path_router(result)
-{
-}
-
-void clip_path_router_intersect::proceed(clip_sweep_lines& sweeplines)
-{
-}
-
-void clip_create_polygons(clip_polygons& polygons, const painter_path& path)
-{
-    int cap = path.size();
-    if(!cap)
+    auto e1botp = get_clip_point(e1bot);
+    auto e1topp = get_clip_point(e1top);
+    auto e2botp = get_clip_point(e2bot);
+    auto e2topp = get_clip_point(e2top);
+    auto e1 = determine_edge(e1botp, e1topp);
+    auto e2 = determine_edge(e2botp, e2topp);
+    if(!e1 || !e2) {
+        assert(!"bad intersection.");
         return;
-    for(int i = 0; i < cap;) {
-        clip_polygon* polygon = new clip_polygon;
-        polygons.push_back(polygon);
-        i = polygon->create(path, i);
     }
+    vec2 p = cvt_point(pt);
+    vec2 fixp1, fixp2;
+    float t1 = correct_intersection(fixp1, p, e1);
+    float t2 = correct_intersection(fixp2, p, e2);
+    vec2 fixp;
+    fixp.add(fixp1, fixp2).scale(0.5f);
+    assert(__current_clipper);
+    auto ip = __current_clipper->create_intersect_point(fixp);
+    assert(ip);
+    pt = cvt_AJ_point(fixp, ip);
+    ip->add_intersect_info(e1, t1);
+    ip->add_intersect_info(e2, t2);
 }
 
-static void compile_path(painter_path& path, const clip_result& poly_result, clip_result::const_iterator p)
+static void clip_simplify(painter_linestrips& lss, Paths& input)
 {
-    assert(p);
-    auto compile_line_segment = [](painter_path& path, clip_line* line)->clip_line* {
-        assert(line);
-        auto* joint1 = line->get_joint(1);
-        assert(joint1 && (joint1->get_type() == ct_final_joint));
-        auto* fj1 = static_cast<clip_final_joint*>(joint1);
-        if(!fj1->is_control_point()) {
-            path.line_to(fj1->get_point());
-            return line->get_next_line();
-        }
-        auto* line2 = line->get_next_line();
-        assert(line2);
-        auto* joint2 = line2->get_joint(1);
-        assert(joint2 && (joint2->get_type() == ct_final_joint));
-        auto* fj2 = static_cast<clip_final_joint*>(joint2);
-        if(!fj2->is_control_point()) {
-            path.quad_to(fj1->get_point(), fj2->get_point());
-            return line2->get_next_line();
-        }
-        auto* line3 = line2->get_next_line();
-        assert(line3);
-        auto* joint3 = line3->get_joint(1);
-        assert(joint3 && (joint3->get_type() == ct_final_joint));
-        auto* fj3 = static_cast<clip_final_joint*>(joint3);
-        assert(!fj3->is_control_point());
-        path.cubic_to(fj1->get_point(), fj2->get_point(), fj3->get_point());
-        return line3->get_next_line();
-    };
-    auto& poly = *p;
-    //assert(!poly.is_patch());
-    auto* line1 = poly.get_line_start();
-    assert(line1);
-    auto& p1 = line1->get_point(0);
-    path.move_to(p1);
-    auto* line = compile_line_segment(path, line1);
-    while(line != line1)
-        line = compile_line_segment(path, line);
-    for(auto i = p.child(); i; i = i.next())
-        compile_path(path, poly_result, i);
+    Paths out;
+    SimplifyPolygons(input, out);
+    convert_to_polygons(lss, out);
 }
 
-void clip_compile_path(painter_path& path, const clip_result& poly_result)
+void clip_simplify(painter_linestrips& lss, const painter_linestrip& input)
 {
-    auto p = poly_result.get_root();
-    assert(p && !p.is_leaf());
-    for(auto i = p.child(); i; i = i.next())
-        compile_path(path, poly_result, i);
+    Paths paths;
+    convert_to_clipper_paths(paths, input);
+    clip_simplify(lss, paths);
 }
 
-void clip_union(clip_result& poly_result, clip_polygons& polygons)
+void clip_simplify(painter_linestrips& lss, const painter_linestrips& input)
 {
-    clip_sweep_line_algorithm sla;
-    sla.set_clip_tag(cp_union);
-    for(auto* p : polygons)
-        sla.add_polygon(p);
-    sla.proceed();
-    sla.output(poly_result);
+    Paths paths;
+    convert_to_clipper_paths(paths, input);
+    clip_simplify(lss, paths);
 }
 
-void clip_intersect(clip_result& poly_result, clip_polygons& polygons)
+static void clip_convert_path(painter_path& out, clip_result_const_iter i)
 {
-    clip_sweep_line_algorithm sla;
-    sla.set_clip_tag(cp_intersect);
-    for(auto* p : polygons)
-        sla.add_polygon(p);
-    sla.proceed();
-    sla.output(poly_result);
+    assert(i);
+    const painter_path& path = *i;
+    out.add_path(path);
+    for(auto j = i.child(); j.is_valid(); j = j.next())
+        clip_convert_path(out, j);
 }
 
-void clip_exclude(clip_result& poly_result, clip_polygons& polygons)
+void clip_convert(painter_path& path, const clip_result& result)
 {
-    clip_sweep_line_algorithm sla;
-    sla.set_clip_tag(cp_exclude);
-    for(auto* p : polygons)
-        sla.add_polygon(p);
-    sla.proceed();
-    sla.output(poly_result);
+    if(result.is_valid())
+        clip_convert_path(path, result.get_root());
+}
+
+void clip_simplify(clip_result& output, const painter_path& input)
+{
+    clipper c;
+    c.add_path(input, ptSubject);
+    c.simplify(output);
+}
+
+void clip_union(clip_result& output, const painter_path& subjects, const painter_path& clips)
+{
+    clipper c;
+    c.add_path(subjects, ptSubject);
+    c.add_path(clips, ptClip);
+    c.do_union(output);
+}
+
+void clip_intersect(clip_result& output, const painter_path& subjects, const painter_path& clips)
+{
+    clipper c;
+    c.add_path(subjects, ptSubject);
+    c.add_path(clips, ptClip);
+    c.do_intersect(output);
+}
+
+void clip_substract(clip_result& output, const painter_path& subjects, const painter_path& clips)
+{
+    clipper c;
+    c.add_path(subjects, ptSubject);
+    c.add_path(clips, ptClip);
+    c.do_substract(output);
+}
+
+void clip_exclude(clip_result& output, const painter_path& subjects, const painter_path& clips)
+{
+    clipper c;
+    c.add_path(subjects, ptSubject);
+    c.add_path(clips, ptClip);
+    c.do_exclude(output);
 }
 
 __ariel_end__

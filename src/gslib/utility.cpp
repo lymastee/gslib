@@ -95,7 +95,7 @@ float quad_reparameterize(const vec3 para[2], const vec2& p)
     for(int i = 0; i < c1; i ++) {
         float t = tx[i];
         float y = para[1].dot(vec3(t * t, t, 1.f));
-        if(fuzz_cmp(y, p.y, 0.1f) == 0)
+        if(fuzz_cmp(y, p.y, 0.1f) == 0.f)
             return t;
     }
     vec3 tryreparay = para[1];
@@ -105,7 +105,7 @@ float quad_reparameterize(const vec3 para[2], const vec2& p)
     for(int i = 0; i < c2; i ++) {
         float t = ty[i];
         float x = para[0].dot(vec3(t * t, t, 1.f));
-        if(fuzz_cmp(x, p.x, 0.1f) == 0)
+        if(fuzz_cmp(x, p.x, 0.1f) == 0.f)
             return t;
     }
     return -1.f;
@@ -136,7 +136,40 @@ float cubic_reparameterize(const vec4 para[2], const vec2& p)
     return -1.f;
 }
 
-static float best_cubic_reparameterize(const vec4 para[2], const vec2& p)
+float best_quad_reparameterize(const vec3 para[2], const vec2& p)
+{
+    float s = -1.f;
+    float min_dis = FLT_MAX;
+    vec3 tryreparax = para[0];
+    tryreparax.z -= p.x;
+    float tx[2];
+    int c1 = solve_univariate_quadratic(tx, tryreparax);
+    for(int i = 0; i < c1; i ++) {
+        float t = tx[i];
+        float y = para[1].dot(vec3(t * t, t, 1.f));
+        float dis = abs(y - p.y);
+        if(dis < min_dis) {
+            s = t;
+            min_dis = dis;
+        }
+    }
+    vec3 tryreparay = para[1];
+    tryreparay.z -= p.y;
+    float ty[2];
+    int c2 = solve_univariate_quadratic(ty, tryreparay);
+    for(int i = 0; i < c2; i ++) {
+        float t = ty[i];
+        float x = para[0].dot(vec3(t * t, t, 1.f));
+        float dis = abs(x - p.x);
+        if(dis < min_dis) {
+            s = t;
+            min_dis = dis;
+        }
+    }
+    return s;
+}
+
+float best_cubic_reparameterize(const vec4 para[2], const vec2& p)
 {
     float s = -1.f;
     float min_dis = FLT_MAX;
@@ -1165,6 +1198,21 @@ void split_quad_bezier(vec2 c[5], const vec2 p[3], float t)
     vec2lerp(&c[2], &c[1], &c[3], t);
 }
 
+void split_quad_bezier(vec2 c[7], const vec2 p[3], float t1, float t2)
+{
+    assert(t1 < t2);
+    vec3 para[2];
+    get_quad_parameter_equation(para, p[0], p[1], p[2]);
+    vec2 p2;
+    eval_quad(p2, para, t2);
+    split_quad_bezier(c, p, t1);
+    get_quad_parameter_equation(para, c[2], c[3], c[4]);
+    float s = quad_reparameterize(para, p2);
+    vec2 cp[3];
+    memmove_s(cp, sizeof(cp), c + 2, sizeof(cp));
+    split_quad_bezier(c + 2, cp, s);
+}
+
 void split_cubic_bezier(vec2 c[7], const vec2 p[4], float t)
 {
     assert(t > 0 && t < 1.f);
@@ -1204,7 +1252,7 @@ void split_cubic_bezier(vec2 c[10], const vec2 p[4], float t1, float t2)
     split_cubic_bezier(c, p, t1);
     /* get s of p2 */
     vec4 para[2];
-    get_cubic_parameter_equation(para, p[0], p[1], p[2], p[3]);
+    get_cubic_parameter_equation(para, c[3], c[4], c[5], c[6]);
     float s = cubic_reparameterize(para, p2);
     /* divide s */
     vec2 cp[4];
@@ -1736,6 +1784,46 @@ bool point_in_triangle(const vec2& p, const vec2& p1, const vec2& p2, const vec2
     if(v <= 0.f)
         return false;
     return u + v < 1.f;
+}
+
+int point_in_polygon(const vec2& p, const vector<vec2>& poly)
+{
+    if(poly.size() < 3)
+        return 0;
+    int result = 0;
+#define in_poly_judge(id0, id1) { \
+        const vec2& p0 = poly.at(id0); \
+        const vec2& p1 = poly.at(id1); \
+        if(p1.y == p.y) { \
+            if((p1.x == p.x) || (p0.y == p.y && ((p1.x > p.x) == (p0.x < p.x)))) \
+                 return -1; \
+        } \
+        if((p0.y < p.y) != (p1.y < p.y)) { \
+            if(p0.x >= p.x) { \
+                if(p1.x > p.x) \
+                    result = 1 - result; \
+                else { \
+                    float d = (p0.x - p.x) * (p1.y - p.y) - (p1.x - p.x) * (p0.y - p.y); \
+                    if(!d) return -1; \
+                    if((d > 0.f) == (p1.y > p0.y)) \
+                        result = 1 - result; \
+                } \
+            } \
+            else { \
+                if(p1.x > p.x) { \
+                    float d = (p0.x - p.x) * (p1.y - p.y) - (p1.x - p.x) * (p0.y - p.y); \
+                    if(!d) return -1; \
+                    if((d > 0.f) == (p1.y > p0.y)) \
+                        result = 1 - result; \
+                } \
+            } \
+        } \
+    }
+    for(int last = 0, i = 1; i < (int)poly.size(); last = i ++)
+        in_poly_judge(last, i);
+    in_poly_judge(poly.size() - 1, 0);
+#undef in_poly_judge
+    return result;
 }
 
 float get_triangle_area(const vec2& p1, const vec2& p2, const vec2& p3)

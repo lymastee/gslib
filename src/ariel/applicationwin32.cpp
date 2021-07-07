@@ -199,7 +199,7 @@ bool app_data::install(const app_config& cfg, const app_env& env)
     scn->set_rendersys(sys->get_rendersys());
     scn->set_rose(sys->get_rose()); // todo: remove
     scn->setup();
-    ShowWindow(hwnd, SW_SHOW);
+    ShowWindow(hwnd, cfg.hidden ? SW_HIDE : SW_SHOW);
     return true;
 }
 

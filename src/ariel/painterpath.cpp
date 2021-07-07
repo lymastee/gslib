@@ -74,6 +74,11 @@ void painter_linestrip::reverse()
         _is_clock_wise = !_is_clock_wise;
 }
 
+int painter_linestrip::point_inside(const vec2& pt) const
+{
+    return point_in_polygon(pt, _pts);
+}
+
 void painter_linestrip::finish()
 {
     if(_pts.front() == _pts.back()) {
@@ -449,7 +454,7 @@ void painter_path::arc_to(const vec2& p1, const vec2& p2, float r)
     float d = vec2length(vec2sub(&vd, &p2, &p1));
     float ar = abs(r);
     float cmp = fuzz_cmp(d, 2.f * ar, 0.1f);
-    if(cmp < 0) {
+    if(cmp < 0.f) {
         assert(!"invalid radius.");
         return;
     }
@@ -628,6 +633,72 @@ int painter_path::get_sub_path(painter_path& sp, int start) const
     return i;
 }
 
+void painter_path::to_sub_paths(painter_paths& paths) const
+{
+    for(int i = 0; i < size(); ) {
+        auto* last = get_node(i);
+        assert(last);
+        if(last->get_tag() != pt_moveto) {
+            assert(!"illegal node skipped.");
+            ++ i;
+            continue;
+        }
+        paths.push_back(painter_path());
+        painter_path& sp = paths.back();
+        auto sp_iter = std::prev(paths.end());
+        sp.move_to(last->get_point());
+        for(++ i; i < size(); ) {
+            auto* node = get_node(i);
+            assert(node);
+            if(node->get_tag() == pt_moveto) {
+                if(sp.size() == 1)
+                    paths.erase(sp_iter);   /* not always back */
+                break;
+            }
+            switch(node->get_tag())
+            {
+            case pt_lineto:
+                sp.line_to(node->get_point());
+                ++ i;
+                break;
+            case pt_quadto:
+                {
+                    auto* p = static_cast<const quad_to_node*>(node);
+                    if(!(fuzz_cmp(last->get_point(), p->get_point()) < 0.1f))
+                        sp.quad_to(p->get_control(), p->get_point());
+                    else {
+                        paths.push_back(painter_path());
+                        painter_path& sp2 = paths.back();
+                        sp2.move_to(p->get_point());
+                        sp2.quad_to(p->get_control(), p->get_point());
+                    }
+                    ++ i;
+                    break;
+                }
+            case pt_cubicto:
+                {
+                    auto* p = static_cast<const cubic_to_node*>(node);
+                    if(!(fuzz_cmp(last->get_point(), p->get_point()) < 0.1f))
+                        sp.cubic_to(p->get_control1(), p->get_control2(), p->get_point());
+                    else {
+                        paths.push_back(painter_path());
+                        painter_path& sp2 = paths.back();
+                        sp2.move_to(p->get_point());
+                        sp2.cubic_to(p->get_control1(), p->get_control2(), p->get_point());
+                    }
+                    ++ i;
+                    break;
+                }
+            default:
+                assert(!"unexpected path node.");
+                ++ i;
+                break;
+            }
+            last = node;
+        }
+    }
+}
+
 bool painter_path::is_clockwise() const
 {
     painter_linestrip ls;
@@ -657,12 +728,10 @@ bool painter_path::is_convex() const
 
 void painter_path::simplify(painter_path& path) const
 {
-    clip_polygons polys;
-    clip_result result;
+    clip_result polys;
+    clip_simplify(polys, *this);
     painter_path tmp;
-    clip_create_polygons(polys, *this);
-    clip_exclude(result, polys);
-    clip_compile_path(tmp, result);
+    clip_convert(tmp, polys);
     painter_helper::transform(path, tmp,
         painter_helper::merge_straight_line | painter_helper::reduce_short_line | painter_helper::reduce_straight_curve
         );

@@ -64,6 +64,7 @@ public:
     vec2* expand(int size);
     void expand_to(int size) { _pts.resize(size); }
     void reverse();
+    int point_inside(const vec2& pt) const;
     bool is_closed() const { return _closed; }
     void set_closed(bool c) { _closed = c; }
     bool is_clockwise() const;
@@ -224,6 +225,7 @@ public:
     void get_linestrips(linestrips& c) const;
     int get_control_contour(painter_linestrip& ls, int start) const;
     int get_sub_path(painter_path& sp, int start) const;
+    void to_sub_paths(painter_paths& paths) const;
     bool is_clockwise() const;
     bool is_convex() const;
     void simplify(painter_path& path) const;

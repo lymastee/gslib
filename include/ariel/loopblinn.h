@@ -148,62 +148,6 @@ public:
     static lb_line* get_line_between(lb_joint* j1, lb_joint* j2);
 };
 
-class lb_shrink_line
-{
-protected:
-    lb_shrink_line*     _prev;
-    lb_shrink_line*     _next;
-    lb_shrink_line*     _bin[2];
-    vec2                _point;
-    vec3                _le;
-
-public:
-    lb_shrink_line();
-    void set_prev(lb_shrink_line* p) { _prev = p; }
-    void set_next(lb_shrink_line* p) { _next = p; }
-    void set_binary(int i, lb_shrink_line* p) { _bin[i] = p; }
-    void set_prev_point(const vec2& p) { _point = p; }
-    void set_next_point(const vec2& p) { _next->set_prev_point(p); }
-    lb_shrink_line* get_prev() const { return _prev; }
-    lb_shrink_line* get_next() const { return _next; }
-    lb_shrink_line* get_binary(int i) const { return _bin[i]; }
-    const vec2& get_prev_point() const { return _point; }
-    const vec2& get_next_point() const { return _next->get_prev_point(); }
-    bool is_boundary() const { return !_bin[0]; }
-    bool is_le_available() const;
-    void calc_linear_expression();
-    float get_le_dot(const vec2& p) const;
-    void tracing() const;
-};
-
-class lb_shrink
-{
-public:
-    lb_shrink() { _center = nullptr; }
-    ~lb_shrink();
-    lb_shrink_line* get_center() const { return _center; }
-    void setup(lb_line* start);
-    bool is_inside(const vec2& p) const;
-    void tracing() const;
-    void trace_loop() const;
-
-protected:
-    lb_shrink_lines     _lines;
-    lb_shrink_line*     _center;
-
-protected:
-    lb_shrink_line* create_line();
-    lb_shrink_line* create(lb_line* start);
-    void create_segment(lb_line_list& span, lb_shrink_line* seg[2]);
-    void create_linear_segment(lb_line* line1, lb_shrink_line* seg[2]);
-    void create_quadratic_segment(lb_line* line1, lb_line* line2, lb_shrink_line* seg[2]);
-    void create_cubic_segment(lb_line* line1, lb_line* line2, lb_line* line3, lb_shrink_line* seg[2]);
-    lb_shrink_line* shrink(lb_shrink_line* start);
-    lb_shrink_line* make_shrink(lb_shrink_line* line1, lb_shrink_line* line2);
-    lb_shrink_line* query(const vec2& p) const;
-    lb_shrink_line* query(const vec2& p, lb_shrink_line* last) const;
-};
-
 enum lb_span_type
 {
     lst_linear,
@@ -247,7 +191,6 @@ class lb_polygon
 protected:
     lb_line*            _boundary;
     lb_line_list        _holes;
-    lb_shrink           _shrink;
     lb_rtree            _mytree;
     lb_triangulator     _cdt;
     dt_input_joints     _dtjoints;
@@ -258,10 +201,7 @@ public:
     void add_hole(lb_line* p) { _holes.push_back(p); }
     lb_line* get_boundary() const { return _boundary; }
     const lb_line_list& get_holes() const { return _holes; }
-    bool is_shrink_available() const { return _shrink.get_center() != nullptr; }
-    void create_shrink() { _shrink.setup(_boundary); }
-    void ensure_create_shrink() { if(!is_shrink_available()) create_shrink(); }
-    bool is_inside(const vec2& p) const { return _shrink.is_inside(p); }
+    bool is_inside(const vec2& p) const;
     lb_rtree& get_rtree() { return _mytree; }
     void convert_to_ndc(const mat3& m);
     void create_dt_joints();
@@ -272,7 +212,6 @@ public:
     void trace_boundary() const;
     void trace_last_hole() const;
     void trace_holes() const;
-    void trace_shrink() const { _shrink.tracing(); }
     void trace_rtree() const { _mytree.tracing(); }
 };
 
@@ -293,7 +232,6 @@ public:
     lb_joint_list& get_joints() { return _joint_holdings; }
     lb_line_list& get_lines() { return _line_holdings; }
     void trace_polygons() const;
-    void trace_shrinks() const;
     void trace_rtree() const;
 
 protected:

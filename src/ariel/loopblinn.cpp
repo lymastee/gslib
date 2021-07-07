@@ -134,13 +134,6 @@ static void lb_connect(lb_joint* joint1, lb_line* line, lb_joint* joint2)
     lb_connect(line, joint2);
 }
 
-static void lb_connect(lb_shrink_line* line1, lb_shrink_line* line2)
-{
-    assert(line1 && line2);
-    line1->set_next(line2);
-    line2->set_prev(line1);
-}
-
 static void lb_collect_end_joints(lb_joint_list& joints, lb_line* start)
 {
     assert(start);
@@ -815,326 +808,48 @@ lb_line* lb_line::get_line_between(lb_joint* j1, lb_joint* j2)
     return nullptr;
 }
 
-lb_shrink_line::lb_shrink_line()
+/* 0 : outside; 1 : inside; -1 : coincide */
+static int point_in_hull(const vec2& p, lb_joint* first)
 {
-    _prev = _next = nullptr;
-    _bin[0] = _bin[1] = nullptr;
-    _le.x = NAN;
-}
-
-bool lb_shrink_line::is_le_available() const
-{
-    return !isnan(_le.x);
-}
-
-void lb_shrink_line::calc_linear_expression()
-{
-    if(is_le_available())
-        return;
-    auto& p1 = get_prev_point();
-    auto& p2 = get_next_point();
-    get_linear_coefficient(_le, p1, vec2().sub(p2, p1));
-}
-
-float lb_shrink_line::get_le_dot(const vec2& p) const
-{
-    assert(is_le_available());
-    return _le.dot(vec3(p.x, p.y, 1.f));
-}
-
-void lb_shrink_line::tracing() const
-{
-    assert(_next);
-    auto& p1 = get_prev_point();
-    auto& p2 = get_next_point();
-    trace(_t("@moveTo %f, %f;\n"), p1.x, p1.y);
-    trace(_t("@lineTo %f, %f;\n"), p2.x, p2.y);
-    if(_bin[0])
-        _bin[0]->tracing();
-    if(_bin[1])
-        _bin[1]->tracing();
-}
-
-lb_shrink::~lb_shrink()
-{
-    for(auto* p : _lines) { delete p; }
-    _lines.clear();
-    _center = nullptr;
-}
-
-void lb_shrink::setup(lb_line* start)
-{
-    assert(start);
-    auto* first = create(start);
     assert(first);
-    if(first->get_prev()->get_prev() == first->get_next()) {
-        /* already a triangle. */
-        _center = first;
-        return;
+    int result = 0;
+    lb_joint* last = first;
+#define in_hull_judge(c, n) { \
+        if(n->get_point().y == p.y) { \
+            if ((n->get_point().x == p.x) || (c->get_point().y == p.y && ((n->get_point().x > p.x) == (c->get_point().x < p.x)))) \
+                return -1; \
+        } \
+        if((c->get_point().y < p.y) != (n->get_point().y < p.y)) { \
+            if(c->get_point().x >= p.x) { \
+                if(n->get_point().x > p.x) \
+                    result = 1 - result; \
+                else { \
+                    float d = (c->get_point().x - p.x) * (n->get_point().y - p.y) - (n->get_point().x - p.x) * (c->get_point().y - p.y); \
+                    if(!d) return -1; \
+                    if((d > 0.f) == (n->get_point().y > c->get_point().y)) \
+                        result = 1 - result; \
+                } \
+            } \
+            else { \
+                if(n->get_point().x > p.x) { \
+                    float d = (c->get_point().x - p.x) * (n->get_point().y - p.y) - (n->get_point().x - p.x) * (c->get_point().y - p.y); \
+                    if(!d) return -1; \
+                    if((d > 0.f) == (n->get_point().y > c->get_point().y)) \
+                        result = 1 - result; \
+                } \
+            } \
+        } \
     }
-    _center = shrink(first);
+    for(lb_joint* next = first->get_next_joint(); next && next != first; last = next, next = next->get_next_joint())
+        in_hull_judge(last, next);
+    in_hull_judge(last, first);
+#undef in_hull_judge
+    return result;
 }
 
-bool lb_shrink::is_inside(const vec2& p) const
+bool lb_polygon::is_inside(const vec2& p) const
 {
-    assert(_center);
-    auto* c = query(p);
-    return !(c && c->is_boundary());
-}
-
-void lb_shrink::tracing() const
-{
-    if(!_center)
-        return;
-    auto* line1 = _center->get_prev();
-    auto* line2 = _center->get_next();
-    assert(line1 && line2);
-    assert((line1 == line2) ||
-        (line1->get_prev() == line2 && line2->get_next() == line1)
-        );
-    _center->tracing();
-    line1->tracing();
-    line2->tracing();
-}
-
-void lb_shrink::trace_loop() const
-{
-    assert(_center);
-    _center->tracing();
-    for(auto* line = _center->get_next(); line != _center; line = line->get_next())
-        line->tracing();
-}
-
-lb_shrink_line* lb_shrink::create_line()
-{
-    auto* p = new lb_shrink_line;
-    assert(p);
-    _lines.push_back(p);
-    return p;
-}
-
-lb_shrink_line* lb_shrink::create(lb_line* start)
-{
-    assert(start);
-    lb_line_list span;
-    auto* line = lb_get_span(span, start);
-    lb_shrink_line* seg[2];
-    create_segment(span, seg);
-    if(line == start) {
-        lb_connect(seg[1], seg[0]);
-        return seg[0];
-    }
-    auto* first = seg[0];
-    while(line != start) {
-        span.clear();
-        line = lb_get_span(span, line);
-        auto* last = seg[1];
-        create_segment(span, seg);
-        lb_connect(last, seg[0]);
-    }
-    lb_connect(seg[1], first);
-    /* calc linear expressions */
-    first->calc_linear_expression();
-    for(auto* line = first->get_next(); line != first; line = line->get_next())
-        line->calc_linear_expression();
-    return first;
-}
-
-void lb_shrink::create_segment(lb_line_list& span, lb_shrink_line* seg[2])
-{
-    int size = (int)span.size();
-    switch(size)
-    {
-    case 1:
-        return create_linear_segment(span.at(0), seg);
-    case 2:
-        return create_quadratic_segment(span.at(0), span.at(1), seg);
-    case 3:
-        return create_cubic_segment(span.at(0), span.at(1), span.at(2), seg);
-    default:
-        assert(!"unexpected span.");
-        return;
-    }
-}
-
-void lb_shrink::create_linear_segment(lb_line* line1, lb_shrink_line* seg[2])
-{
-    assert(line1);
-    auto& p1 = line1->get_prev_point();
-    auto* s = create_line();
-    s->set_prev_point(p1);
-    seg[0] = seg[1] = s;
-}
-
-void lb_shrink::create_quadratic_segment(lb_line* line1, lb_line* line2, lb_shrink_line* seg[2])
-{
-    assert(line1 && line2);
-    auto& p1 = line1->get_prev_point();
-    auto& p2 = line2->get_prev_point();
-    auto& p3 = line2->get_next_point();
-    auto* first = create_line();
-    first->set_prev_point(p1);
-    auto* last = first;
-    vec3 para[2];
-    get_quad_parameter_equation(para, p1, p2, p3);
-    int step = get_rough_interpolate_step(p1, p2, p3);
-    float t, chord;
-    t = chord = 1.f / (step - 1);
-    for(int i = 1; i < step - 1; i ++, t += chord) {
-        vec2 p;
-        eval_quad(p, para, t);
-        auto* line = create_line();
-        line->set_prev_point(p);
-        lb_connect(last, line);
-        last = line;
-    }
-    seg[0] = first;
-    seg[1] = last;
-}
-
-void lb_shrink::create_cubic_segment(lb_line* line1, lb_line* line2, lb_line* line3, lb_shrink_line* seg[2])
-{
-    assert(line1 && line2 && line3);
-    auto& p1 = line1->get_prev_point();
-    auto& p2 = line2->get_prev_point();
-    auto& p3 = line3->get_prev_point();
-    auto& p4 = line3->get_next_point();
-    auto* first = create_line();
-    first->set_prev_point(p1);
-    auto* last = first;
-    vec4 para[2];
-    get_cubic_parameter_equation(para, p1, p2, p3, p4);
-    int step = get_rough_interpolate_step(p1, p2, p3, p4);
-    float t, chord;
-    t = chord = 1.f / (step - 1);
-    for(int i = 1; i < step - 1; i ++, t += chord) {
-        vec2 p;
-        eval_cubic(p, para, t);
-        auto* line = create_line();
-        line->set_prev_point(p);
-        lb_connect(last, line);
-        last = line;
-    }
-    seg[0] = first;
-    seg[1] = last;
-}
-
-lb_shrink_line* lb_shrink::shrink(lb_shrink_line* start)
-{
-    assert(start);
-    int ctr = 1;
-    lb_shrink_line *first, *last, *curr, *next = start->get_next();
-    if(lb_is_convex(start, next)) {
-        first = last = make_shrink(start, next);
-        curr = next->get_next();
-    }
-    else {
-        first = last = start;
-        curr = next;
-    }
-    assert(curr);
-    while(curr != start) {
-        next = curr->get_next();
-        assert(next);
-        if(next == start) {
-            if((first == start) && lb_is_convex(curr, start)) {
-                auto* line = make_shrink(curr, start);      /* could do an extra shrink */
-                lb_connect(line, first->get_next());
-                line->calc_linear_expression();
-                first = line;
-            }
-            else {
-                lb_connect(last, curr);
-                last->calc_linear_expression();
-                last = curr;
-                ctr ++;
-            }
-            break;
-        }
-        if(lb_is_convex(curr, next)) {
-            auto* line = make_shrink(curr, next);
-            lb_connect(last, line);
-            last->calc_linear_expression();
-            last = line;
-            curr = next->get_next();
-        }
-        else {
-            lb_connect(last, curr);
-            last->calc_linear_expression();
-            last = curr;
-            curr = next;
-        }
-        ctr ++;
-    }
-    assert(first && last);
-    lb_connect(last, first);
-    last->calc_linear_expression();
-    return ctr <= 3 ? first : shrink(first);
-}
-
-lb_shrink_line* lb_shrink::make_shrink(lb_shrink_line* line1, lb_shrink_line* line2)
-{
-    assert(line1 && line2);
-    auto* line = create_line();
-    line->set_binary(0, line1);
-    line->set_binary(1, line2);
-    line->set_prev_point(line1->get_prev_point());
-    return line;
-}
-
-lb_shrink_line* lb_shrink::query(const vec2& p) const
-{
-    assert(_center);
-    /* the center could be binary or triangle. */
-    auto* line1 = _center->get_prev();
-    auto* line2 = _center->get_next();
-    assert(line1 && line2);
-    if(line1 == line2) {
-        float d = _center->get_le_dot(p);
-        if(fuzzy_zero(d))
-            return _center;
-        return d < 0 ? query(p, _center) : query(p, line1);
-    }
-    else {
-        assert(line1->get_prev() == line2);
-        float d1 = _center->get_le_dot(p);
-        if(fuzzy_zero(d1))
-            return _center;
-        if(d1 < 0)
-            return query(p, _center);
-        float d2 = line1->get_le_dot(p);
-        if(fuzzy_zero(d2))
-            return line1;
-        if(d2 < 0)
-            return query(p, line1);
-        float d3 = line2->get_le_dot(p);
-        if(fuzzy_zero(d3))
-            return line2;
-        if(d3 < 0)
-            return line2;
-        return nullptr;
-    }
-}
-
-lb_shrink_line* lb_shrink::query(const vec2& p, lb_shrink_line* last) const
-{
-    assert(last);
-    if(last->is_boundary())
-        return last;
-    auto* line1 = last->get_binary(0);
-    auto* line2 = last->get_binary(1);
-    assert(line1 && line2);
-    float d1 = line1->get_le_dot(p);
-    if(fuzzy_zero(d1))
-        return line1;
-    if(d1 < 0)
-        return query(p, line1);
-    float d2 = line2->get_le_dot(p);
-    if(fuzzy_zero(d2))
-        return line2;
-    if(d2 < 0)
-        return query(p, line2);
-    return last;
+    return point_in_hull(p, _boundary->get_prev_joint());
 }
 
 void lb_polygon::convert_to_ndc(const mat3& m)
@@ -1412,15 +1127,6 @@ void loop_blinn_processor::trace_polygons() const
     trace(_t("@@\n"));
 }
 
-void loop_blinn_processor::trace_shrinks() const
-{
-    trace(_t("#trace shrinks start:\n"));
-    trace(_t("@!\n"));
-    for(auto* p : _polygons)
-        p->trace_shrink();
-    trace(_t("@@\n"));
-}
-
 void loop_blinn_processor::trace_rtree() const
 {
     trace(_t("#trace rtree start:\n"));
@@ -1488,7 +1194,6 @@ int loop_blinn_processor::flattening(const painter_path& path, int start, lb_pol
             return size;
         vec2 sample;
         lb_get_sample_cw(sample, line);
-        parent->ensure_create_shrink();
         bool in = parent->is_inside(sample);
         if(in)
             st.push(parent);
@@ -1497,7 +1202,6 @@ int loop_blinn_processor::flattening(const painter_path& path, int start, lb_pol
     else {
         vec2 sample;
         lb_get_sample_ccw(sample, line);
-        parent->ensure_create_shrink();
         bool in = parent->is_inside(sample);
         if(in) {
             parent->add_hole(line);
@@ -1509,7 +1213,6 @@ int loop_blinn_processor::flattening(const painter_path& path, int start, lb_pol
             while(!st.empty()) {
                 auto* uptrace = st.top();
                 st.pop();
-                uptrace->ensure_create_shrink();
                 in = uptrace->is_inside(sample);
                 if(in) {
                     uptrace->add_hole(line);
@@ -1626,7 +1329,6 @@ void loop_blinn_processor::check_boundary(lb_polygon* poly)
     }
     if(concaves.empty())
         return;
-    poly->ensure_create_shrink();
     for(auto* p : concaves)
         check_span(poly, static_cast<lb_control_joint*>(p));
 }
@@ -1655,7 +1357,6 @@ void loop_blinn_processor::check_holes(lb_polygon* poly)
     }
     if(candidates.empty())
         return;
-    poly->ensure_create_shrink();
     for(auto* p : candidates)
         check_span(poly, static_cast<lb_control_joint*>(p));
 }

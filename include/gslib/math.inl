@@ -1769,10 +1769,8 @@ inline matrix* matperspectivefovlh(matrix* out, float fovy, float aspect, float 
 {
     assert(out);
     out->_12 = out->_13 = out->_14 = out->_21 = out->_23 = out->_24 = out->_31 = out->_32 =
-        out->_41 = out->_42 = out->_44 = 0;
-    float hfov = fovy * 0.5f;
-    float cfov = cosf(hfov), sfov = sinf(hfov);
-    out->_11 = out->_22 = cfov / sfov;
+        out->_41 = out->_42 = out->_44 = 0.f;
+    out->_11 = out->_22 = 1.f / tanf(fovy / 2.f);
     out->_11 /= aspect;
     out->_33 = out->_43 = zf / (zf - zn);
     out->_43 *= -zn;
@@ -1784,10 +1782,8 @@ inline matrix* matperspectivefovrh(matrix* out, float fovy, float aspect, float 
 {
     assert(out);
     out->_12 = out->_13 = out->_14 = out->_21 = out->_23 = out->_24 = out->_31 = out->_32 =
-        out->_41 = out->_42 = out->_44 = 0;
-    float hfov = fovy * 0.5f;
-    float cfov = cosf(hfov), sfov = sinf(hfov);
-    out->_11 = out->_22 = cfov / sfov;
+        out->_41 = out->_42 = out->_44 = 0.f;
+    out->_11 = out->_22 = 1.f / tanf(fovy / 2.f);
     out->_11 /= aspect;
     out->_33 = out->_43 = zf / (zn - zf);
     out->_43 *= zn;

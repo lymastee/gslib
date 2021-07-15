@@ -182,6 +182,37 @@ struct viewport
     float           max_depth;
 };
 
+struct axis_aligned_bound_box
+{
+    float           left = FLT_MAX;
+    float           right = -FLT_MAX;
+    float           top = FLT_MAX;
+    float           bottom = -FLT_MAX;
+    float           front = FLT_MAX;
+    float           back = -FLT_MAX;
+
+public:
+    void reset()
+    {
+        left = top = front = FLT_MAX;
+        right = bottom = back = -FLT_MAX;
+    }
+    float width() const { return right - left; }
+    float height() const { return bottom - top; }
+    float depth() const { return back - front; }
+};
+
+struct origin_bound_sphere
+{
+    float           radius = 0.f;
+};
+
+struct bound_sphere
+{
+    vec3            origin;
+    float           radius = 0.f;
+};
+
 enum res_type
 {
     res_mesh,

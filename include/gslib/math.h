@@ -708,7 +708,7 @@ public:
     plane& scale(const plane& p, float s) { return *planescale(this, &p, s); }
     plane& frompointnormal(const vec3& p, const vec3& normal) { return *planefrompointnormal(this, &p, &normal); }
     plane& normalize() { return *planenormalize(this, this); }
-    plane& normalize(const plane& p) { *planenormalize(this, &p); }
+    plane& normalize(const plane& p) { return *planenormalize(this, &p); }
     vec3& intersectline(vec3& v, const vec3& v1, const vec3& v2) const { return *planeintersectline(&v, this, &v1, &v2); }
     plane& frompoints(const vec3& v1, const vec3& v2, const vec3& v3) { return *planefrompoints(this, &v1, &v2, &v3); }
     plane& transform(const matrix& m) { return *planetransform(this, this, &m); }

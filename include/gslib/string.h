@@ -198,7 +198,6 @@ public:
 
 protected:
 #ifdef _MSC_VER
-    void _stl_tidy(bool built, int newsize) { this->_Tidy(built, newsize); }
 #if (_MSC_VER >= 1914)
     bool _stl_grow(int newsize) { this->resize(newsize); return true; }
 #elif (_MSC_VER >= 1910)
@@ -294,7 +293,7 @@ public:
     _string(const element* str) { if(str) this->assign(str); }
     _string(const element* str, int len) { if(str) this->assign(str, len); }
     _string(element c, int ctr) { this->assign(ctr, c); }
-    void destroy() { _stl_tidy(true, 0); }
+    void destroy() { clear(); }
     int length() const { return (int)this->size(); }
     element& front() { return this->at(0); }
     const element& front() const { return this->at(0); }
@@ -631,7 +630,7 @@ inline int utf8_len(const char* str)
     return len;
 }
 
-class gs_export string:
+class string:
     public _string<gchar>
 {
 public:

@@ -259,48 +259,48 @@ typedef plane* (__stdcall *fnplanefrompoints)(plane* out, const vec3* v1, const 
 typedef plane* (__stdcall *fnplanetransform)(plane* out, const plane* p, const matrix* m);
 typedef plane* (__stdcall *fnplanetransformarray)(plane* out, uint ostride, const plane* p, uint pstride, const matrix* m, uint n);
 
-extern fnvec2normalize vec2normalize;
-extern fnvec2hermite vec2hermite;
-extern fnvec2catmullrom vec2catmullrom;
-extern fnvec2barycentric vec2barycentric;
-extern fnvec2transform vec2transform;
-extern fnvec2transformarray vec2transformarray;
-extern fnvec2transformcoordarray vec2transformcoordarray;
-extern fnvec2transformnormalarray vec2transformnormalarray;
-extern fnvec3normalize vec3normalize;
-extern fnvec3hermite vec3hermite;
-extern fnvec3catmullrom vec3catmullrom;
-extern fnvec3barycentric vec3barycentric;
-extern fnvec3transform vec3transform;
-extern fnvec3transformcoord vec3transformcoord;
-extern fnvec3transformnormal vec3transformnormal;
-extern fnvec3transformarray vec3transformarray;
-extern fnvec3transformcoordarray vec3transformcoordarray;
-extern fnvec3transformnormalarray vec3transformnormalarray;
-extern fnvec4cross vec4cross;
-extern fnvec4normalize vec4normalize;
-extern fnvec4hermite vec4hermite;
-extern fnvec4catmullrom vec4catmullrom;
-extern fnvec4barycentric vec4barycentric;
-extern fnvec4transform vec4transform;
-extern fnvec4transformarray vec4transformarray;
-extern fnmatdeterminant matdeterminant;
-extern fnmatmultiply matmultiply;
-extern fnmatmultiplytranspose matmultiplytranspose;
-extern fnmatinverse matinverse;
-extern fnmatshadow matshadow;
-extern fnmatreflect matreflect;
-extern fnquatrotateeuler quatrotateeuler;
-extern fnquatmultiply quatmultiply;
-extern fnquatnormalize quatnormalize;
-extern fnquatinverse quatinverse;
-extern fnplanenormalize planenormalize;
-extern fnplaneintersectline planeintersectline;
-extern fnplanefrompoints planefrompoints;
-extern fnplanetransform planetransform;
-extern fnplanetransformarray planetransformarray;
+gs_export extern fnvec2normalize vec2normalize;
+gs_export extern fnvec2hermite vec2hermite;
+gs_export extern fnvec2catmullrom vec2catmullrom;
+gs_export extern fnvec2barycentric vec2barycentric;
+gs_export extern fnvec2transform vec2transform;
+gs_export extern fnvec2transformarray vec2transformarray;
+gs_export extern fnvec2transformcoordarray vec2transformcoordarray;
+gs_export extern fnvec2transformnormalarray vec2transformnormalarray;
+gs_export extern fnvec3normalize vec3normalize;
+gs_export extern fnvec3hermite vec3hermite;
+gs_export extern fnvec3catmullrom vec3catmullrom;
+gs_export extern fnvec3barycentric vec3barycentric;
+gs_export extern fnvec3transform vec3transform;
+gs_export extern fnvec3transformcoord vec3transformcoord;
+gs_export extern fnvec3transformnormal vec3transformnormal;
+gs_export extern fnvec3transformarray vec3transformarray;
+gs_export extern fnvec3transformcoordarray vec3transformcoordarray;
+gs_export extern fnvec3transformnormalarray vec3transformnormalarray;
+gs_export extern fnvec4cross vec4cross;
+gs_export extern fnvec4normalize vec4normalize;
+gs_export extern fnvec4hermite vec4hermite;
+gs_export extern fnvec4catmullrom vec4catmullrom;
+gs_export extern fnvec4barycentric vec4barycentric;
+gs_export extern fnvec4transform vec4transform;
+gs_export extern fnvec4transformarray vec4transformarray;
+gs_export extern fnmatdeterminant matdeterminant;
+gs_export extern fnmatmultiply matmultiply;
+gs_export extern fnmatmultiplytranspose matmultiplytranspose;
+gs_export extern fnmatinverse matinverse;
+gs_export extern fnmatshadow matshadow;
+gs_export extern fnmatreflect matreflect;
+gs_export extern fnquatrotateeuler quatrotateeuler;
+gs_export extern fnquatmultiply quatmultiply;
+gs_export extern fnquatnormalize quatnormalize;
+gs_export extern fnquatinverse quatinverse;
+gs_export extern fnplanenormalize planenormalize;
+gs_export extern fnplaneintersectline planeintersectline;
+gs_export extern fnplanefrompoints planefrompoints;
+gs_export extern fnplanetransform planetransform;
+gs_export extern fnplanetransformarray planetransformarray;
 
-class vec2:
+class gs_export vec2:
     public _vec2
 {
 public:
@@ -357,7 +357,7 @@ public:
     vec2& transformnormal(const vec2& p, const mat3& m) { return *vec2transformnormal(this, &p, &m); }
 };
 
-class vec3:
+class gs_export vec3:
     public _vec3
 {
 public:
@@ -416,7 +416,7 @@ public:
     vec3& transformnormal(const vec3& v, const matrix& m) { return *vec3transformnormal(this, &v, &m); }
 };
 
-class vec4:
+class gs_export vec4:
     public _vec4
 {
 public:
@@ -469,7 +469,7 @@ public:
     vec4& transform(const vec4& v, const matrix& m) { return *vec4transform(this, &v, &m); }
 };
 
-class mat3:
+class gs_export mat3:
     public _mat3
 {
 public:
@@ -525,7 +525,7 @@ public:
     mat3& inverse(float* det, const mat3& m) { return *mat3inverse(this, det, &m); }
 };
 
-class mat4:
+class gs_export mat4:
     public _mat4
 {
 public:
@@ -608,7 +608,7 @@ public:
     mat4& reflect(const plane& pln) { return *matreflect(this, &pln); }
 };
 
-class quat:
+class gs_export quat:
     public _quat
 {
 public:
@@ -675,7 +675,7 @@ public:
     quat& inverse(const quat& q) { return *quatinverse(this, &q); }
 };
 
-class plane:
+class gs_export plane:
     public _plane
 {
 public:

@@ -38,15 +38,14 @@ typedef tree<painter_path, clip_result_wrapper> clip_result;
 typedef typename clip_result::iterator clip_result_iter;
 typedef typename clip_result::const_iterator clip_result_const_iter;
 
-extern void clip_simplify(painter_linestrips& lss, const painter_linestrip& input);
-extern void clip_simplify(painter_linestrips& lss, const painter_linestrips& input);
-extern void clip_simplify(clip_result& output, const painter_path& input);
-extern void clip_union(clip_result& output, const painter_path& subjects, const painter_path& clips);
-extern void clip_intersect(clip_result& output, const painter_path& subjects, const painter_path& clips);
-extern void clip_substract(clip_result& output, const painter_path& subjects, const painter_path& clips);
-extern void clip_exclude(clip_result& output, const painter_path& subjects, const painter_path& clips);
-extern void clip_convert(painter_path& path, const clip_result& result);
-//extern void clip_convert(clip_result2& result, const painter_path& path);
+ariel_export extern void clip_simplify(painter_linestrips& lss, const painter_linestrip& input);
+ariel_export extern void clip_simplify(painter_linestrips& lss, const painter_linestrips& input);
+ariel_export extern void clip_simplify(clip_result& output, const painter_path& input);
+ariel_export extern void clip_union(clip_result& output, const painter_path& subjects, const painter_path& clips);
+ariel_export extern void clip_intersect(clip_result& output, const painter_path& subjects, const painter_path& clips);
+ariel_export extern void clip_substract(clip_result& output, const painter_path& subjects, const painter_path& clips);
+ariel_export extern void clip_exclude(clip_result& output, const painter_path& subjects, const painter_path& clips);
+ariel_export extern void clip_convert(painter_path& path, const clip_result& result);
 
 __ariel_end__
 

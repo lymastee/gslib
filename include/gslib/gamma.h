@@ -32,7 +32,7 @@
 
 __gslib_begin__
 
-class gamma_corrector
+class gs_export gamma_corrector
 {
 public:
     gamma_corrector() {}

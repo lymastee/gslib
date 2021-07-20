@@ -41,13 +41,13 @@ struct errinfo
 };
 
 typedef void* (*error_dump)(void*);
-extern void* error_dump_callstack(void*);
+gs_export extern void* error_dump_callstack(void*);
 
-extern void _set_error(const gchar* desc, error_dump dump, void* user, const gchar* file, int line);
-extern void _set_last_error(const gchar* desc, error_dump dump, void* user, const gchar* file, int line);
-extern void pop_error();
-extern errinfo* get_last_error();
-extern void reset_error();
+gs_export extern void _set_error(const gchar* desc, error_dump dump, void* user, const gchar* file, int line);
+gs_export extern void _set_last_error(const gchar* desc, error_dump dump, void* user, const gchar* file, int line);
+gs_export extern void pop_error();
+gs_export extern errinfo* get_last_error();
+gs_export extern void reset_error();
 
 #ifndef swsc_char
 #define swsc_char(x) _t(x)
@@ -73,9 +73,9 @@ extern void reset_error();
     _set_last_error(str.c_str(), 0, 0, swsc_char(__FILE__), __LINE__); \
 } while(0)
 
-extern void dumperr_file(void);
-extern void trace_hold(const gchar* fmt, ...);
-extern void _trace_to_clipboard();
+//gs_export extern void dumperr_file(void);
+gs_export extern void trace_hold(const gchar* fmt, ...);
+gs_export extern void _trace_to_clipboard();
 
 #ifdef _GS_TRACE_TO_CLIPBOARD
 #define trace(fmt, ...) do { trace_hold(fmt, __VA_ARGS__); } while(0)
@@ -91,7 +91,7 @@ extern void trace_all(const gchar* str);
 #endif
 
 /* beep an alarm */
-extern void sound_alarm();
+gs_export extern void sound_alarm();
 
 __gslib_end__
 

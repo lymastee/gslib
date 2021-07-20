@@ -33,6 +33,14 @@
 #define __ariel_begin__     namespace gs { namespace ariel {
 #define __ariel_end__       } };
 
+#if defined(ARIEL_LIB)
+#define ariel_export
+#elif defined(ARIEL_DLL)
+#define ariel_export __declspec(dllexport)
+#else
+#define ariel_export __declspec(dllimport)
+#endif
+
 enum
 {
     render_platform_gl_20,

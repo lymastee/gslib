@@ -35,6 +35,14 @@
 #define _GS_X86
 #endif
 
+#if defined(GS_LIB)
+#define gs_export
+#elif defined(GS_DLL)
+#define gs_export __declspec(dllexport)
+#else
+#define gs_export __declspec(dllimport)
+#endif
+
 #ifdef _GS_X86
 
 /* same size: pointer, int, x86 platform */

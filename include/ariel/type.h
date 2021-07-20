@@ -36,7 +36,7 @@
 
 __ariel_begin__
 
-struct color
+struct ariel_export color
 {
     union
     {
@@ -66,7 +66,7 @@ public:
     }
 };
 
-struct font
+struct ariel_export font
 {
     enum
     {
@@ -172,7 +172,7 @@ public:
     }
 };
 
-struct viewport
+struct ariel_export viewport
 {
     float           left;
     float           top;
@@ -182,7 +182,7 @@ struct viewport
     float           max_depth;
 };
 
-struct axis_aligned_bound_box
+struct ariel_export axis_aligned_bound_box
 {
     float           left = FLT_MAX;
     float           right = -FLT_MAX;
@@ -202,12 +202,12 @@ public:
     float depth() const { return back - front; }
 };
 
-struct origin_bound_sphere
+struct ariel_export origin_bound_sphere
 {
     float           radius = 0.f;
 };
 
-struct bound_sphere
+struct ariel_export bound_sphere
 {
     vec3            origin;
     float           radius = 0.f;
@@ -218,7 +218,7 @@ enum res_type
     res_mesh,
 };
 
-class __gs_novtable res_node abstract
+class __gs_novtable ariel_export res_node abstract
 {
 public:
     virtual ~res_node() {}

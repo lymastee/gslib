@@ -36,7 +36,7 @@ __ariel_begin__
 class painter_path;
 typedef list<painter_path> painter_paths;
 
-class painter_linestrip
+class ariel_export painter_linestrip
 {
 public:
     typedef vector<vec2> points;
@@ -95,10 +95,10 @@ typedef vector<painter_linestrip*> linestripvec;
 typedef linestrips painter_linestrips;
 
 /* create a random access view for linestrips */
-extern void append_linestrips_rav(linestripvec& rav, linestrips& src);
-extern void create_linestrips_rav(linestripvec& rav, linestrips& src);
+ariel_export extern void append_linestrips_rav(linestripvec& rav, linestrips& src);
+ariel_export extern void create_linestrips_rav(linestripvec& rav, linestrips& src);
 
-class painter_path
+class ariel_export painter_path
 {
 public:
     enum tag
@@ -109,7 +109,7 @@ public:
         pt_cubicto,
     };
 
-    class __gs_novtable node abstract
+    class __gs_novtable ariel_export node abstract
     {
     public:
         virtual ~node() {}
@@ -147,7 +147,7 @@ public:
     typedef node_tpl<pt_moveto> move_to_node;
     typedef node_tpl<pt_lineto> line_to_node;
 
-    class quad_to_node:
+    class ariel_export quad_to_node:
         public node_tpl<pt_quadto>
     {
     public:
@@ -161,7 +161,7 @@ public:
         vec2            _c;
     };
 
-    class cubic_to_node:
+    class ariel_export cubic_to_node:
         public node_tpl<pt_cubicto>
     {
     public:
@@ -181,8 +181,6 @@ public:
     typedef node_list::iterator iterator;
     typedef node_list::const_iterator const_iterator;
     typedef vector<int> indices;
-
-    friend class raster;
 
 protected:
     node_list           _nodelist;
@@ -236,7 +234,7 @@ public:
 
 typedef painter_path::node painter_node;
 
-struct path_info
+struct ariel_export path_info
 {
     const painter_node*     node[2];
 
@@ -254,7 +252,7 @@ enum curve_type
     ct_cubic,
 };
 
-struct __gs_novtable curve_splitter abstract
+struct __gs_novtable ariel_export curve_splitter abstract
 {
     vec2                fixedpt;
     float               ratio;
@@ -274,7 +272,7 @@ public:
     bool is_leaf() const;
 };
 
-struct curve_splitter_quad:
+struct ariel_export curve_splitter_quad:
     public curve_splitter
 {
     vec2                cp[3];
@@ -291,7 +289,7 @@ public:
     void tracing() const override;
 };
 
-struct curve_splitter_cubic:
+struct ariel_export curve_splitter_cubic:
     public curve_splitter
 {
     vec2                cp[4];
@@ -308,7 +306,7 @@ public:
     void tracing() const override;
 };
 
-struct curve_helper
+struct ariel_export curve_helper
 {
     static curve_splitter* create_splitter(const path_info* pnf);
     static curve_splitter* create_next_splitter(vec2& p, curve_splitter* cs, float t);
@@ -317,7 +315,7 @@ struct curve_helper
     static curve_splitter* query_splitter(curve_splitter* cs, const vec2& p1, const vec2& p2);
 };
 
-struct painter_helper
+struct ariel_export painter_helper
 {
     enum
     {

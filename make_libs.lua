@@ -8,6 +8,8 @@ solution "gslib"
 	}
 	location (todir)
 	
+	defines { "GS_LIB", "ARIEL_LIB" }
+	
 	-- no rtti
 	rtti "Off"
 	

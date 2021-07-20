@@ -167,12 +167,12 @@ struct _string_tool<wchar>
     static const wchar* _test(const wchar* src, const wchar* cpset) { return wcspbrk(src, cpset); }
 };
 
-extern const char* get_mbcs_elem(const char* str, uint& c);
-extern const char* get_mbcs_elem(const char* str, uint& c, const char* end);
-extern int convert_to_wide(wchar out[], int size, const char* str, int len = -1);
-extern int convert_to_byte(char out[], int size, const wchar* str, int len = -1);
-extern int convert_utf8_to_wide(wchar out[], int size, const char* str, int len = -1);
-extern int convert_wide_to_utf8(char out[], int size, const wchar* str, int len = -1);
+gs_export extern const char* get_mbcs_elem(const char* str, uint& c);
+gs_export extern const char* get_mbcs_elem(const char* str, uint& c, const char* end);
+gs_export extern int convert_to_wide(wchar out[], int size, const char* str, int len = -1);
+gs_export extern int convert_to_byte(char out[], int size, const wchar* str, int len = -1);
+gs_export extern int convert_utf8_to_wide(wchar out[], int size, const char* str, int len = -1);
+gs_export extern int convert_wide_to_utf8(char out[], int size, const wchar* str, int len = -1);
 
 struct _string_caseful {};
 struct _string_caseless {};
@@ -631,7 +631,7 @@ inline int utf8_len(const char* str)
     return len;
 }
 
-class string:
+class gs_export string:
     public _string<gchar>
 {
 public:

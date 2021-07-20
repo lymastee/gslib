@@ -133,18 +133,18 @@ inline rect to_aligned_rect(const rectf& rc)
     return std::move(rect(round(rc.left), round(rc.top), round(rc.width()), round(rc.height())));
 }
 
-extern bool intersect_rect(rect& rc, const rect& rc1, const rect& rc2);
-extern bool is_rect_intersected(const rect& rc1, const rect& rc2);
-extern void union_rect(rect& rc, const rect& rc1, const rect& rc2);
-extern bool substract_rect(rect& rc, const rect& rc1, const rect& rc2);
-extern bool intersect_rect(rectf& rc, const rectf& rc1, const rectf& rc2);
-extern bool is_rect_intersected(const rectf& rc1, const rectf& rc2);
-extern bool is_rect_contained(const rect& rc1, const rect& rc2);
-extern bool is_rect_contained(const rectf& rc1, const rectf& rc2);
-extern void union_rect(rectf& rc, const rectf& rc1, const rectf& rc2);
-extern bool substract_rect(rectf& rc, const rectf& rc1, const rectf& rc2);
-extern bool is_line_rect_overlapped(const point& p1, const point& p2, const rect& rc);
-extern bool is_line_rect_overlapped(const pointf& p1, const pointf& p2, const rectf& rc);
+gs_export extern bool intersect_rect(rect& rc, const rect& rc1, const rect& rc2);
+gs_export extern bool is_rect_intersected(const rect& rc1, const rect& rc2);
+gs_export extern void union_rect(rect& rc, const rect& rc1, const rect& rc2);
+gs_export extern bool substract_rect(rect& rc, const rect& rc1, const rect& rc2);
+gs_export extern bool intersect_rect(rectf& rc, const rectf& rc1, const rectf& rc2);
+gs_export extern bool is_rect_intersected(const rectf& rc1, const rectf& rc2);
+gs_export extern bool is_rect_contained(const rect& rc1, const rect& rc2);
+gs_export extern bool is_rect_contained(const rectf& rc1, const rectf& rc2);
+gs_export extern void union_rect(rectf& rc, const rectf& rc1, const rectf& rc2);
+gs_export extern bool substract_rect(rectf& rc, const rectf& rc1, const rectf& rc2);
+gs_export extern bool is_line_rect_overlapped(const point& p1, const point& p2, const rect& rc);
+gs_export extern bool is_line_rect_overlapped(const pointf& p1, const pointf& p2, const rectf& rc);
 
 __gslib_end__
 

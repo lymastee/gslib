@@ -42,7 +42,7 @@
 
 __ariel_begin__
 
-class dt_joint
+class ariel_export dt_joint
 {
 protected:
     vec2            _point;
@@ -57,7 +57,7 @@ public:
     void* get_binding() const { return _binding; }
 };
 
-class dt_edge
+class ariel_export dt_edge
 {
 protected:
     dt_joint*       _org;
@@ -99,7 +99,7 @@ public:
     bool is_boundary() const;
 };
 
-struct dt_edge_range
+struct ariel_export dt_edge_range
 {
     dt_edge*        left;
     dt_edge*        right;
@@ -113,7 +113,7 @@ typedef vector<dt_joint*> dt_joints;
 typedef unordered_set<dt_edge*> dt_edges;
 typedef vector<dt_edge*> dt_edge_list;
 
-class delaunay_triangulation
+class ariel_export delaunay_triangulation
 {
 public:
     delaunay_triangulation() {}

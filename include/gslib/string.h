@@ -43,8 +43,8 @@ public:
     typedef std::char_traits<protoch> prototr;
     typedef std::allocator<protoch> protoalloc;
     typedef std::basic_string<protoch, prototr, protoalloc> protoref;
-    friend int _vsprintf(_std_string<char>& str, const char* fmt, va_list ap);
-    friend int _vsprintf(_std_string<wchar>& str, const wchar* fmt, va_list ap);
+    friend gs_export int _vsprintf(_std_string<char>& str, const char* fmt, va_list ap);
+    friend gs_export int _vsprintf(_std_string<wchar>& str, const wchar* fmt, va_list ap);
 };
 
 template<class _element>

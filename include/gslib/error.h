@@ -81,8 +81,8 @@ gs_export extern void _trace_to_clipboard();
 #define trace(fmt, ...) do { trace_hold(fmt, __VA_ARGS__); } while(0)
 #define trace_to_clipboard _trace_to_clipboard
 #elif defined (DEBUG) || defined (_DEBUG)
-extern void trace(const gchar* fmt, ...);
-extern void trace_all(const gchar* str);
+gs_export extern void trace(const gchar* fmt, ...);
+gs_export extern void trace_all(const gchar* str);
 #define trace_to_clipboard __noop
 #else
 #define trace(fmt, ...) __noop

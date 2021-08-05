@@ -55,6 +55,7 @@ typedef vector<Paths*> PathHoldings;
 static IntPoint cvt_AJ_point(const vec2& pt) { return IntPoint(round(pt.x * int_scale_ratio), round(pt.y * int_scale_ratio)); }
 static IntPoint cvt_AJ_point(const vec2& pt, clip_point* p) { return IntPoint(round(pt.x * int_scale_ratio), round(pt.y * int_scale_ratio), (cInt)p); }
 static vec2 cvt_point(const IntPoint& pt) { return vec2((float)pt.X / int_scale_ratio, (float)pt.Y / int_scale_ratio); }
+static vec2 trunc_point(const vec2& pt) { return cvt_point(cvt_AJ_point(pt)); }
 static clip_point* get_clip_point(const IntPoint& pt) { return reinterpret_cast<clip_point*>(pt.Z); }
 
 static void trace_AJ_path(const Path& path)
@@ -1226,6 +1227,90 @@ void clip_simplify(painter_linestrips& lss, const painter_linestrips& input)
     Paths paths;
     convert_to_clipper_paths(paths, input);
     clip_simplify(lss, paths);
+}
+
+static void add_point_as_if_needed(painter_linestrip& ls, clip_point_attr& attrmap, const vec2& p, uint m, clip_point_tag tag)
+{
+    ls.add_point(p);
+    if(m & tag) {
+        auto r = attrmap.try_emplace(p, 0).first;
+        r->second |= tag;
+    }
+}
+
+void clip_remapping_points(painter_linestrips& output, clip_point_attr& attrmap, const painter_path& input, uint attr_selector, float step_len)
+{
+    painter_linestrip* pc = nullptr;
+    const painter_path::node* last = nullptr;
+    int c = input.size();
+    for(int i = 0; i < c; i ++) {
+        const painter_path::node* n = input.get_node(i);
+        assert(n);
+        switch(n->get_tag())
+        {
+        case painter_path::pt_moveto:
+            {
+                output.push_back(painter_linestrip());
+                if(pc)  pc->finish();
+                pc = &output.back();
+                add_point_as_if_needed(*pc, attrmap, trunc_point(n->get_point()), attr_selector, cpt_corner);
+                break;
+            }
+        case painter_path::pt_lineto:
+            {
+                assert(pc && last);
+                add_point_as_if_needed(*pc, attrmap, trunc_point(n->get_point()), attr_selector, cpt_corner);
+                break;
+            }
+        case painter_path::pt_quadto:
+            {
+                static_cast_as(const painter_path::quad_to_node*, qnode, n);
+                const vec2& p0 = last->get_point();
+                const vec2& p1 = qnode->get_control();
+                const vec2& p2 = qnode->get_point();
+                int step = get_interpolate_step(p0, p1, p2, step_len);
+                int interstep = step - 1;
+                if(interstep > 0) {
+                    float chord, t;
+                    chord = t = 1.f / interstep;
+                    vec3 para[2];
+                    get_quad_parameter_equation(para, p0, p1, p2);
+                    vec2 p;
+                    for(int j = 1; j < interstep; j ++, t += chord) {
+                        eval_quad(p, para, t);
+                        add_point_as_if_needed(*pc, attrmap, trunc_point(p), attr_selector, cpt_interpolate);
+                    }
+                }
+                add_point_as_if_needed(*pc, attrmap, trunc_point(p2), attr_selector, cpt_corner);
+                break;
+            }
+        case painter_path::pt_cubicto:
+            {
+                static_cast_as(const painter_path::cubic_to_node*, cnode, n);
+                const vec2& p0 = last->get_point();
+                const vec2& p1 = cnode->get_control1();
+                const vec2& p2 = cnode->get_control2();
+                const vec2& p3 = cnode->get_point();
+                int step = get_interpolate_step(p0, p1, p2, p3, step_len);
+                int interstep = step - 1;
+                if(interstep > 0) {
+                    float chord, t;
+                    chord = t = 1.f / interstep;
+                    vec4 para[2];
+                    get_cubic_parameter_equation(para, p0, p1, p2, p3);
+                    vec2 p;
+                    for(int j = 1; j < interstep; j ++, t += chord) {
+                        eval_cubic(p, para, t);
+                        add_point_as_if_needed(*pc, attrmap, trunc_point(p), attr_selector, cpt_interpolate);
+                    }
+                }
+                add_point_as_if_needed(*pc, attrmap, trunc_point(p3), attr_selector, cpt_corner);
+                break;
+            }
+        }
+        last = n;
+    }
+    if(pc)  pc->finish();
 }
 
 static void clip_convert_path(painter_path& out, clip_result_const_iter i)

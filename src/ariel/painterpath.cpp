@@ -189,31 +189,12 @@ void create_linestrips_rav(linestripvec& rav, linestrips& src)
     append_linestrips_rav(rav, src);
 }
 
-static int get_quad_step(const vec2& p1, const vec2& p2, const vec2& p3)
-{
-    vec2 d;
-    float d1, d2;
-    d1 = d.sub(p2, p1).length();
-    d2 = d.sub(p3, p2).length();
-    return (int)sqrt((double)round(d1 + d2));
-}
-
-static int get_cubic_step(const vec2& p1, const vec2& p2, const vec2& p3, const vec2& p4)
-{
-    vec2 d;
-    float d1, d2, d3;
-    d1 = d.sub(p2, p1).length();
-    d2 = d.sub(p3, p2).length();
-    d3 = d.sub(p4, p3).length();
-    return (int)sqrt((double)round(d1 + d2 + d3));
-}
-
 void painter_path::quad_to_node::interpolate(painter_linestrip& c, const node* last) const
 {
     const vec2& lastp = last->get_point();
     const quad_to_node* n = static_cast<const quad_to_node*>(this);
     const vec2& c1 = n->get_control();
-    int cs = get_quad_step(lastp, c1, _pt);
+    int cs = get_interpolate_step(lastp, c1, _pt);
     if(int ecs = cs - 1)
         quadratic_interpolate(c.expand(ecs) - 1, lastp, c1, _pt, ecs + 1);
 }
@@ -224,7 +205,7 @@ void painter_path::cubic_to_node::interpolate(painter_linestrip& c, const node* 
     const cubic_to_node* n = static_cast<const cubic_to_node*>(this);
     const vec2& c1 = n->get_control1();
     const vec2& c2 = n->get_control2();
-    int cs = get_cubic_step(lastp, c1, c2, _pt);
+    int cs = get_interpolate_step(lastp, c1, c2, _pt);
     if(int ecs = cs - 1)
         cubic_interpolate(c.expand(ecs) - 1, lastp, c1, c2, _pt, ecs + 1);
 }
@@ -358,13 +339,15 @@ void painter_path::get_boundary_box(rectf& rc) const
                 get_quad_parameter_equation(para, lastn->get_point(), quads->get_control(), quads->get_point());
                 vec2 derivate[2];
                 get_first_derivate_factor(derivate, para);
-                float t = -derivate[0].y / derivate[0].x;
+                float t[2];
+                int c1 = get_quad_extrema(t, derivate[0]);
+                int c2 = get_quad_extrema(t + c1, derivate[1]);
+                int c = c1 + c2;
+                assert(c <= 2);
                 vec2 p;
-                eval_quad(p, para, t);
-                retrieve_dimensions(p);
-                t = -derivate[1].y / derivate[1].x;
-                if(t >= 0.f && t <= 1.f) {
-                    eval_quad(p, para, t);
+                for(int i = 0; i < c; i ++) {
+                    assert(t[i] >= 0.f && t[i] <= 1.f);
+                    eval_quad(p, para, t[i]);
                     retrieve_dimensions(p);
                 }
                 retrieve_dimensions(quads->get_point());
@@ -378,17 +361,15 @@ void painter_path::get_boundary_box(rectf& rc) const
                 vec3 derivate[2];
                 get_first_derivate_factor(derivate, para);
                 float t[4];
-                int c1 = solve_univariate_quadratic(t, derivate[0]);
-                int c2 = solve_univariate_quadratic(t + c1, derivate[1]);
+                int c1 = get_cubic_extrema(t, derivate[0]);
+                int c2 = get_cubic_extrema(t + c1, derivate[1]);
                 int c = c1 + c2;
                 assert(c <= 4);
+                vec2 p;
                 for(int i = 0; i < c; i ++) {
-                    vec2 p;
-                    float s = t[i];
-                    if(s >= 0.f && s <= 1.f) {
-                        eval_cubic(p, para, s);
-                        retrieve_dimensions(p);
-                    }
+                    assert(t[i] >= 0.f && t[i] <= 1.f);
+                    eval_cubic(p, para, t[i]);
+                    retrieve_dimensions(p);
                 }
                 retrieve_dimensions(cubics->get_point());
                 break;
@@ -530,8 +511,8 @@ void painter_path::transform(const mat3& m)
 
 void painter_path::get_linestrips(linestrips& c) const
 {
-    painter_linestrip* pc = 0;
-    const node* last = 0;
+    painter_linestrip* pc = nullptr;
+    const node* last = nullptr;
     for(const_iterator i = _nodelist.begin(); i != _nodelist.end(); ++ i) {
         const node* n = *i;
         if(n->get_tag() == pt_moveto) {

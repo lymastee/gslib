@@ -33,11 +33,24 @@
 
 __ariel_begin__
 
+enum clip_point_tag
+{
+    cpt_corner = 0x01,
+    cpt_interpolate = 0x02,
+};
+
+struct clip_vec2_hash
+{
+    size_t operator()(const vec2& pt) const { return hash_bytes((const byte*)&pt, sizeof(pt)); }
+};
+
 typedef _treenode_wrapper<painter_path> clip_result_wrapper;
 typedef tree<painter_path, clip_result_wrapper> clip_result;
 typedef typename clip_result::iterator clip_result_iter;
 typedef typename clip_result::const_iterator clip_result_const_iter;
+typedef unordered_map<vec2, uint, clip_vec2_hash> clip_point_attr;
 
+ariel_export extern void clip_remapping_points(painter_linestrips& output, clip_point_attr& attrmap, const painter_path& input, uint attr_selector, float step_len = -1.f);
 ariel_export extern void clip_simplify(painter_linestrips& lss, const painter_linestrip& input);
 ariel_export extern void clip_simplify(painter_linestrips& lss, const painter_linestrips& input);
 ariel_export extern void clip_simplify(clip_result& output, const painter_path& input);

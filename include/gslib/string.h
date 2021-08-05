@@ -198,13 +198,6 @@ public:
 
 protected:
 #ifdef _MSC_VER
-#if (_MSC_VER >= 1914)
-    bool _stl_grow(int newsize) { this->resize(newsize); return true; }
-#elif (_MSC_VER >= 1910)
-    bool _stl_grow(int newsize, bool trim = false) { return this->_Grow(newsize); }
-#else
-    bool _stl_grow(int newsize, bool trim = false) { return this->_Grow(newsize, trim); }
-#endif
 #if (_MSC_VER >= 1920)
     element* _stl_rawstr() { return const_cast<element*>(c_str()); }
     const element* _stl_rawstr() const { return c_str(); }
@@ -249,7 +242,7 @@ private:
     void convert_from<char>(const wchar* str)
     {
         int len = convert_to_byte(0, 0, str);
-        _stl_grow(len);
+        resize(len);
         convert_to_byte(_stl_rawstr(), len, str);
         _stl_fix();
     }
@@ -257,7 +250,7 @@ private:
     void convert_from<wchar>(const char* str)
     {
         int len = convert_to_wide(0, 0, str);
-        _stl_grow(len);
+        resize(len);
         convert_to_wide(_stl_rawstr(), len, str);
         _stl_fix();
     }
@@ -273,7 +266,7 @@ private:
     void convert_from<wchar>(const char* str, int len)
     {
         int l = convert_to_wide(0, 0, str, len);
-        _stl_grow(l + 1);
+        resize(l + 1);
         convert_to_wide(_stl_rawstr(), l, str, len);
         _stl_eos(l);
     }
@@ -281,7 +274,7 @@ private:
     void convert_from<char>(const wchar* str, int len)
     {
         int l = convert_to_byte(0, 0, str, len);
-        _stl_grow(l + 1);
+        resize(l + 1);
         convert_to_byte(_stl_rawstr(), l, str, len);
         _stl_eos(l);
     }
@@ -395,21 +388,21 @@ public:
     }
     _string& from_int(int i, int radix = 10)
     {
-        _stl_grow(12);
+        resize(12);
         _strtool::from_int(i, _stl_rawstr(), _stl_cap(), radix);
         _stl_fix();
         return *this;
     }
     _string& from_int64(int64 i, int radix = 10)
     {
-        _stl_grow(24);
+        resize(24);
         _strtool::from_int64(i, _stl_rawstr(), _stl_cap(), radix);
         _stl_fix();
         return *this;
     }
     _string& from_real(real d, int precis = 22)
     {
-        _stl_grow(precis + 2);
+        resize(precis + 2);
         _strtool::from_real(_stl_rawstr(), _stl_cap(), d, precis);
         _stl_fix();
         return *this;

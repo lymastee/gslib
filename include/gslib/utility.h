@@ -80,7 +80,7 @@ gs_export extern int solve_univariate_cubic(float t[3], const vec4& coef);
 gs_export extern int solve_univariate_quartic(float t[4], const float coef[5]);
 gs_export extern int get_cubic_inflection(float t[2], const vec2& a, const vec2& b, const vec2& c, const vec2& d);
 gs_export extern int get_cubic_inflection(float t[2], const vec3 ff[2], const vec2 sf[2]);
-gs_export extern bool get_quad_extrema(float& t, const vec2& ff);
+gs_export extern int get_quad_extrema(float t[], const vec2& ff);
 gs_export extern int get_cubic_extrema(float t[2], const vec3& ff);
 gs_export extern void get_quad_bound_box(rectf& rc, const vec2& p1, const vec2& p2, const vec2& p3);
 gs_export extern void get_cubic_bound_box(rectf& rc, const vec2& p1, const vec2& p2, const vec2& p3, const vec2& p4);
@@ -102,8 +102,8 @@ gs_export extern int cubic_to_quad_bezier(vector<vec2>& quadctl, const vec2 cp[4
 gs_export extern float quad_control_length(const vec2& a, const vec2& b, const vec2& c);
 gs_export extern float cubic_control_length(const vec2& a, const vec2& b, const vec2& c, const vec2& d);
 gs_export extern float point_line_distance(const vec2& p, const vec2& p1, const vec2& p2);
-gs_export extern int get_interpolate_step(const vec2& a, const vec2& b, const vec2& c);
-gs_export extern int get_interpolate_step(const vec2& a, const vec2& b, const vec2& c, const vec2& d);
+gs_export extern int get_interpolate_step(const vec2& a, const vec2& b, const vec2& c, float step_len = -1.f);
+gs_export extern int get_interpolate_step(const vec2& a, const vec2& b, const vec2& c, const vec2& d, float step_len = -1.f);
 gs_export extern int get_rough_interpolate_step(const vec2& a, const vec2& b, const vec2& c);
 gs_export extern int get_rough_interpolate_step(const vec2& a, const vec2& b, const vec2& c, const vec2& d);
 gs_export extern float get_cubic_klmcoords(vec3 m[4], const vec2& p1, const vec2& p2, const vec2& p3, const vec2& p4,

@@ -711,14 +711,19 @@ int get_cubic_inflection(float t[2], const vec3 ff[2], const vec2 sf[2])
     return cnt;
 }
 
-bool get_quad_extrema(float& t, const vec2& ff)
+int get_quad_extrema(float t[], const vec2& ff)
 {
-    t = -ff.y / ff.x;
-    return t >= 0.f && t <= 1.f;
+    if(fuzzy_zero(ff.x, 1e-5f))
+        return 0;
+    assert(t);
+    *t = -ff.y / ff.x;
+    return (*t >= 0.f && *t <= 1.f) ? 1 : 0;
 }
 
 int get_cubic_extrema(float t[2], const vec3& ff)
 {
+    if(fuzzy_zero(ff.x, 1e-5f))
+        return get_quad_extrema(t, vec2(ff.y, ff.z));
     float s[2];
     int c = solve_univariate_quadratic(s, ff);
     int r = 0;
@@ -737,8 +742,8 @@ void get_quad_bound_box(rectf& rc, const vec2& p1, const vec2& p2, const vec2& p
     vec2 ff[2];
     get_first_derivate_factor(ff, para);
     float tx, ty;
-    bool has_x_extrema = get_quad_extrema(tx, ff[0]);
-    bool has_y_extrema = get_quad_extrema(ty, ff[1]);
+    bool has_x_extrema = (get_quad_extrema(&tx, ff[0]) != 0);
+    bool has_y_extrema = (get_quad_extrema(&ty, ff[1]) != 0);
     if(has_x_extrema) {
         float x = para[0].dot(vec3(tx * tx, tx, 1.f));
         rc.left = gs_min(rc.left, x);
@@ -1434,19 +1439,23 @@ float point_line_distance(const vec2& p, const vec2& p1, const vec2& p2)
     return d;
 }
 
-int get_interpolate_step(const vec2& a, const vec2& b, const vec2& c)
+int get_interpolate_step(const vec2& a, const vec2& b, const vec2& c, float step_len)
 {
+    if(step_len <= 0.f)
+        step_len = __plot_step_len;
     vec2 pt[] = { a, b, c };
     float len = quad_bezier_length(pt);
-    int step = round(len / __plot_step_len);
+    int step = round(len / step_len);
     return step < 2 ? 2 : step;
 }
 
-int get_interpolate_step(const vec2& a, const vec2& b, const vec2& c, const vec2& d)
+int get_interpolate_step(const vec2& a, const vec2& b, const vec2& c, const vec2& d, float step_len)
 {
+    if(step_len <= 0.f)
+        step_len = __plot_step_len;
     vec2 pt[] = { a, b, c, d };
     float len = cubic_bezier_length(pt, __plot_tol);
-    int step = round(len / __plot_step_len);
+    int step = round(len / step_len);
     return step < 2 ? 2 : step;
 }
 

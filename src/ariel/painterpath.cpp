@@ -189,23 +189,23 @@ void create_linestrips_rav(linestripvec& rav, linestrips& src)
     append_linestrips_rav(rav, src);
 }
 
-void painter_path::quad_to_node::interpolate(painter_linestrip& c, const node* last) const
+void painter_path::quad_to_node::interpolate(painter_linestrip& c, const node* last, float step_len) const
 {
     const vec2& lastp = last->get_point();
     const quad_to_node* n = static_cast<const quad_to_node*>(this);
     const vec2& c1 = n->get_control();
-    int cs = get_interpolate_step(lastp, c1, _pt);
+    int cs = get_interpolate_step(lastp, c1, _pt, step_len);
     if(int ecs = cs - 1)
         quadratic_interpolate(c.expand(ecs) - 1, lastp, c1, _pt, ecs + 1);
 }
 
-void painter_path::cubic_to_node::interpolate(painter_linestrip& c, const node* last) const
+void painter_path::cubic_to_node::interpolate(painter_linestrip& c, const node* last, float step_len) const
 {
     const vec2& lastp = last->get_point();
     const cubic_to_node* n = static_cast<const cubic_to_node*>(this);
     const vec2& c1 = n->get_control1();
     const vec2& c2 = n->get_control2();
-    int cs = get_interpolate_step(lastp, c1, c2, _pt);
+    int cs = get_interpolate_step(lastp, c1, c2, _pt, step_len);
     if(int ecs = cs - 1)
         cubic_interpolate(c.expand(ecs) - 1, lastp, c1, c2, _pt, ecs + 1);
 }
@@ -509,7 +509,7 @@ void painter_path::transform(const mat3& m)
     }
 }
 
-void painter_path::get_linestrips(linestrips& c) const
+void painter_path::get_linestrips(linestrips& c, float step_len) const
 {
     painter_linestrip* pc = nullptr;
     const node* last = nullptr;
@@ -520,11 +520,11 @@ void painter_path::get_linestrips(linestrips& c) const
             if(pc != 0)
                 pc->finish();
             pc = &c.back();
-            n->interpolate(*pc, 0);
+            n->interpolate(*pc, nullptr, step_len);
         }
         else {
             assert(pc && last);
-            n->interpolate(*pc, last);
+            n->interpolate(*pc, last, step_len);
         }
         last = n;
     }

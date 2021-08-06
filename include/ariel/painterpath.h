@@ -116,7 +116,7 @@ public:
         virtual tag get_tag() const = 0;
         virtual const vec2& get_point() const = 0;
         virtual void set_point(const vec2&) = 0;
-        virtual void interpolate(painter_linestrip& c, const node* last) const = 0;
+        virtual void interpolate(painter_linestrip& c, const node* last, float step_len) const = 0;
 
     public:
         template<class _c>
@@ -138,7 +138,7 @@ public:
         tag get_tag() const override { return _tag; }
         const vec2& get_point() const override { return _pt; }
         void set_point(const vec2& pt) override { _pt = pt; }
-        void interpolate(painter_linestrip& c, const node* last) const override { c.add_point(_pt); }
+        void interpolate(painter_linestrip& c, const node*, float) const override { c.add_point(_pt); }
 
     protected:
         vec2            _pt;
@@ -155,7 +155,7 @@ public:
         quad_to_node(const vec2& p1, const vec2& p2): node_tpl(p2) { _c = p1; }
         void set_control(const vec2& c) { _c = c; }
         const vec2& get_control() const { return _c; }
-        void interpolate(painter_linestrip& c, const node* last) const override;
+        void interpolate(painter_linestrip& c, const node* last, float step_len) const override;
 
     protected:
         vec2            _c;
@@ -171,7 +171,7 @@ public:
         void set_control2(const vec2& c) { _c[1] = c; }
         const vec2& get_control1() const { return _c[0]; }
         const vec2& get_control2() const { return _c[1]; }
-        void interpolate(painter_linestrip& c, const node* last) const override;
+        void interpolate(painter_linestrip& c, const node* last, float step_len) const override;
 
     protected:
         vec2            _c[2];
@@ -220,7 +220,7 @@ public:
     void arc_to(const vec2& pt, float r);
     void rarc_to(const vec2& pt, float r);
     void transform(const mat3& m);
-    void get_linestrips(linestrips& c) const;
+    void get_linestrips(linestrips& c, float step_len = -1.f) const;
     int get_control_contour(painter_linestrip& ls, int start) const;
     int get_sub_path(painter_path& sp, int start) const;
     void to_sub_paths(painter_paths& paths) const;

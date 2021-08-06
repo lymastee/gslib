@@ -1238,7 +1238,7 @@ static void add_point_as_if_needed(painter_linestrip& ls, clip_point_attr& attrm
     }
 }
 
-void clip_remapping_points(painter_linestrips& output, clip_point_attr& attrmap, const painter_path& input, uint attr_selector, float step_len)
+void clip_remap_points(painter_linestrips& output, clip_point_attr& attrmap, const painter_path& input, uint attr_selector, float step_len)
 {
     painter_linestrip* pc = nullptr;
     const painter_path::node* last = nullptr;

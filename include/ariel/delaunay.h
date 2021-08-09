@@ -126,6 +126,7 @@ public:
     void set_range_left(dt_edge* e) { _edge_range.left = e; }
     void tracing() const;
     void trace_heuristically() const;
+    void trace_mel() const;
 
 protected:
     dt_joints       _sorted_joints;

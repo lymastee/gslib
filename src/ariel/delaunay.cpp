@@ -190,6 +190,14 @@ static void dt_trace_edge(dt_edge* e)
     dt_check_edge_linkage(e->get_symmetric());
 }
 
+static void dt_trace_edge_mel(dt_edge* e)
+{
+    assert(e);
+    const vec2& p1 = e->get_org_point();
+    const vec2& p2 = e->get_dest_point();
+    trace(_t("curve -d 1 -p %f %f 0 -p %f %f 0;\n"), p1.x, p1.y, p2.x, p2.y);
+}
+
 void dt_collect_intersect_edges_c(const vec2& p1, const vec2& p2, dt_edge_list& edges, dt_edge* last);
 
 static void dt_collect_intersect_edges_w(const vec2& p1, const vec2& p2, dt_edge_list& edges, dt_edge* init)
@@ -572,6 +580,14 @@ void delaunay_triangulation::trace_heuristically() const
     for(auto* p : _edge_holdings) {
         dt_trace_edge_info(p);
         dt_trace_edge_info(p->get_symmetric());
+    }
+}
+
+void delaunay_triangulation::trace_mel() const
+{
+    for(auto e : _edge_holdings) {
+        assert(e);
+        dt_trace_edge_mel(e);
     }
 }
 

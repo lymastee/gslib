@@ -30,6 +30,7 @@
 __ariel_begin__
 
 static const float dt_tolerance = 1e-6f;
+static const double dt_tolerance64 = 1e-12;
 
 static double dt_area(const vec2& a, const vec2& b, const vec2& c) { return ((double)b.x - a.x) * ((double)c.y - a.y) - ((double)b.y - a.y) * ((double)c.x - a.x); }
 static double dt_lengthsq(const vec2& q) { return (double)q.x * q.x + (double)q.y * q.y; }
@@ -46,7 +47,7 @@ static bool dt_in_circle(const vec2& a, const vec2& b, const vec2& c, const vec2
         dt_lengthsq(b) * dt_area(a, c, d) +
         dt_lengthsq(c) * dt_area(a, b, d) -
         dt_lengthsq(d) * dt_area(a, b, c);
-    return f > dt_tolerance;
+    return f > dt_tolerance64;
 }
 
 static void dt_splice(dt_edge* e1, dt_edge* e2)

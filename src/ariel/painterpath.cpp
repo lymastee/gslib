@@ -30,6 +30,27 @@
 
 __ariel_begin__
 
+static vec2 offset_pt(const vec2& p, const vec2& d, float off)
+{
+    vec2 step(d.y, -d.x);
+    step.normalize().scale(off);
+    return p + step;
+}
+
+static vec2 mid_offset_pt(const vec2& before, const vec2& p, const vec2& after, float off)
+{
+    vec2 d1, d2;
+    d1.sub(p, before);
+    d2.sub(after, p);
+    if(is_parallel(d1, d2))
+        return offset_pt(p, d1, off);
+    vec2 p1 = offset_pt(before, d1, off);
+    vec2 p2 = offset_pt(p, d2, off);
+    vec2 intsp;
+    intersectp_linear_linear(intsp, p1, p2, d1, d2);
+    return intsp;
+}
+
 painter_linestrip::painter_linestrip()
 {
     _closed = false;
@@ -72,6 +93,29 @@ void painter_linestrip::reverse()
     _pts.swap(pts);
     if(is_clockwise_inited())
         _is_clock_wise = !_is_clock_wise;
+}
+
+void painter_linestrip::offset(const painter_linestrip& org, float off)
+{
+    clear();
+    if(org.get_size() <= 1)
+        return;
+    if(org.get_size() == 2) {
+        vec2 d;
+        d.sub(org.get_point(1), org.get_point(0));
+        _pts.resize(2);
+        _pts.at(0) = offset_pt(org.get_point(0), d, off);
+        _pts.at(1) = offset_pt(org.get_point(1), d, off);
+        set_closed(org.is_closed());
+        return;
+    }
+    int size = org.get_size();
+    _pts.reserve(size);
+    add_point(mid_offset_pt(org.get_last_point(), org.get_point(0), org.get_point(1), off));
+    for(int i = 2; i < size; i ++)
+        add_point(mid_offset_pt(org.get_point(i - 2), org.get_point(i - 1), org.get_point(i), off));
+    add_point(mid_offset_pt(org.get_point(size - 2), org.get_point(size - 1), org.get_point(0), off));
+    set_closed(org.is_closed());
 }
 
 int painter_linestrip::point_inside(const vec2& pt) const
@@ -143,7 +187,7 @@ bool painter_linestrip::is_convex(int i) const
 
 void painter_linestrip::tracing() const
 {
-#ifdef _DEBUG
+#if defined(DEBUG) || defined(_DEBUG)
     if(_pts.empty())
         return;
     trace(_t("@!\n"));
@@ -158,9 +202,9 @@ void painter_linestrip::tracing() const
 #endif
 }
 
-void painter_linestrip::tracing_segments() const
+void painter_linestrip::trace_segments() const
 {
-#ifdef _DEBUG
+#if defined(DEBUG) || defined(_DEBUG)
     if(_pts.empty())
         return;
     trace(_t("@!\n"));
@@ -173,6 +217,30 @@ void painter_linestrip::tracing_segments() const
     i = _pts.begin();
     trace(_t("@lineTo %f, %f;\n"), i->x, i->y);
     trace(_t("@@\n"));
+#endif
+}
+
+void painter_linestrip::trace_mel(float z) const
+{
+#if defined(DEBUG) || defined(_DEBUG)
+    if(get_size() <= 0)
+        return;
+    string str = _t("curve -d 1");
+    int size = get_size();
+    for(int i = 0; i < size; i ++) {
+        const vec2& p = get_point(i);
+        string s;
+        s.format(_t(" -p %f %f %f"), p.x, p.y, z);
+        str.append(s);
+    }
+    if(is_closed()) {
+        const vec2& p = get_point(0);
+        string s;
+        s.format(_t(" -p %f %f %f"), p.x, p.y, z);
+        str.append(s);
+    }
+    str.append(_t(";\n"));
+    trace(str.c_str());
 #endif
 }
 

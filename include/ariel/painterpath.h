@@ -57,6 +57,8 @@ public:
     vec2& get_last_point() { return _pts.back(); }
     const vec2& get_last_point() const { return _pts.back(); }
     void add_point(const vec2& pt) { _pts.push_back(pt); }
+    void set_point(int i, const vec2& pt) { _pts.at(i) = pt; }
+    void reserve(int s) { _pts.reserve(s); }
     void clear() { _pts.clear(); }
     void swap(painter_linestrip& another);
     void finish();
@@ -64,6 +66,7 @@ public:
     vec2* expand(int size);
     void expand_to(int size) { _pts.resize(size); }
     void reverse();
+    void offset(const painter_linestrip& org, float off);
     int point_inside(const vec2& pt) const;
     bool is_closed() const { return _closed; }
     void set_closed(bool c) { _closed = c; }
@@ -71,7 +74,8 @@ public:
     bool is_convex() const;
     bool is_convex(int i) const;
     void tracing() const;
-    void tracing_segments() const;
+    void trace_segments() const;
+    void trace_mel(float z) const;
 
 protected:
     enum

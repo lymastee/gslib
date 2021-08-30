@@ -1313,6 +1313,33 @@ void clip_remap_points(painter_linestrips& output, clip_point_attr& attrmap, con
     if(pc)  pc->finish();
 }
 
+void clip_offset(painter_linestrips& lss, const painter_linestrips& input, float offset)
+{
+    Paths out, paths;
+    convert_to_clipper_paths(paths, input);
+    ClipperOffset co;
+    co.AddPaths(paths, jtMiter, etClosedPolygon);
+    co.Execute(out, (double)(offset * int_scale_ratio));
+    convert_to_polygons(lss, out);
+}
+
+void clip_stroker(painter_linestrips& lss, const painter_linestrips& input, float offset)
+{
+    Paths paths, outward, inward;
+    convert_to_clipper_paths(paths, input);
+    ClipperOffset co;
+    co.AddPaths(paths, jtMiter, etClosedPolygon);
+    co.Execute(outward, (double)(offset * int_scale_ratio));
+    co.Execute(inward, (double)(-offset * int_scale_ratio));
+    Clipper c;
+    c.StrictlySimple(true);
+    c.AddPaths(outward, ptSubject, true);
+    c.AddPaths(inward, ptClip, true);
+    Paths out;
+    c.Execute(ctDifference, out);
+    convert_to_polygons(lss, out);
+}
+
 static void clip_convert_path(painter_path& out, clip_result_const_iter i)
 {
     assert(i);

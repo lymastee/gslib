@@ -1208,25 +1208,25 @@ static void clip_zfill(IntPoint& e1bot, IntPoint& e1top, IntPoint& e2bot, IntPoi
     ip->add_intersect_info(e2, t2);
 }
 
-static void clip_simplify(painter_linestrips& lss, Paths& input)
+static void clip_simplify(painter_linestrips& lss, Paths& input, PolyFillType ft)
 {
     Paths out;
-    SimplifyPolygons(input, out);
+    SimplifyPolygons(input, out, ft);
     convert_to_polygons(lss, out);
 }
 
-void clip_simplify(painter_linestrips& lss, const painter_linestrip& input)
+void clip_simplify(painter_linestrips& lss, const painter_linestrip& input, clip_fill_type ft)
 {
     Paths paths;
     convert_to_clipper_paths(paths, input);
-    clip_simplify(lss, paths);
+    clip_simplify(lss, paths, (PolyFillType)ft);
 }
 
-void clip_simplify(painter_linestrips& lss, const painter_linestrips& input)
+void clip_simplify(painter_linestrips& lss, const painter_linestrips& input, clip_fill_type ft)
 {
     Paths paths;
     convert_to_clipper_paths(paths, input);
-    clip_simplify(lss, paths);
+    clip_simplify(lss, paths, (PolyFillType)ft);
 }
 
 static void add_point_as_if_needed(painter_linestrip& ls, clip_point_attr& attrmap, const vec2& p, uint m, clip_point_tag tag)

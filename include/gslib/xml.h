@@ -136,6 +136,7 @@ public:
     int get_attribute_count() const override { return (int)attrlist.size(); }
     const string& get_name() const override { return key; }
     void set_name(const gchar* str, int len) override { key.assign(str, len); }
+    void set_value(const string& v) { __super::set_name(v); }
     kvplist& get_attributes() { return attrlist; }
     const kvplist& const_attributes() const { return attrlist; }
     string to_string() const override;

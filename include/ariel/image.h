@@ -65,6 +65,7 @@ public:
     int get_xdpi() const { return _xdpi; }
     int get_ydpi() const { return _ydpi; }
     byte* get_data(int x, int y) const;
+    byte* get_bits() const { return _data; }
     bool load(const string& filepath);
     bool load(const gchar* filepath, int len) { return load(string(filepath, len)); }
     bool save(const string& filepath) const;

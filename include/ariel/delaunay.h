@@ -134,6 +134,7 @@ protected:
     dt_edges        _edge_holdings;
 
 protected:
+    bool is_in_range(int begin, int end, dt_joint* joint);
     dt_edge_range delaunay(int begin, int end);
     dt_edge* create_edge_pair();
     dt_edge* connect_edges(dt_edge* e1, dt_edge* e2);

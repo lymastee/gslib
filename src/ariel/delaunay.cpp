@@ -99,8 +99,6 @@ static dt_edge* dt_locate_point(const vec2& p, dt_edge* start)
     for(;;) {
         if(p == e->get_org_point() || p == e->get_dest_point())
             return e;
-        else if(dt_on_edge(p, e))
-            return e;
         else if(!dt_right_of(p, e->get_org_next())) {
             if(s != 1) {
                 s = 1;
@@ -119,8 +117,6 @@ static dt_edge* dt_locate_point(const vec2& p, dt_edge* start)
             if(e == start)
                 return nullptr;
         }
-        else
-            return e;
     }
     return nullptr;
 }
@@ -370,6 +366,18 @@ static void dt_trace_edge_loop(dt_edge* e)
         dt_trace_edge(n);
 }
 
+static bool dt_joint_compare(const dt_joint* i, const dt_joint* j) 
+{
+    assert(i && j);
+    auto& p1 = i->get_point();
+    auto& p2 = j->get_point();
+    if(p1.x < p2.x)
+        return true;
+    else if(p1.x > p2.x)
+        return false;
+    return p1.y < p2.y;
+};
+
 dt_edge::dt_edge()
 {
     _org = nullptr;
@@ -420,16 +428,7 @@ void delaunay_triangulation::initialize(dt_input_joints& inputs)
     dt_joint_ptrs pre_sort;
     for(auto& p : inputs)
         pre_sort.push_back(&p);
-    pre_sort.sort([](dt_joint* i, dt_joint* j)->bool {
-        assert(i && j);
-        auto& p1 = i->get_point();
-        auto& p2 = j->get_point();
-        if(p1.x < p2.x)
-            return true;
-        else if(p1.x > p2.x)
-            return false;
-        return p1.y < p2.y;
-    });
+    pre_sort.sort(dt_joint_compare);
     /* delete same points, maybe a problem. */
     if(!pre_sort.empty()) {
         auto i = pre_sort.begin(), j = std::next(i), end = pre_sort.end();
@@ -468,8 +467,12 @@ void delaunay_triangulation::clear()
 dt_edge* delaunay_triangulation::add_constraint(const vec2& p1, const vec2& p2)
 {
     auto* init = dt_locate_point(p1, _edge_range.left);
-    if(!init)
-        return nullptr;
+    if(!init) {
+        init = dt_locate_point(p1, _edge_range.right);
+        if(!init)
+            return nullptr;
+    }
+    assert(init);
     if(init->get_org_point() != p1)
         init = init->get_symmetric();
     assert(init->get_org_point() == p1);
@@ -592,6 +595,17 @@ void delaunay_triangulation::trace_mel() const
     }
 }
 
+bool delaunay_triangulation::is_in_range(int begin, int end, dt_joint* joint)
+{
+    if(!joint)
+        return false;
+    const auto& min_joint = _sorted_joints[begin];
+    if(dt_joint_compare(joint, min_joint))
+        return false;
+    const auto& max_joint = _sorted_joints[end];
+    return !dt_joint_compare(max_joint, joint);
+}
+
 dt_edge_range delaunay_triangulation::delaunay(int begin, int end)
 {
     int size = end - begin + 1;
@@ -659,7 +673,9 @@ dt_edge_range delaunay_triangulation::delaunay(int begin, int end)
         for(;;) {
             auto* lcand = basel->get_symmetric()->get_org_next();
             if(dt_valid(lcand, basel)) {
-                while(dt_in_circle(basel->get_dest_point(), basel->get_org_point(),
+                while(is_in_range(begin, center-1, lcand->get_org_next()->get_dest()) && // 删除左侧边要保证在左侧集合中，不做此判断会导致 basel 被误删 
+                    dt_right_of(lcand->get_org_next()->get_dest_point(), basel) && // 候选边要保证与 basel 夹角小于 180 度，即在 basel 的右侧
+                    dt_in_circle(basel->get_dest_point(), basel->get_org_point(),
                     lcand->get_dest_point(), lcand->get_org_next()->get_dest_point()
                     )) {
                     auto* t = lcand->get_org_next();
@@ -669,7 +685,9 @@ dt_edge_range delaunay_triangulation::delaunay(int begin, int end)
             }
             auto* rcand = basel->get_org_prev();
             if(dt_valid(rcand, basel)) {
-                while(dt_in_circle(basel->get_dest_point(), basel->get_org_point(),
+                while(is_in_range(center, end, rcand->get_org_prev()->get_dest()) && // 删除右侧边要保证在右侧集合中，不做此判断会导致 basel 被误删 
+                    dt_right_of(rcand->get_org_prev()->get_dest_point(), basel) && // 候选边要保证与 basel 夹角小于 180 度，即在 basel 的右侧
+                    dt_in_circle(basel->get_dest_point(), basel->get_org_point(),
                     rcand->get_dest_point(), rcand->get_org_prev()->get_dest_point()
                     )) {
                     auto* t = rcand->get_org_prev();

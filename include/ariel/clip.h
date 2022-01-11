@@ -39,6 +39,14 @@ enum clip_point_tag
     cpt_interpolate = 0x02,
 };
 
+enum clip_fill_type
+{
+    cft_even_odd = 0,
+    cft_non_zero,
+    cft_positive,
+    cft_negative,
+};
+
 struct clip_vec2_hash
 {
     size_t operator()(const vec2& pt) const { return hash_bytes((const byte*)&pt, sizeof(pt)); }
@@ -53,8 +61,8 @@ typedef unordered_map<vec2, uint, clip_vec2_hash> clip_point_attr;
 ariel_export extern void clip_remap_points(painter_linestrips& output, clip_point_attr& attrmap, const painter_path& input, uint attr_selector, float step_len = -1.f);
 ariel_export extern void clip_offset(painter_linestrips& lss, const painter_linestrips& input, float offset);
 ariel_export extern void clip_stroker(painter_linestrips& lss, const painter_linestrips& input, float offset);
-ariel_export extern void clip_simplify(painter_linestrips& lss, const painter_linestrip& input);
-ariel_export extern void clip_simplify(painter_linestrips& lss, const painter_linestrips& input);
+ariel_export extern void clip_simplify(painter_linestrips& lss, const painter_linestrip& input, clip_fill_type ft = cft_even_odd);
+ariel_export extern void clip_simplify(painter_linestrips& lss, const painter_linestrips& input, clip_fill_type ft = cft_even_odd);
 ariel_export extern void clip_simplify(clip_result& output, const painter_path& input);
 ariel_export extern void clip_union(clip_result& output, const painter_path& subjects, const painter_path& clips);
 ariel_export extern void clip_intersect(clip_result& output, const painter_path& subjects, const painter_path& clips);

@@ -383,6 +383,7 @@ dt_edge::dt_edge()
     _org = nullptr;
     _prev = _next = _symmetric = nullptr;
     _constraint = false;
+    _boundary = false;
     _checked = false;
 }
 
@@ -399,7 +400,7 @@ bool dt_edge::is_outside_boundary() const
     return i != j;
 }
 
-bool dt_edge::is_boundary() const
+bool dt_edge::is_boundary_by_dcel() const
 {
     assert(_symmetric);
     if(!is_outside_boundary()) {
@@ -533,7 +534,8 @@ void delaunay_triangulation::trim(dt_edge_list& edges)
     dt_edge_list for_trim;
     for(auto* e : edges) {
         assert(e && e->is_constraint());
-        if(e->is_boundary())
+        e->set_boundary(true);
+        if(e->is_boundary_by_dcel())
             continue;
         auto* e1 = e->get_prev_edge();
         auto* e2 = e->get_next_edge();
@@ -543,24 +545,27 @@ void delaunay_triangulation::trim(dt_edge_list& edges)
         if(!e2->is_checked())
             collect_trim_edges(for_trim, e2->get_symmetric());
     }
-    bool need_reset_left = false;
+    bool need_reset_left = false, need_reset_right = false;
     auto* rleft = _edge_range.left;
+    auto* rright = _edge_range.right;
     for(auto* e : for_trim) {
         if((e == rleft) || (e->get_symmetric() == rleft))
             need_reset_left = true;
+        if((e == rright) || (e->get_symmetric() == rright))
+            need_reset_right = true;
         destroy_edge_pair(e);
     }
+    auto f = _edge_holdings.begin();
+    auto pr = [](dt_edge* e)-> bool { return e->is_boundary() || e->is_boundary_by_dcel(); };
     if(need_reset_left) {
-        /* find a boundary from remains */
-        dt_edge* any_bound = nullptr;
-        for(auto* e : _edge_holdings) {
-            if(e->is_boundary()) {
-                any_bound = e;
-                break;
-            }
-        }
-        assert(any_bound);
-        set_range_left(any_bound);
+        f = std::find_if(f, _edge_holdings.end(), pr);
+        if(f != _edge_holdings.end())
+            set_range_left(*f);
+    }
+    if(need_reset_right) {
+        f = std::find_if(f, _edge_holdings.end(), pr);
+        if(f != _edge_holdings.end())
+            set_range_right(*f);
     }
 }
 
@@ -821,6 +826,26 @@ void delaunay_triangulation::collect_trim_edges(dt_edge_list& edges, dt_edge* e)
         collect_trim_edges(edges, e1->get_symmetric());
     if(!e2->is_checked())
         collect_trim_edges(edges, e2->get_symmetric());
+}
+
+void delaunay_triangulation::collect_triangles(dt_traversal_triangles& triangles)
+{
+    dt_traversal_triangles bound_triangles;    /* try to filter triangle holes */
+    int s = (int)triangles.size();
+    traverse_triangles([&bound_triangles, &triangles](void* b1, void* b2, void* b3, bool b[3]) {
+        dt_traversal_triangle t;
+        t.binding1 = b1;
+        t.binding2 = b2;
+        t.binding3 = b3;
+        t.is_boundary[0] = b[0];
+        t.is_boundary[1] = b[1];
+        t.is_boundary[2] = b[2];
+        (b[0] && b[1] && b[2]) ? bound_triangles.emplace_back(t) : triangles.emplace_back(t);
+    });
+    if((int)triangles.size() <= s) {    /* means == */
+        if(!bound_triangles.empty())
+            triangles.emplace_back(bound_triangles.front());
+    }
 }
 
 void delaunay_triangulation::reset_traverse()

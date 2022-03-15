@@ -481,7 +481,7 @@ public:
         auto firstep = create_end_point(ajp, last->get_point());
         assert(firstep);
         auto lastep = firstep;
-        for(int i = 1; i < path.size(); i ++) {
+        for(int i = 1; i < path.size() - 1; i ++) {
             auto* node = path.get_node(i);
             assert(node);
             switch(node->get_tag())
@@ -520,8 +520,53 @@ public:
             last = node;
         }
         assert(last);
-        if(fuzz_cmp(last->get_point(), first->get_point()) >= 0.1f)
-            add_linear_edge(lastep, firstep);
+        auto* lastnode = path.get_node(path.size() - 1);
+        assert(lastnode);
+        switch(lastnode->get_tag())
+        {
+        case painter_path::pt_lineto:
+            {
+                if(fuzz_cmp(lastnode->get_point(), firstep->get_point()) < 0.1f)
+                    add_linear_edge(lastep, firstep);
+                else {
+                    auto ep = create_end_point(ajp, lastnode->get_point());
+                    assert(ep);
+                    add_linear_edge(lastep, ep);
+                    add_linear_edge(ep, firstep);
+                }
+                break;
+            }
+        case painter_path::pt_quadto:
+            {
+                auto e = create_quad_edge(last, static_cast<const painter_path::quad_to_node*>(lastnode));
+                assert(e);
+                create_quad_points(ajp, e);
+                if(fuzz_cmp(lastnode->get_point(), firstep->get_point()) < 0.1f)
+                    add_curve_edge(lastep, e, firstep);
+                else {
+                    auto ep = create_end_point(ajp, lastnode->get_point());
+                    assert(ep);
+                    add_curve_edge(lastep, e, ep);
+                    add_linear_edge(ep, firstep);
+                }
+                break;
+            }
+        case painter_path::pt_cubicto:
+            {
+                auto e = create_cubic_edge(last, static_cast<const painter_path::cubic_to_node*>(lastnode));
+                assert(e);
+                create_cubic_points(ajp, e);
+                if(fuzz_cmp(lastnode->get_point(), firstep->get_point()) < 0.1f)
+                    add_curve_edge(lastep, e, firstep);
+                else {
+                    auto ep = create_end_point(ajp, lastnode->get_point());
+                    assert(ep);
+                    add_curve_edge(lastep, e, ep);
+                    add_linear_edge(ep, firstep);
+                }
+                break;
+            }
+        }
         end_create_AJ_path(ajp);
     }
     void simplify(clip_result& result)
@@ -904,16 +949,17 @@ private:
         Path& path = poly->Contour;
         if(!path.empty())
             convert_output(*iter, path);
-        if(poly->ChildCount() <= 0)
+        int c = poly->ChildCount();
+        if(c <= 0)
             return;
         auto r = result.birth_tail(iter);
         assert(r);
         auto node = poly->Childs.front();
         assert(node);
         convert_output(result, r, node);
-        for(node = node->GetNext(); node; node = node->GetNext()) {
+        for(int i = 1; i < c; i ++) {
             r = result.insert_after(r);
-            convert_output(result, r, node);
+            convert_output(result, r, poly->Childs.at(i));
         }
     }
     void convert_output(painter_path& output, Path& path)

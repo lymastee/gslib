@@ -209,7 +209,7 @@ protected:
     bat_triangle* create_triangle(lb_joint* i, lb_joint* j, lb_joint* k, float z);
     bat_line* create_line(lb_joint* i, lb_joint* j, float w, float z, uint t, bool half);
     bat_line* create_half_line(lb_joint* i, lb_joint* j, const vec2& p1, const vec2& p2, float w, float z, uint t);
-    void add_triangle(lb_joint* i, lb_joint* j, lb_joint* k, bool b[3], float z, uint brush_tag);
+    void add_triangle(lb_joint* i, lb_joint* j, lb_joint* k, float z, uint brush_tag);
     void collect_aa_borders(bat_triangle* triangle, bool b[3], uint pen_tag);
     void proceed_line_batch();
     void gather_tex_triangles(bat_triangles& triangles, lb_polygon* poly, float z);

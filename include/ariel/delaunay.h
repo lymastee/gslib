@@ -65,6 +65,7 @@ protected:
     dt_edge*        _next;
     dt_edge*        _symmetric;
     bool            _constraint;
+    bool            _boundary;
     bool            _checked;
 
 public:
@@ -93,10 +94,12 @@ public:
     dt_edge* get_right_prev() const { return _symmetric->get_prev_edge()->get_symmetric(); }
     void set_constraint(bool b) { _constraint = b; }
     bool is_constraint() const { return _constraint; }
+    void set_boundary(bool b) { _boundary = b; }
+    bool is_boundary() const { return _boundary; }
     void set_checked(bool c) { _checked = c; }
     bool is_checked() const { return _checked; }
     bool is_outside_boundary() const;
-    bool is_boundary() const;
+    bool is_boundary_by_dcel() const;
 };
 
 struct ariel_export dt_edge_range
@@ -107,11 +110,20 @@ struct ariel_export dt_edge_range
     dt_edge_range()  { left = right = nullptr; }
 };
 
+struct ariel_export dt_traversal_triangle
+{
+    void*           binding1 = nullptr;
+    void*           binding2 = nullptr;
+    void*           binding3 = nullptr;
+    bool            is_boundary[3] = { false, false, false };
+};
+
 typedef list<dt_joint> dt_input_joints;
 typedef list<dt_joint*> dt_joint_ptrs;
 typedef vector<dt_joint*> dt_joints;
 typedef unordered_set<dt_edge*> dt_edges;
 typedef vector<dt_edge*> dt_edge_list;
+typedef vector<dt_traversal_triangle> dt_traversal_triangles;
 
 class ariel_export delaunay_triangulation
 {
@@ -124,6 +136,7 @@ public:
     dt_edge* add_constraint(const vec2& p1, const vec2& p2);
     void trim(dt_edge_list& edges);
     void set_range_left(dt_edge* e) { _edge_range.left = e; }
+    void set_range_right(dt_edge* e) { _edge_range.right = e; }
     void tracing() const;
     void trace_heuristically() const;
     void trace_mel() const;
@@ -227,6 +240,7 @@ public:
     {
         traverse_triangles_flatly(_edge_range.left, visit);
     }
+    void collect_triangles(dt_traversal_triangles& triangles);
     void reset_traverse();
 };
 

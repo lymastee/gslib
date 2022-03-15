@@ -506,11 +506,12 @@ void batch_processor::add_non_tex_polygon(lb_polygon* poly, float z, uint brush_
     assert(poly);
     assert(brush_tag != painter_brush::picture);
     auto& cdt = poly->get_cdt_result();
-    cdt.traverse_triangles([this, &z, &brush_tag](void* i, void* j, void* k, bool b[3]) {
-        assert(i && j && k);
-        auto* j1 = reinterpret_cast<lb_joint*>(i);
-        auto* j2 = reinterpret_cast<lb_joint*>(j);
-        auto* j3 = reinterpret_cast<lb_joint*>(k);
+    dt_traversal_triangles dtts;
+    cdt.collect_triangles(dtts);
+    for(const dt_traversal_triangle& dtt : dtts) {
+        auto* j1 = reinterpret_cast<lb_joint*>(dtt.binding1);
+        auto* j2 = reinterpret_cast<lb_joint*>(dtt.binding2);
+        auto* j3 = reinterpret_cast<lb_joint*>(dtt.binding3);
 #if (defined (DEBUG) || defined (_DEBUG)) && defined(_GS_DEBUG_VERBOSE)
         auto& p1 = j1->get_point();
         auto& p2 = j2->get_point();
@@ -520,8 +521,8 @@ void batch_processor::add_non_tex_polygon(lb_polygon* poly, float z, uint brush_
         trace(_t("@lineTo %f, %f;\n"), p3.x, p3.y);
         trace(_t("@lineTo %f, %f;\n"), p1.x, p1.y);
 #endif
-        add_triangle(j1, j2, j3, b, z, brush_tag);
-    });
+        add_triangle(j1, j2, j3, z, brush_tag);
+    }
 }
 
 /* I put the picture fill into one batch for better texture batching purpose. */
@@ -622,7 +623,7 @@ bat_line* batch_processor::create_half_line(lb_joint* i, lb_joint* j, const vec2
     return p;
 }
 
-void batch_processor::add_triangle(lb_joint* j1, lb_joint* j2, lb_joint* j3, bool b[3], float z, uint brush_tag)
+void batch_processor::add_triangle(lb_joint* j1, lb_joint* j2, lb_joint* j3, float z, uint brush_tag)
 {
     assert(j1 && j2 && j3);
     auto* triangle = create_triangle(j1, j2, j3, z);
@@ -787,15 +788,16 @@ void batch_processor::gather_tex_triangles(bat_triangles& triangles, lb_polygon*
 {
     assert(poly);
     auto& cdt = poly->get_cdt_result();
-    cdt.traverse_triangles([this, &z, &triangles](void* i, void* j, void* k, bool b[3]) {
-        assert(i && j && k);
-        auto* j1 = reinterpret_cast<lb_joint*>(i);
-        auto* j2 = reinterpret_cast<lb_joint*>(j);
-        auto* j3 = reinterpret_cast<lb_joint*>(k);
+    dt_traversal_triangles dtts;
+    cdt.collect_triangles(dtts);
+    for(const dt_traversal_triangle& dtt : dtts) {
+        auto* j1 = reinterpret_cast<lb_joint*>(dtt.binding1);
+        auto* j2 = reinterpret_cast<lb_joint*>(dtt.binding2);
+        auto* j3 = reinterpret_cast<lb_joint*>(dtt.binding3);
         auto* triangle = create_triangle(j1, j2, j3, z);
         assert(triangle);
         triangles.push_back(triangle);
-    });
+    }
 }
 
 bat_batch* batch_processor::find_containable_tex_batch(const bat_triangles& triangles)

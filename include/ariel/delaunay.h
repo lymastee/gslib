@@ -100,6 +100,7 @@ public:
     bool is_checked() const { return _checked; }
     bool is_outside_boundary() const;
     bool is_boundary_by_dcel() const;
+    void tracing() const;
 };
 
 struct ariel_export dt_edge_range
@@ -157,88 +158,44 @@ protected:
     void collect_trim_edges(dt_edge_list& edges, dt_edge* e);
 
     template<class _visit>
-    static void traverse_triangles_recursively(dt_edge* e, _visit visit)
+    static void traverse_per_edge(dt_edge* e, _visit visit)
     {
         assert(e);
         if(e->is_checked())
             return;
-        auto do_visit = [&visit](dt_edge* e) {
-            assert(e);
-            auto* e1 = e->get_prev_edge();
-            auto* e2 = e->get_next_edge();
-            assert(e1 && e2 && !e1->is_checked() && !e2->is_checked());
-            void* b1 = e->get_org_binding();
-            void* b2 = e->get_dest_binding();
-            void* b3 = e1->get_org_binding();
-            void* b4 = e2->get_dest_binding();
-            if(b3 != b4)    /* invalid triangle */
-                return;
-            auto& p1 = e->get_org_point();
-            auto& p2 = e->get_dest_point();
-            auto& p3 = e1->get_org_point();
-            if(!is_concave_angle(p1, p2, p3))     /* ccw! */
-                return;
-            bool b[3];
-            b[0] = e->is_boundary();
-            b[1] = e1->is_boundary();
-            b[2] = e2->is_boundary();
-            visit(b1, b2, b3, b);
-            e->set_checked(true);
-            e1->set_checked(true);
-            e2->set_checked(true);
-        };
-        do_visit(e);
-        traverse_triangles_recursively(e->get_symmetric(), visit);
-        traverse_triangles_recursively(e->get_prev_edge()->get_symmetric(), visit);
-        traverse_triangles_recursively(e->get_next_edge()->get_symmetric(), visit);
-    }
-    template<class _visit>
-    static void traverse_triangles_flatly(dt_edge* e, _visit visit)
-    {
-        vector<dt_edge*> edges;
-        edges.push_back(e);
-        while(!edges.empty()) {
-            e = edges.back();
-            edges.pop_back();
-            if(e->is_checked())
-                continue;
-            auto do_visit = [&visit](dt_edge* e) {
-                assert(e);
-                auto* e1 = e->get_prev_edge();
-                auto* e2 = e->get_next_edge();
-                assert(e1 && e2 && !e1->is_checked() && !e2->is_checked());
-                void* b1 = e->get_org_binding();
-                void* b2 = e->get_dest_binding();
-                void* b3 = e1->get_org_binding();
-                void* b4 = e2->get_dest_binding();
-                if(b3 != b4)    /* invalid triangle */
-                    return;
-                auto& p1 = e->get_org_point();
-                auto& p2 = e->get_dest_point();
-                auto& p3 = e1->get_org_point();
-                if(!is_concave_angle(p1, p2, p3))     /* ccw! */
-                    return;
-                bool b[3];
-                b[0] = e->is_boundary();
-                b[1] = e1->is_boundary();
-                b[2] = e2->is_boundary();
-                visit(b1, b2, b3, b);
-                e->set_checked(true);
-                e1->set_checked(true);
-                e2->set_checked(true);
-            };
-            do_visit(e);
-            edges.push_back(e->get_symmetric());
-            edges.push_back(e->get_prev_edge()->get_symmetric());
-            edges.push_back(e->get_next_edge()->get_symmetric());
-        }
+        auto* e1 = e->get_prev_edge();
+        auto* e2 = e->get_next_edge();
+        assert(e1 && e2 && !e1->is_checked() && !e2->is_checked());
+        void* b1 = e->get_org_binding();
+        void* b2 = e->get_dest_binding();
+        void* b3 = e1->get_org_binding();
+        void* b4 = e2->get_dest_binding();
+        if(b3 != b4)    /* invalid triangle */
+            return;
+        const vec2& p1 = e->get_org_point();
+        const vec2& p2 = e->get_dest_point();
+        const vec2& p3 = e1->get_org_point();
+        if(!is_concave_angle(p1, p2, p3))     /* ccw! */
+            return;
+        bool b[3];
+        b[0] = e->is_boundary();
+        b[1] = e1->is_boundary();
+        b[2] = e2->is_boundary();
+        visit(b1, b2, b3, b);
+        e->set_checked(true);
+        e1->set_checked(true);
+        e2->set_checked(true);
     }
 
 public:
     template<class _visit>
     void traverse_triangles(_visit visit)
     {
-        traverse_triangles_flatly(_edge_range.left, visit);
+        for(dt_edge* e : _edge_holdings) {
+            traverse_per_edge(e, visit);
+            if(dt_edge* sy = e->get_symmetric())
+                traverse_per_edge(sy, visit);
+        }
     }
     void collect_triangles(dt_traversal_triangles& triangles);
     void reset_traverse();

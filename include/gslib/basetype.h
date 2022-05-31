@@ -34,7 +34,7 @@
 
 __gslib_begin__
 
-#ifdef _GS_X86
+#if defined(_GS_X86) || defined(_GS_X64)
 
 typedef int8_t int8;
 typedef int16_t int16;

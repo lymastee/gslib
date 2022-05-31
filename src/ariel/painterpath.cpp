@@ -98,7 +98,7 @@ void painter_linestrip::reverse()
 void painter_linestrip::offset(const painter_linestrip& org, float off)
 {
     clear();
-    if(org.get_size() <= 1)
+    if(org.get_size() < 2)
         return;
     if(org.get_size() == 2) {
         vec2 d;
@@ -109,13 +109,24 @@ void painter_linestrip::offset(const painter_linestrip& org, float off)
         set_closed(org.is_closed());
         return;
     }
-    int size = org.get_size();
-    _pts.reserve(size);
-    add_point(mid_offset_pt(org.get_last_point(), org.get_point(0), org.get_point(1), off));
-    for(int i = 2; i < size; i ++)
-        add_point(mid_offset_pt(org.get_point(i - 2), org.get_point(i - 1), org.get_point(i), off));
-    add_point(mid_offset_pt(org.get_point(size - 2), org.get_point(size - 1), org.get_point(0), off));
-    set_closed(org.is_closed());
+    if(org.is_closed()) {
+        int size = org.get_size();
+        _pts.reserve(size);
+        add_point(mid_offset_pt(org.get_last_point(), org.get_point(0), org.get_point(1), off));
+        for(int i = 2; i < size; i ++)
+            add_point(mid_offset_pt(org.get_point(i - 2), org.get_point(i - 1), org.get_point(i), off));
+        add_point(mid_offset_pt(org.get_point(size - 2), org.get_point(size - 1), org.get_point(0), off));
+        set_closed(true);
+    }
+    else {
+        int size = org.get_size();
+        _pts.reserve(size);
+        add_point(offset_pt(org.get_point(0), vec2().sub(org.get_point(1), org.get_point(0)), off));
+        for(int i = 2; i < size; i ++)
+            add_point(mid_offset_pt(org.get_point(i - 2), org.get_point(i - 1), org.get_point(i), off));
+        add_point(offset_pt(org.get_last_point(), vec2().sub(org.get_last_point(), org.get_point(size - 2)), off));
+        set_closed(false);
+    }
 }
 
 int painter_linestrip::point_inside(const vec2& pt) const

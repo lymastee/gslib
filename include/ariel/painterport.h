@@ -132,6 +132,7 @@ public:
     virtual void draw_rect(const rectf& rc) override;
     virtual void draw_text(const gchar* str, float x, float y, const color& cr, int length) override;
     virtual void on_draw_begin() override;
+    virtual void draw_viewport(painter* paint, const rectf& rc) {}
 
 protected:
     painter_obj_rtree       _rtree;

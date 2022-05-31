@@ -424,6 +424,27 @@ bool dt_edge::is_boundary_by_dcel() const
     return false;
 }
 
+void dt_edge::tracing() const
+{
+    vector<vec2> pts;
+    if(_prev && _prev->get_org())
+        pts.emplace_back(_prev->get_org_point());
+    if(_org)
+        pts.emplace_back(get_org_point());
+    if(_symmetric && _symmetric->get_org())
+        pts.emplace_back(get_dest_point());
+    if(_next && _next->get_symmetric() && _next->get_symmetric()->get_org())
+        pts.emplace_back(_next->get_dest_point());
+    if(pts.size() < 2)
+        return;
+    const vec2& p0 = pts.front();
+    trace(_t("@moveTo %f, %f;\n"), p0.x, p0.y);
+    for(int i = 1; i < (int)pts.size(); i ++) {
+        const vec2& p = pts.at(i);
+        trace(_t("@lineTo %f, %f;\n"), p.x, p.y);
+    }
+}
+
 void delaunay_triangulation::initialize(dt_input_joints& inputs)
 {
     dt_joint_ptrs pre_sort;

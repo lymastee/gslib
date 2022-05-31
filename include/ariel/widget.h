@@ -329,9 +329,9 @@ public:
     void refresh(const rect& rc, bool imm = false);
     void update();
     void update(widget* w);
-    widget* hit_test(point pt) { return hit_test(_root, pt); }
-    widget* hit_test(widget* ptr, point pt);
-    widget* hit_proc(const point& pt, point& pt1);
+    widget* hit_test(const point& pt) { return hit_test(_root, pt); }
+    widget* hit_test(widget* ptr, const point& pt);
+    widget* hit_widget(const point& pt, point& pt1);
     widget* set_capture(widget* ptr, bool b);
     widget* set_focus(widget* ptr);
     void on_caret(uint);

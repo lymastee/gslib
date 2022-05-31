@@ -1300,7 +1300,7 @@ void wsys_manager::update(widget* w)
     _painter->restore();
 }
 
-widget* wsys_manager::hit_test(widget* ptr, point pt)
+widget* wsys_manager::hit_test(widget* ptr, const point& pt)
 {
     if(!ptr || !ptr->is_visible() || !ptr->is_enabled())
         return nullptr;
@@ -1316,7 +1316,7 @@ widget* wsys_manager::hit_test(widget* ptr, point pt)
     return ptr;
 }
 
-widget* wsys_manager::hit_proc(const point& pt, point& pt1)
+widget* wsys_manager::hit_widget(const point& pt, point& pt1)
 {
     widget* ptr = _capture;
     if(!ptr && !(ptr = hit_test(pt)))
@@ -1408,7 +1408,7 @@ void wsys_manager::on_resume()
 bool wsys_manager::on_mouse_down(uint um, unikey uk, const point& pt)
 {
     point pt1;
-    if(widget* ptr = hit_proc(pt, pt1)) {
+    if(widget* ptr = hit_widget(pt, pt1)) {
         ptr->on_press(um, uk, pt1);
         return true;
     }
@@ -1418,7 +1418,7 @@ bool wsys_manager::on_mouse_down(uint um, unikey uk, const point& pt)
 bool wsys_manager::on_mouse_up(uint um, unikey uk, const point& pt)
 {
     point pt1;
-    if(widget* ptr = hit_proc(pt, pt1)) {
+    if(widget* ptr = hit_widget(pt, pt1)) {
         ptr->on_click(um, uk, pt1);
         return true;
     }
@@ -1436,7 +1436,7 @@ bool wsys_manager::on_mouse_move(uint um, const point& pt)
         return true;
     }
     point pt1;
-    widget* ptr = hit_proc(pt, pt1);
+    widget* ptr = hit_widget(pt, pt1);
     if(_hover && _hover != ptr) {
         point pt2;
         _hover->to_global(pt2);

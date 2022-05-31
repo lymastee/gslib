@@ -234,45 +234,6 @@ protected:
     void destroy_text_image_cache();
 };
 
-// class painter_obj;
-// typedef list<painter_obj*> painter_obj_list;
-// typedef painter_obj_list::iterator painter_obj_iter;
-// typedef painter_obj_list::const_iterator painter_obj_const_iter;
-// 
-// class __gs_novtable painter_obj abstract
-// {
-// public:
-//     typedef painter_obj_list obj_list;
-//     typedef painter_obj_iter iterator;
-//     typedef painter_obj_const_iter const_iterator;
-// 
-// public:
-//     painter_obj(const painter_context& ctx);
-//     void set_parent(painter_obj* p) { _parent = p; }
-//     painter_obj* get_parent() const { return _parent; }
-//     void set_context(const painter_context& c) { _context = c; }
-//     const painter_context& get_context() const { return _context; }
-//     painter_obj_iter add_child(painter_obj* p);
-//     painter_obj_iter find_child_iterator(painter_obj* p);
-//     painter_obj_iter add_child_before(painter_obj_iter pos, painter_obj* p);
-//     painter_obj_iter add_child_after(painter_obj_iter pos, painter_obj* p);
-//     void detach_child(painter_obj_iter pos);
-//     void detach_child(painter_obj* p);
-//     void remove_child(painter_obj_iter pos);
-//     void remove_child(painter_obj* p);
-//     painter_obj_iter get_self_iterator();
-//     void destroy_children();
-// 
-// protected:
-//     painter_obj*        _parent;
-//     obj_list            _children;
-//     painter_context     _context;
-// 
-// public:
-//     virtual ~painter_obj();
-//     virtual void draw(painter*) const = 0;
-// };
-
 __ariel_end__
 
 #endif

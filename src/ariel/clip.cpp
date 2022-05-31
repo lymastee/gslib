@@ -1259,6 +1259,8 @@ static void clip_simplify(painter_linestrips& lss, Paths& input, PolyFillType ft
     Paths out;
     SimplifyPolygons(input, out, ft);
     convert_to_polygons(lss, out);
+    for(painter_linestrip& ls : lss)
+        ls.set_closed(true);
 }
 
 void clip_simplify(painter_linestrips& lss, const painter_linestrip& input, clip_fill_type ft)
@@ -1366,23 +1368,6 @@ void clip_offset(painter_linestrips& lss, const painter_linestrips& input, float
     ClipperOffset co;
     co.AddPaths(paths, jtMiter, etClosedPolygon);
     co.Execute(out, (double)(offset * int_scale_ratio));
-    convert_to_polygons(lss, out);
-}
-
-void clip_stroker(painter_linestrips& lss, const painter_linestrips& input, float offset)
-{
-    Paths paths, outward, inward;
-    convert_to_clipper_paths(paths, input);
-    ClipperOffset co;
-    co.AddPaths(paths, jtMiter, etClosedPolygon);
-    co.Execute(outward, (double)(offset * int_scale_ratio));
-    co.Execute(inward, (double)(-offset * int_scale_ratio));
-    Clipper c;
-    c.StrictlySimple(true);
-    c.AddPaths(outward, ptSubject, true);
-    c.AddPaths(inward, ptClip, true);
-    Paths out;
-    c.Execute(ctDifference, out);
     convert_to_polygons(lss, out);
 }
 

@@ -40,12 +40,21 @@ class __gs_novtable scrollarea_service abstract:
     public _base_widget
 {
 public:
-    scrollarea_service()
+    scrollarea_service(wsys_manager* m): _base_widget(m)
+    {
+    }
+    void set_scroll_area(const rectf& rc) { _scroll_area = rc; }
+    void set_scroll_viewport(const rectf& rc) { _scroll_viewport = rc; }
+
+public:
+    virtual void draw(painter* paint) override
     {
     }
 
 protected:
     painterport         _painter;
+    rectf               _scroll_area;
+    rectf               _scroll_viewport;
 };
 
 };

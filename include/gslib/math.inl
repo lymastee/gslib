@@ -1796,9 +1796,9 @@ inline matrix* matperspectiveoffcenterlh(matrix* out, float l, float r, float b,
     assert(out);
     out->_12 = out->_13 = out->_14 = out->_21 = out->_23 = out->_24 = out->_41 = out->_42 = out->_44 = 0;
     out->_34 = 1.f;
-    out->_11 = 2.f * zn / (r - 1.f);
+    out->_11 = 2.f * zn / (r - l);
     out->_22 = 2.f * zn / (t - b);
-    out->_31 = (1.f + r) / (1.f - r);
+    out->_31 = (l + r) / (l - r);
     out->_32 = (t + b) / (b - t);
     out->_33 = zf / (zf - zn);
     out->_43 = zn * zf / (zn - zf);
@@ -1810,9 +1810,9 @@ inline matrix* matperspectiveoffcenterrh(matrix* out, float l, float r, float b,
     assert(out);
     out->_12 = out->_13 = out->_14 = out->_21 = out->_23 = out->_24 = out->_41 = out->_42 = out->_44 = 0;
     out->_34 = -1.f;
-    out->_11 = 2.f * zn / (r - 1.f);
+    out->_11 = 2.f * zn / (r - l);
     out->_22 = 2.f * zn / (t - b);
-    out->_31 = (1.f + r) / (r - 1.f);
+    out->_31 = (l + r) / (r - l);
     out->_32 = (t + b) / (t - b);
     out->_33 = zf / (zn - zf);
     out->_43 = zn * zf / (zn - zf);

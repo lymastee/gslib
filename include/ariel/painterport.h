@@ -58,6 +58,7 @@ public:
     virtual ~painter_obj() {}
     virtual type get_type() const = 0;
     virtual rectf& get_rect(rectf& rc) const = 0;
+    virtual void draw_to(painter* paint, const rectf& vp) const = 0;
 
 protected:
     painter_context         _ctx;
@@ -73,6 +74,7 @@ public:
     painter_line_obj(const painter_context& ctx, const pointf& p1, const pointf& p2): painter_obj(ctx), _p1(p1), _p2(p2) {}
     virtual type get_type() const override { return po_line; }
     virtual rectf& get_rect(rectf& rc) const override;
+    virtual void draw_to(painter* paint, const rectf& vp) const override;
 
 private:
     pointf                  _p1;
@@ -86,6 +88,7 @@ public:
     painter_rect_obj(const painter_context& ctx,  const rectf& rc): painter_obj(ctx), _rc(rc) {}
     virtual type get_type() const override { return po_rect; }
     virtual rectf& get_rect(rectf& rc) const override { return rc = _rc; }
+    virtual void draw_to(painter* paint, const rectf& vp) const override {}
 
 private:
     rectf                   _rc;
@@ -99,6 +102,7 @@ public:
     painter_path_obj(const painter_context& ctx, const painter_path& path): painter_obj(ctx), _path(path) {}
     virtual type get_type() const override { return po_path; }
     virtual rectf& get_rect(rectf& rc) const override;
+    virtual void draw_to(painter* paint, const rectf& vp) const override {}
     rectf& rebuild_rect(rectf& rc) const;
 
 private:
@@ -114,6 +118,7 @@ public:
     painter_text_obj(const painter_context& ctx, const string& txt, const pointf& p, const color& cr): painter_obj(ctx), _text(txt), _pos(p), _cr(cr) {}
     virtual type get_type() const override { return po_text; }
     virtual rectf& get_rect(rectf& rc) const override;
+    virtual void draw_to(painter* paint, const rectf& vp) const override {}
 
 private:
     string                  _text;
@@ -132,14 +137,14 @@ public:
     virtual void draw_rect(const rectf& rc) override;
     virtual void draw_text(const gchar* str, float x, float y, const color& cr, int length) override;
     virtual void on_draw_begin() override;
-    virtual void draw_viewport(painter* paint, const rectf& rc) {}
+    virtual void flush_port(painter* paint, const rectf& rc) const;
 
 protected:
     painter_obj_rtree       _rtree;
 
 public:
     rectf& get_area_rect(rectf& rc) const;
-    void query_objs(painter_objs& objs, const rectf& rc);
+    void query_objs(painter_objs& objs, const rectf& rc) const;
 
 protected:
     void add_obj(painter_obj* obj);

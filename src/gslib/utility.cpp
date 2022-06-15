@@ -1305,11 +1305,14 @@ float quad_bezier_length(const vec2 cp[3])
     t2.sub(cp[1], cp[0]).scale(2.f);
     float a = t1.lengthsq() * 4.f;
     if(fuzzy_zero(a))
-        return 0.f;
+        return quad_control_length(cp[0], cp[1], cp[2]);
     float b = t1.dot(t2) * 4.f;
     float c = t2.lengthsq();
     float ssabc = sqrtf(a + b + c);
-    return (2.f * sqrtf(a) * (2.f * a * ssabc + b * (ssabc - sqrtf(c))) + (b * b - 4.f * a * c) * (logf(b + 2.f * sqrtf(a * c)) -  logf(b + 2.f * a + 2.f * sqrtf(a) * ssabc))) / (8.f * powf(a, 1.5f));
+    float r = (2.f * sqrtf(a) * (2.f * a * ssabc + b * (ssabc - sqrtf(c))) + (b * b - 4.f * a * c) * (logf(b + 2.f * sqrtf(a * c)) -  logf(b + 2.f * a + 2.f * sqrtf(a) * ssabc))) / (8.f * powf(a, 1.5f));
+    if(isnan(r) || isinf(r))
+        return quad_control_length(cp[0], cp[1], cp[2]);
+    return r;
 }
 
 float cubic_bezier_length(const vec2 cp[4], float tolerance)
@@ -1327,7 +1330,7 @@ float cubic_bezier_length(const vec2 cp[4], float tolerance)
     return len;
 }
 
-static int cubic_to_quad_bezier_iteration(vector<vec2>& quadctls, const vec2 cp[4], float tolerance)
+static bool cubic_to_quad_bezier_dcvt(vector<vec2>& quadctls, const vec2 cp[4], float tolerance)
 {
     float ctlen = cubic_control_length(cp[0], cp[1], cp[2], cp[3]);
     if(ctlen < tolerance) {
@@ -1335,8 +1338,59 @@ static int cubic_to_quad_bezier_iteration(vector<vec2>& quadctls, const vec2 cp[
         center.add(cp[0], cp[3]).scale(0.5f);
         quadctls.push_back(center);
         quadctls.push_back(cp[3]);
+        return true;
+    }
+    return false;
+}
+
+int cubic_to_quad_bezier_non_inflection(vector<vec2>& quadctls, const vec2 cp[4], float tolerance);
+
+static int cubic_to_quad_bezier_rcvt(vector<vec2>& quadctls, const vec2 cp[4], float tolerance)
+{
+    vec2 ip;
+    get_reduce_point(ip, cp[0], cp[1], cp[2], cp[3]);
+    vec4 cpara[2];
+    get_cubic_parameter_equation(cpara, cp[0], cp[1], cp[2], cp[3]);
+    if(fuzzy_zero(cpara[0].x) && fuzzy_zero(cpara[0].y) && fuzzy_zero(cpara[0].z) ||
+        fuzzy_zero(cpara[1].x) && fuzzy_zero(cpara[1].y) && fuzzy_zero(cpara[1].z)) {
+        quadctls.push_back(ip);
+        quadctls.push_back(cp[3]);
         return (int)quadctls.size();
     }
+    vec3 qpara[2];
+    get_quad_parameter_equation(qpara, cp[0], ip, cp[3]);
+    auto close_test = [](const vec4 cpara[2], const vec3 qpara[2], float t, float tol)-> bool {
+        vec2 v1, v2;
+        eval_quad(v1, qpara, t);
+        float s = best_cubic_reparameterize(cpara, v1);
+        if(s < 0.f || s > 1.f)
+            return false;
+        eval_cubic(v2, cpara, s);
+        float d = vec2().sub(v1, v2).length();
+        return d < tol;
+    };
+    if(close_test(cpara, qpara, 0.25f, tolerance) && close_test(cpara, qpara, 0.75f, tolerance)) {
+        quadctls.push_back(ip);
+        quadctls.push_back(cp[3]);
+        return (int)quadctls.size();
+    }
+    vec2 dcp[7];
+    split_cubic_bezier(dcp, cp, 0.5f);
+    cubic_to_quad_bezier_non_inflection(quadctls, dcp, tolerance);
+    return cubic_to_quad_bezier_non_inflection(quadctls, dcp + 3, tolerance);
+}
+
+static int cubic_to_quad_bezier_non_inflection(vector<vec2>& quadctls, const vec2 cp[4], float tolerance)
+{
+    if(cubic_to_quad_bezier_dcvt(quadctls, cp, tolerance))
+        return (int)quadctls.size();
+    return cubic_to_quad_bezier_rcvt(quadctls, cp, tolerance);
+}
+
+static int cubic_to_quad_bezier_iteration(vector<vec2>& quadctls, const vec2 cp[4], float tolerance)
+{
+    if(cubic_to_quad_bezier_dcvt(quadctls, cp, tolerance))
+        return (int)quadctls.size();
     float t[2];
     int i = get_cubic_inflection(t, cp[0], cp[1], cp[2], cp[3]);
     assert(i <= 2);
@@ -1346,8 +1400,8 @@ static int cubic_to_quad_bezier_iteration(vector<vec2>& quadctls, const vec2 cp[
         {
             vec2 dcp[7];
             split_cubic_bezier(dcp, cp, t[0]);
-            cubic_to_quad_bezier_iteration(quadctls, dcp, tolerance);
-            return cubic_to_quad_bezier_iteration(quadctls, dcp + 3, tolerance);
+            cubic_to_quad_bezier_non_inflection(quadctls, dcp, tolerance);
+            return cubic_to_quad_bezier_non_inflection(quadctls, dcp + 3, tolerance);
         }
     case 2:
         {
@@ -1355,56 +1409,12 @@ static int cubic_to_quad_bezier_iteration(vector<vec2>& quadctls, const vec2 cp[
             if(t[0] > t[1])
                 gs_swap(t[0], t[1]);
             split_cubic_bezier(dcp, cp, t[0], t[1]);
-            cubic_to_quad_bezier_iteration(quadctls, dcp, tolerance);
-            cubic_to_quad_bezier_iteration(quadctls, dcp + 3, tolerance);
-            return cubic_to_quad_bezier_iteration(quadctls, dcp + 6, tolerance);
+            cubic_to_quad_bezier_non_inflection(quadctls, dcp, tolerance);
+            cubic_to_quad_bezier_non_inflection(quadctls, dcp + 3, tolerance);
+            return cubic_to_quad_bezier_non_inflection(quadctls, dcp + 6, tolerance);
         }
     }
-    vec2 d1, d2;
-    d1.sub(cp[1], cp[0]);
-    d2.sub(cp[3], cp[2]);
-    bool need_div = false;
-    if(is_parallel(d1, d2))
-        need_div = true;
-    else {
-        vec2 ip;
-        intersectp_linear_linear(ip, cp[0], cp[3], d1, d2);
-        float t1 = linear_reparameterize(cp[0], cp[1], ip);
-        float t2 = linear_reparameterize(cp[3], cp[2], ip);
-        if(t1 <= 0.f || t2 <= 0.f)
-            need_div = true;
-        else if(t1 < 1.f - 1e-4f || t2 < 1.f - 1e-4f) {
-            //assert(!"should've had a inflection?");
-            need_div = true;
-        }
-        else {
-            vec2 v1, v2;
-            vec4 cpara[2];
-            get_cubic_parameter_equation(cpara, cp[0], cp[1], cp[2], cp[3]);
-            vec3 qpara[2];
-            get_quad_parameter_equation(qpara, cp[0], ip, cp[3]);
-            eval_quad(v2, qpara, 0.5f);
-            float s = best_cubic_reparameterize(cpara, v2);
-            if(s < 0.f)
-                need_div = true;
-            else {
-                eval_cubic(v1, cpara, s);
-                float d = vec2().sub(v2, v1).length();
-                if(d < tolerance) {
-                    quadctls.push_back(ip);
-                    quadctls.push_back(cp[3]);
-                    return (int)quadctls.size();
-                }
-                else
-                    need_div = true;
-            }
-        }
-    }
-    assert(need_div);
-    vec2 dcp[7];
-    split_cubic_bezier(dcp, cp, 0.5f);
-    cubic_to_quad_bezier_iteration(quadctls, dcp, tolerance);
-    return cubic_to_quad_bezier_iteration(quadctls, dcp + 3, tolerance);
+    return cubic_to_quad_bezier_rcvt(quadctls, cp, tolerance);
 }
 
 int cubic_to_quad_bezier(vector<vec2>& quadctl, const vec2 cp[4], float tolerance)

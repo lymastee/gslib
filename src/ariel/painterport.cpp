@@ -34,6 +34,20 @@ rectf& painter_line_obj::get_rect(rectf& rc) const
     return rc;
 }
 
+void painter_line_obj::draw_to(painter* paint, const rectf& vp) const
+{
+    float t[2];
+    if(!clip_line_rectf(t, _p1, _p2, vp))
+        return;
+    vec2 p1, p2;
+    p1.lerp(_p1, _p2, t[0]);
+    p2.lerp(_p1, _p2, t[1]);
+    p1 -= vp.top_left();
+    p2 -= vp.top_left();
+    assert(paint);
+    paint->draw_line(p1, p2);
+}
+
 rectf& painter_path_obj::get_rect(rectf& rc) const
 {
     if(_rc_valid)
@@ -94,6 +108,18 @@ void painterport::on_draw_begin()
     clear_objs();
 }
 
+void painterport::flush_port(painter* paint, const rectf& rc) const
+{
+    assert(paint);
+    painter_objs vo;
+    query_objs(vo, rc);
+    paint->save();
+    // todo:
+    for(painter_obj* o : vo)
+        o->draw_to(paint, rc);
+    paint->restore();
+}
+
 rectf& painterport::get_area_rect(rectf& rc) const
 {
     if(!_rtree.is_valid()) {
@@ -105,7 +131,7 @@ rectf& painterport::get_area_rect(rectf& rc) const
     return rc;
 }
 
-void painterport::query_objs(painter_objs& objs, const rectf& rc)
+void painterport::query_objs(painter_objs& objs, const rectf& rc) const
 {
     _rtree.query(rc, objs);
 }

@@ -521,6 +521,11 @@ dt_edge* delaunay_triangulation::add_constraint(const vec2& p1, const vec2& p2)
     dt_collect_intersect_edges_w(p1, p2, edges, init);
     if(edges.empty())
         return nullptr;
+    /* check constraint conflicts */
+    for(auto* e : edges) {
+        if(e->is_constraint())
+            return nullptr;
+    }
     /* find the head tail of the loop */
     auto* firstcut = edges.front();
     auto* cand1 = firstcut->get_left_prev();

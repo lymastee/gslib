@@ -1361,11 +1361,11 @@ void clip_remap_points(painter_linestrips& output, clip_point_attr& attrmap, con
     if(pc)  pc->finish();
 }
 
-void clip_offset(painter_linestrips& lss, const painter_linestrips& input, float offset)
+void clip_offset(painter_linestrips& lss, const painter_linestrips& input, float offset, float miter_limit)
 {
     Paths out, paths;
     convert_to_clipper_paths(paths, input);
-    ClipperOffset co;
+    ClipperOffset co(miter_limit);
     co.AddPaths(paths, jtMiter, etClosedPolygon);
     co.Execute(out, (double)(offset * int_scale_ratio));
     convert_to_polygons(lss, out);

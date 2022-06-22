@@ -116,8 +116,10 @@ gs_export extern float get_rotate_angle(const vec2& a, const vec2& b, const vec2
 gs_export extern void get_reduce_point(vec2& p, const vec2& a, const vec2& b, const vec2& c, const vec2& d);
 gs_export extern bool point_in_triangle(const vec2& p, const vec2& p1, const vec2& p2, const vec2& p3);
 gs_export extern int point_in_polygon(const vec2& p, const vector<vec2>& poly);   /* 0: outside; 1 : inside; -1 : coincide */
-gs_export extern float get_triangle_area(const vec2& p1, const vec2& p2, const vec2& p3);
+gs_export extern float calc_triangle_area(const vec2& p1, const vec2& p2, const vec2& p3);
+gs_export extern double hp_calc_triangle_area(const vec2& p1, const vec2& p2, const vec2& p3);
 gs_export extern vec3 get_barycentric_coords(const vec2& p, const vec2& p1, const vec2& p2, const vec2& p3);
+gs_export extern double calc_polygon_area(const vec2 p[], int size);
 gs_export extern bool clip_line_rect(float t[2], const vec2& p1, const vec2& p2, const rect& clipbox);
 gs_export extern bool clip_line_rectf(float t[2], const vec2& p1, const vec2& p2, const rectf& clipbox);
 gs_export extern void trace_quad_strip(const vec2 cp[], int size);

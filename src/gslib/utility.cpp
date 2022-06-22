@@ -1288,14 +1288,9 @@ void offset_cubic_bezier(vec2 c[4], const vec2 p[4], float d)
     intersectp_linear_linear(c[2], c[3], p[2], d3, v2);
 }
 
-static float get_triangle_area(const vec2 cp[3])
-{
-    return 0.5f * (cp[0].x * cp[1].y + cp[1].x * cp[2].y + cp[2].x * cp[0].y - cp[0].x * cp[2].y - cp[1].x * cp[0].y - cp[2].x * cp[1].y);
-}
-
 float quad_bezier_length(const vec2 cp[3])
 {
-    if(abs(get_triangle_area(cp)) < 1e-6f) {
+    if(abs(calc_triangle_area(cp[0], cp[1], cp[2])) < 1e-6f) {
         vec2 d;
         d.sub(cp[2], cp[0]);
         return d.length();
@@ -1325,7 +1320,7 @@ float cubic_bezier_length(const vec2 cp[4], float tolerance)
         return 0.f;
     }
     float len = 0.f;
-    for(int i = 0; (i + 1) < size; i += 2)
+    for(int i = 0; (i + 2) < size; i += 2)
         len += quad_bezier_length(&quadctls.at(i));
     return len;
 }
@@ -1845,18 +1840,36 @@ int point_in_polygon(const vec2& p, const vector<vec2>& poly)
     return result;
 }
 
-float get_triangle_area(const vec2& p1, const vec2& p2, const vec2& p3)
+float calc_triangle_area(const vec2& p1, const vec2& p2, const vec2& p3)
 {
     return 0.5f * (p1.x * p2.y + p2.x * p3.y + p3.x * p1.y - p1.x * p3.y - p2.x * p1.y - p3.x * p2.y);
 }
 
+double hp_calc_triangle_area(const vec2& p1, const vec2& p2, const vec2& p3)
+{
+    double d = (double)p1.x * p2.y + (double)p2.x * p3.y + (double)p3.x * p1.y - (double)p1.x * p3.y - (double)p2.x * p1.y - (double)p3.x * p2.y;
+    return d * 0.5;
+}
+
 vec3 get_barycentric_coords(const vec2& p, const vec2& p1, const vec2& p2, const vec2& p3)
 {
-    float s = get_triangle_area(p1, p2, p3);
-    float s1 = get_triangle_area(p, p2, p3);
-    float s2 = get_triangle_area(p, p3, p1);
-    float s3 = get_triangle_area(p, p1, p2);
+    float s = calc_triangle_area(p1, p2, p3);
+    float s1 = calc_triangle_area(p, p2, p3);
+    float s2 = calc_triangle_area(p, p3, p1);
+    float s3 = calc_triangle_area(p, p1, p2);
     return vec3(s1 / s, s2 / s, s3 / s);
+}
+
+double calc_polygon_area(const vec2 p[], int size)
+{
+    if(!p || size < 3)
+        return 0.0;
+    double area = 0.0;
+    for(int i = 2; i < size; i ++) {
+        double d = hp_calc_triangle_area(p[0], p[i - 1], p[i]);
+        area += d;
+    }
+    return area;
 }
 
 bool clip_line_rect(float t[2], const vec2& p1, const vec2& p2, const rect& clipbox)

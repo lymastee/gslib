@@ -59,7 +59,7 @@ typedef typename clip_result::const_iterator clip_result_const_iter;
 typedef unordered_map<vec2, uint, clip_vec2_hash> clip_point_attr;
 
 ariel_export extern void clip_remap_points(painter_linestrips& output, clip_point_attr& attrmap, const painter_path& input, uint attr_selector, float step_len = -1.f);
-ariel_export extern void clip_offset(painter_linestrips& lss, const painter_linestrips& input, float offset);
+ariel_export extern void clip_offset(painter_linestrips& lss, const painter_linestrips& input, float offset, float miter_limit = 2.f);
 ariel_export extern void clip_simplify(painter_linestrips& lss, const painter_linestrip& input, clip_fill_type ft = cft_even_odd);
 ariel_export extern void clip_simplify(painter_linestrips& lss, const painter_linestrips& input, clip_fill_type ft = cft_even_odd);
 ariel_export extern void clip_simplify(clip_result& output, const painter_path& input);

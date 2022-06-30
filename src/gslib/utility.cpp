@@ -750,7 +750,7 @@ void get_quad_bound_box(rectf& rc, const vec2& p1, const vec2& p2, const vec2& p
         rc.right = gs_max(rc.right, x);
     }
     if(has_y_extrema) {
-        float y = para[1].dot(vec3(tx * tx, tx, 1.f));
+        float y = para[1].dot(vec3(ty * ty, ty, 1.f));
         rc.top = gs_min(rc.top, y);
         rc.bottom = gs_max(rc.bottom, y);
     }
@@ -1156,34 +1156,35 @@ bool get_self_intersection(float ts[2], const vec2& a, const vec2& b, const vec2
      * solve u, v first, IE.
      * 3(b - a) + 3(a - 2b + c)u + (-a + 3(b - c) + d)v = 0
      */
-    struct build_equation {
-        /* coefficient for [1, u, v] */
-        build_equation(vec3& v, float a, float b, float c, float d)
-        {
-            v.x = 3.f * (b - a);
-            v.y = 3.f * (a - 2.f * b + c);
-            v.z = -a + 3.f * (b - c) + d;
-        }
+    auto build_equation = [](float a, float b, float c, float d)-> vec3 {
+        return vec3(
+            3.f * (a - 2.f * b + c),
+            -(a - 3.f * b + 3.f * c - d),
+            3.f * (a - b)
+            );
     };
-    vec3 equ1, equ2;
-    build_equation build1(equ1, a.x, b.x, c.x, d.x), build2(equ2, a.y, b.y, c.y, d.y);
-    vec3scale(&equ1, &equ1, equ2.y);
-    vec3scale(&equ2, &equ2, equ1.y);
-    float v = (equ2.x - equ1.x) / (equ1.z - equ2.z);
-    float u = -(v * equ1.z + equ1.x) / equ1.y;
+    vec3 eq1 = build_equation(a.x, b.x, c.x, d.x);
+    vec3 eq2 = build_equation(a.y, b.y, c.y, d.y);
+    float detc = eq1.x * eq2.y - eq1.y * eq2.x;
+    if(fabsf(detc) < FLT_EPSILON)
+        return false;
+    float detx = eq1.z * eq2.y - eq1.y * eq2.z;
+    float dety = eq1.x * eq2.z - eq1.z * eq2.x;
+    float u = detx / detc;
+    float v = dety / detc;
     /*
      * now we solve the [u, v, s, t] puzzle
      * t = u - s
      * u^2 - us + s^2 = 0   => retrieve s
      */
-    vec3 coef(1, -u, u * u);
+    vec3 coef(1, -u, u * u - v);
     float tt[2];
     int count = solve_univariate_quadratic(tt, coef);
     if (count != 2)
         return false;
     else
     {
-        if (tt[0] >= 0 && tt[0] <= 1.f && tt[1] >= 0 && tt[1] <= 1.f)
+        if (tt[0] >= 0.f && tt[0] <= 1.f && tt[1] >= 0.f && tt[1] <= 1.f)
         {
             ts[0] = gs_min(tt[0], tt[1]);
             ts[1] = gs_max(tt[0], tt[1]);
@@ -1450,7 +1451,7 @@ int get_interpolate_step(const vec2& a, const vec2& b, const vec2& c, float step
         step_len = __plot_step_len;
     vec2 pt[] = { a, b, c };
     float len = quad_bezier_length(pt);
-    int step = round(len / step_len);
+    int step = (int)ceilf(len / step_len) + 1;
     return step < 2 ? 2 : step;
 }
 
@@ -1460,7 +1461,7 @@ int get_interpolate_step(const vec2& a, const vec2& b, const vec2& c, const vec2
         step_len = __plot_step_len;
     vec2 pt[] = { a, b, c, d };
     float len = cubic_bezier_length(pt, __plot_tol);
-    int step = round(len / step_len);
+    int step = (int)ceilf(len / step_len) + 1;
     return step < 2 ? 2 : step;
 }
 

@@ -319,8 +319,10 @@ uint dsm_get_address(uint addr, uint pthis)
         return 0;
     if(pfunc[0] == 0xe9)        /* jump offset from addr + 5 */
         return dsm_get_address(addr + 5 + *(int*)(pfunc + 1), pthis);
-    if(pfunc[0] == 0x8b && pfunc[1] == 0x01) {          /* mov eax, dword ptr[ecx] */
-        assert(pfunc[2] == 0xff && pfunc[3] == 0x60);   /* jmp dword ptr[eax + ?] */
+    if(pfunc[0] == 0x8b && pfunc[1] == 0x01) {              /* mov eax, dword ptr[ecx] */
+        assert((pfunc[2] == 0xff && pfunc[3] == 0x60) ||    /* jmp dword ptr[eax + ?] */
+            (pfunc[2] == 0xff && pfunc[3] == 0x20)          /* jmp dword ptr[eax] todo:??? */
+            );
         byte* pvt = *(byte**)pthis;
         pvt += pfunc[4];
         return dsm_get_address(*(int*)pvt, pthis);

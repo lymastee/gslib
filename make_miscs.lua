@@ -353,3 +353,47 @@ project "msomorph"
 		--"proj/msomorph/shader.hlsl"
 	}
 	
+project "curve"
+	language "c++"
+	kind "WindowedApp"
+	entrypoint ""
+	dependson {
+		"zlib",
+		"libpng",
+		"libjpeg",
+		"gslib",
+		"ariel"
+	}
+	includedirs {
+		todir,
+		"include",
+		"src",
+		"ext"
+	}
+	libdirs {
+		"$(OutDir)"
+	}
+	links {
+		"dxgi.lib",
+		"d3d11.lib",
+		"zlib.lib",
+		"libjpeg.lib",
+		"libpng.lib",
+		"gslib.lib",
+		"ariel.lib",
+		"imm32.lib",
+		"snmpapi.lib",
+		"d3d10_1.lib",
+		"d2d1.lib",
+		"dwrite.lib"
+	}
+	files {
+		"test/curve/main.cpp",
+		"test/curve/curve_view.cpp",
+		"test/curve/curve_view.h",
+		"test/curve/basis.cpp",
+		"test/curve/basis.h",
+		"test/curve/editor.cpp",
+		"test/curve/editor.h"
+	}
+	

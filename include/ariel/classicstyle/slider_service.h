@@ -98,11 +98,11 @@ protected:
             return;
         _is_dragging = true;
         _init_drag_pt = pt;
-        capture(true);
+        set_capture(true);
     }
     void end_dragging(const point& pt)
     {
-        capture(false);
+        set_capture(false);
         if(!_is_dragging)
             return;
         on_dragging(pt);

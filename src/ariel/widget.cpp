@@ -86,7 +86,7 @@ void widget::close()
 {
     _visible = false;
     _enabled = false;
-    capture(false);
+    set_capture(false);
     assert(!_child);
     if(_parent && _parent->_child == this)
         _parent->_child = _next;
@@ -105,7 +105,7 @@ void widget::show(bool b)
         refresh(false);
     }
     if(!b)
-        capture(false);
+        set_capture(false);
 }
 
 void widget::enable(bool b)
@@ -153,36 +153,30 @@ void widget::refresh(const rect& rc, bool imm)
     _manager->refresh(rc1, imm);
 }
 
-widget* widget::capture(bool b)
+widget* widget::set_capture(bool b)
 {
     assert(_manager);
     return _manager->set_capture(this, b);
 }
 
-widget* widget::focus()
+widget* widget::set_focus()
 {
     assert(_manager);
     return _manager->set_focus(this);
 }
 
-void widget::lay(widget* ptr, laytag t)
-{
-    /* currently unsupported */
-    assert(0);
-}
-
 void widget::on_press(uint um, unikey uk, const point& pt)
 {
     if(uk == mk_left)
-        capture(true);
+        set_capture(true);
 }
 
 void widget::on_click(uint um, unikey uk, const point& pt)
 {
     if(uk == mk_left) {
-        capture(false);
+        set_capture(false);
         /* focus! */
-        focus();
+        set_focus();
     }
 }
 
@@ -197,6 +191,11 @@ void widget::on_leave(uint um, const point& pt)
 bool widget::is_focused() const
 {
     return _manager ? (_manager->get_focus() == this) : false;
+}
+
+bool widget::is_inside(const point& pt) const
+{
+    return pt.x > 0 && pt.y > 0 && pt.x < get_width() && pt.y < get_height();
 }
 
 point& widget::to_global(point& pt) const

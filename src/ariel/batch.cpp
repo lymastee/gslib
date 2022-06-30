@@ -421,19 +421,31 @@ void bat_line::trim_contour(bat_line& line)
 {
     assert(!_recalc);
     assert(get_end_point() == line.get_start_point());
-    vec2 p;
+    auto calc_mid_point = [](const vec2& p1, const vec2& p2, const vec2& q1, const vec2& q2)-> vec2 {
+        vec2 d1, d2;
+        d1.sub(p2, p1);
+        d2.sub(q2, q1);
+        if(abs(d1.ccw(d2)) < 0.05f) {
+            vec2 p;
+            p.add(p2, q1).scale(0.5f);
+            return p;
+        }
+        vec2 p;
+        intersectp_linear_linear(p, p1, q1, d1, d2);
+        return p;
+    };
     const vec2& m1 = get_contour_point(2);
     const vec2& m2 = get_contour_point(3);
     const vec2& n1 = line.get_contour_point(2);
     const vec2& n2 = line.get_contour_point(3);
-    intersectp_linear_linear(p, m1, n1, vec2().sub(m2, m1), vec2().sub(n2, n1));
+    vec2 p = calc_mid_point(m1, m2, n1, n2);
     set_contour_point(3, p);
     line.set_contour_point(2, p);
     const vec2& m3 = get_contour_point(0);
     const vec2& m4 = get_contour_point(1);
     const vec2& n3 = line.get_contour_point(0);
     const vec2& n4 = line.get_contour_point(1);
-    intersectp_linear_linear(p, m3, n3, vec2().sub(m4, m3), vec2().sub(n4, n3));
+    p = calc_mid_point(m3, m4, n3, n4);
     set_contour_point(1, p);
     line.set_contour_point(0, p);
 }

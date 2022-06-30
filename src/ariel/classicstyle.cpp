@@ -110,6 +110,35 @@ static const style_sheet_def __edit_line_style_sheet_defs[] =
     std::make_pair(sst_float, _t("text_font_opacity")),
 };
 
+static const style_sheet_def __combo_box_style_sheet_defs[] =
+{
+    std::make_pair(sst_color, _t("normal_fill_color")),
+    std::make_pair(sst_color, _t("normal_stroke_color")),
+    std::make_pair(sst_color, _t("hover_fill_color")),
+    std::make_pair(sst_color, _t("hover_stroke_color")),
+    std::make_pair(sst_color, _t("press_fill_color")),
+    std::make_pair(sst_color, _t("press_stroke_color")),
+    std::make_pair(sst_color, _t("disable_fill_color")),
+    std::make_pair(sst_color, _t("disable_stroke_color")),
+    std::make_pair(sst_float, _t("normal_fill_opacity")),
+    std::make_pair(sst_float, _t("normal_stroke_opacity")),
+    std::make_pair(sst_float, _t("hover_fill_opacity")),
+    std::make_pair(sst_float, _t("hover_stroke_opacity")),
+    std::make_pair(sst_float, _t("press_fill_opacity")),
+    std::make_pair(sst_float, _t("press_stroke_opacity")),
+    std::make_pair(sst_float, _t("disable_fill_opacity")),
+    std::make_pair(sst_float, _t("disable_stroke_opacity")),
+    std::make_pair(sst_string, _t("candidate_items")),
+    std::make_pair(sst_string, _t("item_font_name")),
+    std::make_pair(sst_integer, _t("item_font_size")),
+    std::make_pair(sst_string, _t("item_font_color")),
+    std::make_pair(sst_color, _t("text_background_color")),
+    std::make_pair(sst_color, _t("text_disable_background_color")),
+    std::make_pair(sst_integer, _t("text_horizontal_margin")),
+    std::make_pair(sst_integer, _t("text_vertical_margin")),
+    std::make_pair(sst_integer, _t("candidate_box_width")),
+};
+
 static const style_sheet_def __menu_style_sheet_defs[] =
 {
     /* same with button style */
@@ -795,6 +824,244 @@ void edit_line_style_sheet::set_value(const string& name, const string& value)
     }
 }
 
+combo_box_style_sheet::combo_box_style_sheet():
+    ariel::style_sheet(__combo_box_style_sheet_defs, _countof(__combo_box_style_sheet_defs))
+{
+    _normal_fill_color = color(245, 246, 247);
+    _normal_stroke_color = color(245, 246, 247, 0);
+    _hover_fill_color = color(232, 239, 247);
+    _hover_stroke_color = color(164, 206, 249);
+    _press_fill_color = color(201, 224, 247);
+    _press_stroke_color = color(98, 162, 228);
+    _disable_fill_color = color(245, 246, 247);
+    _disable_stroke_color = color(0, 0, 0);
+    _candidate_items.assign(_t("combo box"));
+    _item_font_name.assign(_t("Tahoma"));
+    _item_font_size = 10;
+    _item_font_color = color(0, 0, 0);
+    _text_bkground_color = color(250, 251, 252);
+    _text_disable_bkground_color = color(230, 230, 230);
+    _text_horizontal_margin = 5;
+    _text_vertical_margin = 5;
+    _candidate_box_width = 100;
+}
+
+bool combo_box_style_sheet::get_value(const string& name, string& value)
+{
+    int index = get_style_sheet_index(name);
+    switch(index)
+    {
+    case 0:
+        return from_color(value, _normal_fill_color);
+    case 1:
+        return from_color(value, _normal_stroke_color);
+    case 2:
+        return from_color(value, _hover_fill_color);
+    case 3:
+        return from_color(value, _hover_stroke_color);
+    case 4:
+        return from_color(value, _press_fill_color);
+    case 5:
+        return from_color(value, _press_stroke_color);
+    case 6:
+        return from_color(value, _disable_fill_color);
+    case 7:
+        return from_color(value, _disable_stroke_color);
+    case 8:
+        return from_float(value, (float)_normal_fill_color.alpha / 255.f);
+    case 9:
+        return from_float(value, (float)_normal_stroke_color.alpha / 255.f);
+    case 10:
+        return from_float(value, (float)_hover_fill_color.alpha / 255.f);
+    case 11:
+        return from_float(value, (float)_hover_stroke_color.alpha / 255.f);
+    case 12:
+        return from_float(value, (float)_press_fill_color.alpha / 255.f);
+    case 13:
+        return from_float(value, (float)_press_stroke_color.alpha / 255.f);
+    case 14:
+        return from_float(value, (float)_disable_fill_color.alpha / 255.f);
+    case 15:
+        return from_float(value, (float)_disable_stroke_color.alpha / 255.f);
+    case 16:
+        value = _candidate_items;
+        return true;
+    case 17:
+        value = _item_font_name;
+        return true;
+    case 18:
+        return from_integer(value, _item_font_size);
+    case 19:
+        return from_color(value, _item_font_color);
+    case 20:
+        return from_color(value, _text_bkground_color);
+    case 21:
+        return from_color(value, _text_disable_bkground_color);
+    case 22:
+        return from_integer(value, _text_horizontal_margin);
+    case 23:
+        return from_integer(value, _text_vertical_margin);
+    case 24:
+        return from_integer(value, _candidate_box_width);
+    default:
+        return false;
+    }
+}
+
+void combo_box_style_sheet::set_value(const string& name, const string& value)
+{
+    int index = get_style_sheet_index(name);
+    switch(index)
+    {
+    case 0:
+        verify(to_color(_normal_fill_color, value));
+        break;
+    case 1:
+        verify(to_color(_normal_stroke_color, value));
+        break;
+    case 2:
+        verify(to_color(_hover_fill_color, value));
+        break;
+    case 3:
+        verify(to_color(_hover_stroke_color, value));
+        break;
+    case 4:
+        verify(to_color(_press_fill_color, value));
+        break;
+    case 5:
+        verify(to_color(_press_stroke_color, value));
+        break;
+    case 6:
+        verify(to_color(_disable_fill_color, value));
+        break;
+    case 7:
+        verify(to_color(_disable_stroke_color, value));
+        break;
+    case 8:
+        {
+            float f;
+            verify(to_float(f, value));
+            if(f < 0.f || f > 1.f) {
+                assert(!"invalid opacity for button_style_sheet.");
+                return;
+            }
+            _normal_fill_color.alpha = round(f * 255.f);
+            break;
+        }
+    case 9:
+        {
+            float f;
+            verify(to_float(f, value));
+            if(f < 0.f || f > 1.f) {
+                assert(!"invalid opacity for button_style_sheet.");
+                return;
+            }
+            _normal_stroke_color.alpha = round(f * 255.f);
+            break;
+        }
+    case 10:
+        {
+            float f;
+            verify(to_float(f, value));
+            if(f < 0.f || f > 1.f) {
+                assert(!"invalid opacity for button_style_sheet.");
+                return;
+            }
+            _hover_fill_color.alpha = round(f * 255.f);
+            break;
+        }
+    case 11:
+        {
+            float f;
+            verify(to_float(f, value));
+            if(f < 0.f || f > 1.f) {
+                assert(!"invalid opacity for button_style_sheet.");
+                return;
+            }
+            _hover_stroke_color.alpha = round(f * 255.f);
+            break;
+        }
+    case 12:
+        {
+            float f;
+            verify(to_float(f, value));
+            if(f < 0.f || f > 1.f) {
+                assert(!"invalid opacity for button_style_sheet.");
+                return;
+            }
+            _press_fill_color.alpha = round(f * 255.f);
+            break;
+        }
+    case 13:
+        {
+            float f;
+            verify(to_float(f, value));
+            if(f < 0.f || f > 1.f) {
+                assert(!"invalid opacity for button_style_sheet.");
+                return;
+            }
+            _press_stroke_color.alpha = round(f * 255.f);
+            break;
+        }
+    case 14:
+        {
+            float f;
+            verify(to_float(f, value));
+            if(f < 0.f || f > 1.f) {
+                assert(!"invalid opacity for button_style_sheet.");
+                return;
+            }
+            _disable_fill_color.alpha = round(f * 255.f);
+            break;
+        }
+    case 15:
+        {
+            float f;
+            verify(to_float(f, value));
+            if(f < 0.f || f > 1.f) {
+                assert(!"invalid opacity for button_style_sheet.");
+                return;
+            }
+            _disable_stroke_color.alpha = round(f * 255.f);
+            break;
+        }
+    case 16:
+        _candidate_items = value;
+        break;
+    case 17:
+        _item_font_name = value;
+        break;
+    case 18:
+        {
+            int i;
+            verify(to_integer(i, value));
+            _item_font_size = i;
+            break;
+        }
+    case 19:
+        verify(to_color(_item_font_color, value));
+        break;
+    case 20:
+        verify(to_color(_text_bkground_color, value));
+        break;
+    case 21:
+        verify(to_color(_text_disable_bkground_color, value));
+        break;
+    case 22:
+        verify(to_integer(_text_horizontal_margin, value));
+        break;
+    case 23:
+        verify(to_integer(_text_vertical_margin, value));
+        break;
+    case 24:
+        verify(to_integer(_candidate_box_width, value));
+        break;
+    default:
+        assert(!"unexpected style sheet name.");
+        break;
+    }
+}
+
 menu_style_sheet::menu_style_sheet():
     ariel::style_sheet(__menu_style_sheet_defs, _countof(__menu_style_sheet_defs))
 {
@@ -1454,6 +1721,13 @@ void edit_line::draw_background(painter* paint)
     rc.move_to(0.f, 0.f);
     paint->draw_rect(rc);
     paint->restore();
+}
+
+void* combo_box::query_interface(const uuid& uid)
+{
+    if(uid == uuid_style_sheet)
+        return static_cast<style_sheet*>(this);
+    return __super::query_interface(uid);
 }
 
 void horizontal_splitter::on_hover(uint um, const point& pt)
@@ -2558,7 +2832,7 @@ void menu::on_click(uint um, unikey uk, const point& pt)
     on_current_hover(nullptr, um, pt);
     assert(_manager);
     _manager->set_focus(nullptr);
-    capture(false);
+    set_capture(false);
     hide();
 }
 
@@ -2603,8 +2877,8 @@ void menu::startup()
         return;
     }
     show(true);
-    capture(true);
-    focus();
+    set_capture(true);
+    set_focus();
 }
 
 void menu::on_sub_menu(menu_sub_item* item)

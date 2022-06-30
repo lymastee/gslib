@@ -283,9 +283,9 @@ private:
 
 public:
     _string() {}
-    _string(const element* str) { if(str) this->assign(str); }
-    _string(const element* str, int len) { if(str) this->assign(str, len); }
-    _string(element c, int ctr) { this->assign(ctr, c); }
+    explicit _string(const element* str) { if(str) this->assign(str); }
+    explicit _string(const element* str, int len) { if(str) this->assign(str, len); }
+    explicit _string(element c, int ctr) { this->assign(ctr, c); }
     void destroy() { clear(); }
     int length() const { return (int)this->size(); }
     element& front() { return this->at(0); }

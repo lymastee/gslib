@@ -54,21 +54,12 @@ public:
     virtual void move(const rect& rc);
     virtual void refresh(const rect& rc, bool imm = false);
     virtual void draw(painter* paint) {}
-    virtual widget* capture(bool b);
-    virtual widget* focus();
+    virtual widget* set_capture(bool b);
+    virtual widget* set_focus();
     virtual bool hit_test(const point& pt) { return (_style & sm_hitable) != 0; }
 
 public:
-    enum laytag
-    {
-        lay_before,
-        lay_after,
-        lay_first,
-        lay_last,
-    };
-    virtual void lay(widget* ptr, laytag t);
-
-public:
+    /* responsers */
     virtual void on_press(uint um, unikey uk, const point& pt);
     virtual void on_click(uint um, unikey uk, const point& pt);
     virtual void on_hover(uint um, const point& pt);
@@ -96,6 +87,7 @@ public:
     bool is_visible() const { return _visible && (_style & sm_visible); }
     bool is_enabled() const { return _enabled; }
     bool is_focused() const;
+    bool is_inside(const point& pt) const;
     void hide() { show(false); }
     void disable() { enable(false); }
     point& to_global(point& pt) const;

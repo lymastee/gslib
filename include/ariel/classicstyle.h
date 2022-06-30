@@ -132,6 +132,34 @@ protected:
     color               _text_font_color;
 };
 
+class combo_box_style_sheet:
+    public ariel::style_sheet
+{
+public:
+    combo_box_style_sheet();
+    virtual bool get_value(const string& name, string& value) override;
+    virtual void set_value(const string& name, const string& value) override;
+
+protected:
+    color               _normal_fill_color;
+    color               _normal_stroke_color;
+    color               _hover_fill_color;
+    color               _hover_stroke_color;
+    color               _press_fill_color;
+    color               _press_stroke_color;
+    color               _disable_fill_color;
+    color               _disable_stroke_color;
+    string              _candidate_items;           /* format like: item1 | item2 | item3 | ... */
+    string              _item_font_name;
+    int                 _item_font_size;
+    color               _item_font_color;
+    color               _text_bkground_color;
+    color               _text_disable_bkground_color;
+    int                 _text_horizontal_margin;
+    int                 _text_vertical_margin;
+    int                 _candidate_box_width;
+};
+
 class menu_style_sheet:
     public ariel::style_sheet
 {
@@ -348,6 +376,88 @@ protected:
 
 protected:
     virtual void draw_background(painter* paint) override;
+};
+
+struct combo_box_item
+{
+    string              str;
+    int                 id = -1;
+    void*               binding = nullptr;
+};
+
+typedef list<combo_box_item> combo_box_items;
+
+class combo_box:
+    public ariel::widget,
+    public combo_box_style_sheet
+{
+public:
+    enum cb_state
+    {
+        cb_normal,
+        cb_hover,
+        cb_press,
+        cb_disable,
+    };
+
+    typedef unordered_map<string, combo_box_item*> cb_string_map;
+    typedef map<int, combo_box_item*> cb_id_map;
+
+public:
+    combo_box(wsys_manager* m): ariel::widget(m) {}
+    virtual void* query_interface(const uuid& uid) override;
+    virtual void enable(bool b) override;
+    virtual void draw(painter* paint) override;
+    virtual void on_press(uint um, unikey uk, const point& pt) override;
+    virtual void on_click(uint um, unikey uk, const point& pt) override;
+    virtual void on_hover(uint um, const point& pt) override;
+    virtual void on_leave(uint um, const point& pt) override;
+    virtual void flush_style() override;
+    virtual void on_selection_changed(int prev_id);
+
+protected:
+    painter_brush       _normal_brush;
+    painter_pen         _normal_pen;
+    painter_brush       _hover_brush;
+    painter_pen         _hover_pen;
+    painter_brush       _press_brush;
+    painter_pen         _press_pen;
+    painter_brush       _disable_brush;
+    painter_pen         _disable_pen;
+    font                _caption_font;
+    painter_brush       _text_bk_brush;
+    painter_brush       _current_brush;
+    painter_pen         _current_pen;
+
+public:
+    int add_candidate(const string& str, void* binding = nullptr);
+    bool insert_candidate(int id, const string& str, void* binding = nullptr);
+    int query_candidate(const string& str) const;
+    void delete_candidate(int id);
+    void delete_candidate(const string& str) { delete_candidate(query_candidate(str)); }
+    void reset_candidates();
+    void set_selection(int id);
+    int get_selection() const;
+    const string& get_selection_name() const;
+    void* get_selection_binding() const;
+    void* get_binding(int id) const;
+    void* get_binding(const string& str) const;
+
+protected:
+    combo_box_items     _items;
+    combo_box_item*     _curr_item = nullptr;
+    cb_string_map       _str_map;
+    cb_id_map           _id_map;
+
+protected:
+    void set_press();
+    void set_normal();
+    void set_hover();
+    void set_gray();
+    void parse_candidates(const string& str);
+    combo_box_item* find_item(int id) const;
+    combo_box_item* find_item(const string& str) const;
+    void prepare_candidate_box();
 };
 
 typedef slider_service<widget> splitter;

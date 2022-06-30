@@ -343,8 +343,8 @@ bool zip::start(const gchar* name, const gchar* password, const gchar* comment)
     assert(name);
     zip_fileinfo zi;
     memset(&zi, 0, sizeof(zi));
-    zstr zipname = cvtzctlstr(name);
-    zstr zippwd = cvtzctlstr(password);
+    zstr zipname(cvtzctlstr(name));
+    zstr zippwd(cvtzctlstr(password));
     int err = zipOpenNewFileInZip(_zh, zipname.c_str(), &zi, 0, 0, 0, 0, cvtzctlstr(comment), Z_DEFLATED, _arg.level);
     return err == ZIP_OK;
 }

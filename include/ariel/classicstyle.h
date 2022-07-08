@@ -726,6 +726,7 @@ class __gs_novtable menu_cmd_notify abstract
 {
 public:
     virtual bool on_menu_command(menu_cmd_item* item) = 0;
+    dvt_end_of_vtable;
 };
 
 class __gs_novtable menu_item abstract

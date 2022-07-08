@@ -28,6 +28,8 @@
 
 __gslib_begin__
 
+static const int max_vtable_size = 999;
+
 static const byte __notify_code_0[] =
 {
     0x8d, 0x05, 0xcc, 0xcc, 0xcc, 0xcc,     /* lea eax, 0xcccccccc:old_func */
@@ -241,27 +243,61 @@ void* dvt_bridge_code::get_bridge(int index) const
     return (void*)(_bridges + (index * _jt_stride));
 }
 
-dvt_holder::dvt_holder()
+dvt_sub_holder::~dvt_sub_holder()
 {
-    _backvt = nullptr;
-    _backvtsize = 0;
+    if(_subvt && _backvt) {
+        switch_to_dvt();    /* ensure we have dvt here */
+        dvt_recover_vtable(_subvt, _backvt, _backvtsize);
+        _backvt = nullptr;
+        _backvtsize = 0;
+    }
+}
+
+void dvt_sub_holder::switch_to_ovt()
+{
+    if(_switchvt || !_backvt)
+        return;
+    byte* pvt = *(byte**)_subvt;
+    _switchvt = pvt;
+    memcpy(_subvt, &_backvt, 4);
+}
+
+void dvt_sub_holder::switch_to_dvt()
+{
+    if(!_switchvt)
+        return;
+    memcpy(_subvt, &_switchvt, 4);
     _switchvt = nullptr;
-    _delete_later = false;
+}
+
+void dvt_sub_holder::ensure_dvt_available(void* subvt, uint func)
+{
+    assert(subvt);
+    if(_subvt || _backvt)
+        return;
+    _subvt = subvt;
+    _backvtsize = dvt_get_vtable_size(subvt, func) + 1;         /* include eov */
+    _backvt = dvt_create_vtable(subvt, _backvtsize, _bridges);
 }
 
 dvt_holder::~dvt_holder()
 {
-    if(_backvt) {
-        switch_to_dvt();    /* ensure we have dvt here */
-        dvt_recover_vtable(this, _backvt, _backvtsize);
-        _backvt = nullptr;
-        _backvtsize = 0;
-    }
+    _subs.clear();
     for(auto* detour : _detours) {
         assert(detour);
         delete detour;
     }
     _detours.clear();
+}
+
+dvt_sub_holder& dvt_holder::ensure_sub_holder(void* pthis)
+{
+    if(!pthis)
+        pthis = this;
+    auto f = std::lower_bound(_subs.begin(), _subs.end(), pthis, [](const dvt_sub_holder& holder, void* pthis)->bool { return holder.get_subvt() < pthis; });
+    if((f == _subs.end()) || (f->get_subvt() != pthis))
+        f = _subs.emplace(f, _bridges, pthis == this);
+    return *f;
 }
 
 dvt_detour_code* dvt_holder::add_detour(dvt_detour_code::detour_type dty, int argsize)
@@ -272,23 +308,16 @@ dvt_detour_code* dvt_holder::add_detour(dvt_detour_code::detour_type dty, int ar
     return notify;
 }
 
-dvt_holder* dvt_holder::switch_to_ovt()
+void dvt_holder::switch_to_ovt()
 {
-    if(_switchvt || !_backvt)
-        return this;
-    byte* pvt = *(byte**)this;
-    _switchvt = pvt;
-    memcpy(this, &_backvt, 4);
-    return this;
+    for(dvt_sub_holder& subholder : _subs)
+        subholder.switch_to_ovt();
 }
 
-dvt_holder* dvt_holder::switch_to_dvt()
+void dvt_holder::switch_to_dvt()
 {
-    if(!_switchvt)
-        return this;
-    memcpy(this, &_switchvt, 4);
-    _switchvt = nullptr;
-    return this;
+    for(dvt_sub_holder& subholder : _subs)
+        subholder.switch_to_dvt();
 }
 
 bool dvt_collector::set_delete_later(dvt_holder* holder)
@@ -319,18 +348,46 @@ uint dsm_get_address(uint addr, uint pthis)
         return 0;
     if(pfunc[0] == 0xe9)        /* jump offset from addr + 5 */
         return dsm_get_address(addr + 5 + *(int*)(pfunc + 1), pthis);
+    if(pfunc[0] == 0x8d && pfunc[1] == 0x05) {              /* lea eax, ds:[address] */
+        if(pfunc[6] == 0xff && pfunc[7] == 0xe0) {          /* jmp eax */
+            int abs_addr = *(int*)(pfunc + 2);
+            return dsm_get_address(abs_addr, pthis);
+        }
+        assert(!"unexpected.");
+        return 0;
+    }
     if(pfunc[0] == 0x8b && pfunc[1] == 0x01) {              /* mov eax, dword ptr[ecx] */
-        assert((pfunc[2] == 0xff && pfunc[3] == 0x60) ||    /* jmp dword ptr[eax + ?] */
-            (pfunc[2] == 0xff && pfunc[3] == 0x20)          /* jmp dword ptr[eax] todo:??? */
-            );
-        byte* pvt = *(byte**)pthis;
-        pvt += pfunc[4];
-        return dsm_get_address(*(int*)pvt, pthis);
+        if(pfunc[2] == 0xff && pfunc[3] == 0x20) {          /* jmp dword ptr[eax] */
+            byte* pvt = *(byte**)pthis;
+            return dsm_get_address(*(int*)pvt, pthis);
+        }
+        else if(pfunc[2] == 0xff && pfunc[3] == 0x60) {     /* jmp dword ptr[eax + ?] */
+            byte* pvt = *(byte**)pthis;
+            pvt += pfunc[4];
+            return dsm_get_address(*(int*)pvt, pthis);
+        }
+        assert(!"unexpected.");
+        return 0;
     }
     if(pfunc[0] == 0x55)        /* push ebp, means the address was right. */
         return addr;
     assert(!"unexpected dsm code.");
     return addr;
+}
+
+void* dvt_create_vtable(void* pthis, int vtsize, dvt_bridge_code& bridges)
+{
+    assert(pthis);
+    byte* ovt = *(byte**)pthis;
+    void** pvt = (void**)VirtualAlloc(nullptr, vtsize * 4, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+    assert(pvt);
+    bridges.install(ovt, vtsize);
+    for(int i = 0; i < vtsize; i ++)
+        pvt[i] = bridges.get_bridge(i);
+    memcpy(pthis, &pvt, 4);
+    DWORD oldpro;
+    VirtualProtect(pvt, vtsize * 4, PAGE_EXECUTE_READ, &oldpro);
+    return ovt;
 }
 
 void dvt_recover_vtable(void* pthis, void* ovt, int vtsize)
@@ -340,6 +397,47 @@ void dvt_recover_vtable(void* pthis, void* ovt, int vtsize)
     vtsize *= 4;
     VirtualFree(pvt, vtsize, MEM_DECOMMIT);
     memcpy(pthis, &ovt, 4);
+}
+
+int dvt_get_vtable_method_index(void* pthis, uint m, uint eovm)
+{
+    uint mv = dsm_get_address(m, (uint)pthis);
+    uint eov = dsm_get_address(eovm, (uint)pthis);
+    uint* ovt = *(uint**)pthis;
+    for(int i = 0; i < max_vtable_size; i ++) {
+        uint cv = dsm_get_address(ovt[i], (uint)pthis);
+        if(cv == mv)
+            return i;
+        if(cv == eov) {
+            assert(!"get index failed.");
+            return i;
+        }
+    }
+    return -1;
+}
+
+int dvt_get_vtable_size(void* pthis, uint eovm)
+{
+    uint eov = dsm_get_address(eovm, (uint)pthis);
+    uint* ovt = *(uint**)pthis;
+    for(int i = 0; i < max_vtable_size; i ++) {
+        uint cv = dsm_get_address(ovt[i], (uint)pthis);
+        if(cv == eov)
+            return i;
+    }
+    return -1;
+}
+
+uint dvt_replace_vtable_method(void* pthis, int index, uint func)
+{
+    uint* vt = *(uint**)pthis;
+    vt += index;
+    uint r = *vt;
+    DWORD oldpro;
+    VirtualProtect(vt, 4, PAGE_EXECUTE_READWRITE, &oldpro);
+    *vt = func;
+    VirtualProtect(vt, 4, oldpro, &oldpro);
+    return r;
 }
 
 __gslib_end__

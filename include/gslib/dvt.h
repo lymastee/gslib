@@ -32,6 +32,8 @@
 #include <gslib/type.h>
 #include <gslib/std.h>
 
+#define dvt_end_of_vtable   virtual void end_of_vtable() { __asm { nop }; } /* add some real stuff in this function to prevent optimization in release. */
+
 __gslib_begin__
 
 template<class _targetfn>
@@ -42,10 +44,14 @@ inline uint method_address(_targetfn fn)
     return r;
 }
 
-extern uint dsm_get_address(uint addr, uint pthis);
-extern void dvt_recover_vtable(void* pthis, void* ovt, int vtsize);
-
 class dvt_bridge_code;
+
+extern uint dsm_get_address(uint addr, uint pthis);
+extern void* dvt_create_vtable(void* pthis, int vtsize, dvt_bridge_code& bridges);
+extern void dvt_recover_vtable(void* pthis, void* ovt, int vtsize);
+extern int dvt_get_vtable_method_index(void* pthis, uint m, uint eovm);
+extern int dvt_get_vtable_size(void* pthis, uint eovm);
+extern uint dvt_replace_vtable_method(void* pthis, int index, uint func);
 
 template<class _cls>
 class vtable_ops:
@@ -62,73 +68,65 @@ public:
     myref(_arg1 a1, _arg2 a2): _cls(a1, a2) {}
     template<class _arg1, class _arg2, class _arg3>
     myref(_arg1 a1, _arg2 a2, _arg3 a3): _cls(a1, a2, a3) {}
-    virtual void end_of_vtable() { __asm { nop } }      /* add some real stuff in this function to prevent optimization in release. */
+    dvt_end_of_vtable;
 
 public:
-    int get_virtual_method_index(uint m) const
-    {
-        uint mv = dsm_final_address(m);
-        uint eov = dsm_final_address(method_address(&myref::end_of_vtable));
-        uint* ovt = *(uint**)this;
-        int i = 0;
-        for(;; ++ i) {
-            uint cv = dsm_final_address(ovt[i]);
-            if(cv == mv)
-                return i;
-            if(cv == eov) {
-                assert(!"get index failed.");
-                return i;
-            }
-        }
-        return -1;
-    }
-    int size_of_vtable() const
-    {
-        return get_virtual_method_index(
-            dsm_final_address(method_address(&myref::end_of_vtable))
-            );
-    }
-    void* create_per_instance_vtable(_cls* p, dvt_bridge_code& bridges)
-    {
-        assert(p);
-        int count = size_of_vtable();
-        byte* ovt = *(byte**)p;
-        void** pvt = (void**)VirtualAlloc(nullptr, count * 4, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
-        assert(pvt);
-        bridges.install(ovt, count);
-        for(int i = 0; i < count; i ++)
-            pvt[i] = bridges.get_bridge(i);
-        memcpy(p, &pvt, 4);
-        DWORD oldpro;
-        VirtualProtect(pvt, count * 4, PAGE_EXECUTE_READ, &oldpro);
-        return ovt;
-    }
-    void destroy_per_instance_vtable(_cls* p, void* ovt)
-    {
-        assert(p && ovt);
-        dvt_recover_vtable(p, ovt, size_of_vtable());
-    }
-    template<class _func>
-    uint replace_vtable_method(_cls* p, int index, _func func)
-    {
-        uint* vt = *(uint**)p;
-        vt += index;
-        uint r = *vt;
-        DWORD oldpro;
-        VirtualProtect(vt, 4, PAGE_EXECUTE_READWRITE, &oldpro);
-        *vt = (uint)func;
-        VirtualProtect(vt, 4, oldpro, &oldpro);
-        return r;
-    }
-
-private:
-    uint dsm_final_address(uint addr) const
-    {
-        return dsm_get_address(
-            addr, (uint)((void*)this)
-        );
-    }
+    int get_virtual_method_index(uint m) const { return dvt_get_vtable_method_index((void*)this, m, method_address(&myref::end_of_vtable)); }
+    int size_of_vtable() const { return dvt_get_vtable_size((void*)this, method_address(&myref::end_of_vtable)); }
+    uint replace_vtable_method(void* p, int index, uint func) { return dvt_replace_vtable_method(p, index, func); }
 };
+
+/*
+ * The two kind of DVT callings:
+ * 1.notify:    the original function would be called first, and then the notify function will be called after, you MUST specify the size of the argument table.
+ * 2.reflect:   the original function would NOT be called, simply jump to the reflect function, and the argument table of the reflect function SHOULD be exactly the same with the original function.
+ */
+#define connect_typed_detour(targettype, target, trigger, host, action, dty, argsize) { \
+    auto& vo = vtable_ops<targettype>(nullptr); \
+    auto& sub = (target)->ensure_sub_holder(nullptr); \
+    sub.ensure_main_dvt_available<targettype>((target)); \
+    auto* detour = (target)->add_detour(dty, argsize); \
+    assert(detour); \
+    uint old_func = vo.replace_vtable_method(target, vo.get_virtual_method_index(method_address(trigger)), detour->get_code_address()); \
+    detour->finalize(old_func, (uint)host, method_address(action)); \
+}
+
+#define connect_typed_notify(targettype, target, trigger, host, action, argsize) \
+    connect_typed_detour(targettype, target, trigger, host, action, dvt_detour_code::detour_notify, argsize)
+
+#define connect_notify(target, trigger, host, action, argsize) \
+    connect_typed_notify(std::remove_reference_t<decltype(*target)>, target, trigger, host, action, argsize)
+
+#define connect_typed_reflect(targettype, target, trigger, host, action) \
+    connect_typed_detour(targettype, target, trigger, host, action, dvt_detour_code::detour_reflect, 0)
+
+#define connect_reflect(target, trigger, host, action) \
+    connect_typed_reflect(std::remove_reference_t<decltype(*target)>, target, trigger, host, action)
+
+#define connect_subnode_typed_detour(targettype, subtype, target, trigger, host, action, dty, argsize) { \
+    auto* subnode = static_cast<subtype*>(target); \
+    assert((void*)subnode != (void*)(target)); \
+    auto& sub = (target)->ensure_sub_holder(subnode); \
+    uint eov = method_address(&subtype::end_of_vtable); \
+    sub.ensure_dvt_available(subnode, eov); \
+    auto* detour = (target)->add_detour(dty, argsize); \
+    assert(detour); \
+    int id = dvt_get_vtable_method_index(subnode, method_address(trigger), eov); \
+    uint old_func = dvt_replace_vtable_method(subnode, id, detour->get_code_address()); \
+    detour->finalize(old_func, (uint)host, method_address(action)); \
+}
+
+#define connect_subnode_typed_notify(targettype, subtype, target, trigger, host, action, argsize) \
+    connect_subnode_typed_detour(targettype, subtype, target, trigger, host, action, dvt_detour_code::detour_notify, argsize)
+
+#define connect_subnode_notify(subtype, target, trigger, host, action, argsize) \
+    connect_subnode_typed_notify(std::remove_reference_t<decltype(*target)>, subtype, target, trigger, host, action, argsize)
+
+#define connect_subnode_typed_reflect(targettype, subtype, target, trigger, host, action) \
+    connect_subnode_typed_detour(targettype, subtype, target, trigger, host, action, dvt_detour_code::detour_reflect, 0)
+
+#define connect_subnode_reflect(subtype, target, trigger, host, action) \
+    connect_subnode_typed_reflect(std::remove_reference_t<decltype(*target)>, subtype, target, trigger, host, action)
 
 class dvt_detour_code
 {
@@ -156,32 +154,6 @@ private:
 };
 
 /*
- * The two kind of DVT callings:
- * 1.notify:    the original function would be called first, and then the notify function will be called after, you MUST specify the size of the argument table.
- * 2.reflect:   the original function would NOT be called, simply jump to the reflect function, and the argument table of the reflect function SHOULD be exactly the same with the original function.
- */
-#define connect_typed_detour(targettype, target, trigger, host, action, dty, argsize) { \
-    auto& vo = vtable_ops<targettype>(nullptr); \
-    (target)->ensure_dvt_available<targettype>(); \
-    auto* detour = (target)->add_detour(dty, argsize); \
-    assert(detour); \
-    uint old_func = vo.replace_vtable_method(target, vo.get_virtual_method_index(method_address(trigger)), detour->get_code_address()); \
-    detour->finalize(old_func, (uint)host, method_address(action)); \
-}
-
-#define connect_typed_notify(targettype, target, trigger, host, action, argsize) \
-    connect_typed_detour(targettype, target, trigger, host, action, dvt_detour_code::detour_notify, argsize)
-
-#define connect_notify(target, trigger, host, action, argsize) \
-    connect_typed_notify(std::remove_reference_t<decltype(*target)>, target, trigger, host, action, argsize)
-
-#define connect_typed_reflect(targettype, target, trigger, host, action) \
-    connect_typed_detour(targettype, target, trigger, host, action, dvt_detour_code::detour_reflect, 0)
-
-#define connect_reflect(target, trigger, host, action) \
-    connect_typed_reflect(std::remove_reference_t<decltype(*target)>, target, trigger, host, action)
-
-/*
  * Bridge to jump to the original vtable
  * The reason why we can't simply copy the original vtable was that it's hard to determine how long the vtable actually was.
  * If the target class had a complex derivations, missing a part of the vtable would make you unable to call __super::function.
@@ -200,36 +172,59 @@ protected:
     int             _jt_stride;         /* jump table stride in bytes */
 };
 
+class dvt_sub_holder
+{
+public:
+    dvt_sub_holder(dvt_bridge_code& bridges, bool mainvt): _bridges(bridges), _mainvt(mainvt) {}
+    ~dvt_sub_holder();
+    void* get_subvt() const { return _subvt; }
+    void switch_to_ovt();               /* switch to original vtable */
+    void switch_to_dvt();
+
+private:
+    dvt_bridge_code& _bridges;
+    void*           _subvt = nullptr;
+    void*           _backvt = nullptr;
+    int             _backvtsize = 0;
+    void*           _switchvt = nullptr;
+    bool            _mainvt = false;
+
+public:
+    void ensure_dvt_available(void* subvt, uint func);
+    template<class _cls>
+    void ensure_main_dvt_available(void* pthis)
+    {
+        assert(pthis);
+        if(_subvt || _backvt)
+            return;
+        _subvt = pthis;
+        auto& vo = vtable_ops<_cls>(nullptr);
+        _backvtsize = vo.size_of_vtable();
+        _backvt = dvt_create_vtable(pthis, _backvtsize, _bridges);
+    }
+};
+
 class dvt_holder
 {
 public:
     typedef vector<dvt_detour_code*> detour_list;
+    typedef list<dvt_sub_holder> sub_holders;
 
 public:
-    dvt_holder();
+    dvt_holder() {}
     virtual ~dvt_holder();
 
 private:
-    void*           _backvt;
-    int             _backvtsize;
-    void*           _switchvt;
+    sub_holders     _subs;
     detour_list     _detours;
-    bool            _delete_later;
     dvt_bridge_code _bridges;
+    bool            _delete_later = false;
 
 public:
-    template<class _cls>
-    void ensure_dvt_available()
-    {
-        if(_backvt)
-            return;
-        auto& vo = vtable_ops<_cls>(nullptr);
-        _backvtsize = vo.size_of_vtable();
-        _backvt = vo.create_per_instance_vtable(static_cast<_cls*>(this), _bridges);
-    }
+    dvt_sub_holder& ensure_sub_holder(void* pthis);
     dvt_detour_code* add_detour(dvt_detour_code::detour_type dty, int argsize);
-    dvt_holder* switch_to_ovt();        /* switch to original vtable */
-    dvt_holder* switch_to_dvt();
+    void switch_to_ovt();        /* switch to original vtable */
+    void switch_to_dvt();
     /*
      * In case the holder would be tagged more than once by the garbage collector, the cause might be
      * a message re-entrant of the msg callback function. So here we tag it.

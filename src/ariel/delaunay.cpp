@@ -91,72 +91,6 @@ static bool dt_on_edge(const vec2& p, dt_edge* e)
     return dt_on_edge(p, e->get_org_point(), e->get_dest_point());
 }
 
-static dt_edge* dt_locate_point(const vec2& p, dt_edge* start)
-{
-    assert(start);
-    auto* e = start;
-    int s = 0;
-    for(;;) {
-        if(p == e->get_org_point() || p == e->get_dest_point())
-            return e;
-        else if(!dt_right_of(p, e->get_org_next())) {
-            if(s != 1) {
-                s = 1;
-                start = e;
-            }
-            e = e->get_org_next();
-            if(e == start)
-                return nullptr;
-        }
-        else if(!dt_right_of(p, e->get_dest_prev())) {
-            if(s != 2) {
-                s = 2;
-                start = e;
-            }
-            e = e->get_dest_prev();
-            if(e == start)
-                return nullptr;
-        }
-    }
-    return nullptr;
-}
-
-static dt_edge* dt_locate_joint(dt_joint* j, dt_edge* start)
-{
-    assert(start);
-    auto* b = j->get_binding();
-    auto& p = j->get_point();
-    auto* e = start;
-    int s = 0;
-    for(;;) {
-        if(b == e->get_org()->get_binding() || b == e->get_dest()->get_binding())
-            return e;
-        else if(dt_on_edge(p, e))
-            return e;
-        else if(!dt_right_of(p, e->get_org_next())) {
-            if(s != 1) {
-                s = 1;
-                start = e;
-            }
-            e = e->get_org_next();
-            if(e == start)
-                return nullptr;
-        }
-        else if(!dt_right_of(p, e->get_dest_prev())) {
-            if(s != 2) {
-                s = 2;
-                start = e;
-            }
-            e = e->get_dest_prev();
-            if(e == start)
-                return nullptr;
-        }
-        else
-            return e;
-    }
-    return nullptr;
-}
-
 static bool dt_line_intersect(const vec2& p1, const vec2& p2, const vec2& p3, const vec2& p4)
 {
     if(p1 == p3 || p1 == p4 || p2 == p3 || p2 == p4)
@@ -253,20 +187,6 @@ static void dt_collect_intersect_edges_c(const vec2& p1, const vec2& p2, dt_edge
     ints = ints->get_symmetric();
     edges.push_back(ints);
     dt_collect_intersect_edges_c(p1, p2, edges, ints);
-}
-
-static void dt_collect_intersect_edges(const vec2& p1, const vec2& p2, dt_edge_list& edges, dt_edge* start)
-{
-    assert(start);
-    auto* init = dt_locate_point(p1, start);
-    if(!init)
-        return;
-    if(init->get_org_point() != p1)
-        init = init->get_symmetric();
-    assert(init->get_org_point() == p1 &&
-        "This function only used for the situation that the query point was on the mesh."
-        );
-    dt_collect_intersect_edges_w(p1, p2, edges, init);
 }
 
 static bool dt_can_flip(dt_edge* e)
@@ -366,16 +286,21 @@ static void dt_trace_edge_loop(dt_edge* e)
         dt_trace_edge(n);
 }
 
+static dt_edge* dt_find_edge(const vec2& p, dt_edges& edges)
+{
+    for(dt_edge* e : edges) {
+        if(e->get_org_point() == p)
+            return e;
+        else if(e->get_dest_point() == p)
+            return e->get_symmetric();
+    }
+    return nullptr;
+}
+
 static bool dt_joint_compare(const dt_joint* i, const dt_joint* j) 
 {
     assert(i && j);
-    auto& p1 = i->get_point();
-    auto& p2 = j->get_point();
-    if(p1.x < p2.x)
-        return true;
-    else if(p1.x > p2.x)
-        return false;
-    return p1.y < p2.y;
+    return dt_ptorder()(i->get_point(), j->get_point());
 };
 
 dt_edge::dt_edge()
@@ -488,12 +413,9 @@ void delaunay_triangulation::clear()
 
 dt_edge* delaunay_triangulation::add_constraint(const vec2& p1, const vec2& p2)
 {
-    auto* init = dt_locate_point(p1, _edge_range.left);
-    if(!init) {
-        init = dt_locate_point(p1, _edge_range.right);
-        if(!init)
-            return nullptr;
-    }
+    auto* init = dt_find_edge(p1, _edge_holdings);
+    if(!init)
+        return nullptr;
     assert(init);
     if(init->get_org_point() != p1)
         init = init->get_symmetric();
@@ -704,11 +626,9 @@ dt_edge_range delaunay_triangulation::delaunay(int begin, int end)
         for(;;) {
             auto* lcand = basel->get_symmetric()->get_org_next();
             if(dt_valid(lcand, basel)) {
-                while(is_in_range(begin, center-1, lcand->get_org_next()->get_dest()) && // 删除左侧边要保证在左侧集合中，不做此判断会导致 basel 被误删 
-                    dt_right_of(lcand->get_org_next()->get_dest_point(), basel) && // 候选边要保证与 basel 夹角小于 180 度，即在 basel 的右侧
-                    dt_in_circle(basel->get_dest_point(), basel->get_org_point(),
-                    lcand->get_dest_point(), lcand->get_org_next()->get_dest_point()
-                    )) {
+                while(is_in_range(begin, center-1, lcand->get_org_next()->get_dest()) && dt_right_of(lcand->get_org_next()->get_dest_point(), basel) &&
+                    dt_in_circle(basel->get_dest_point(), basel->get_org_point(), lcand->get_dest_point(), lcand->get_org_next()->get_dest_point())
+                    ) {
                     auto* t = lcand->get_org_next();
                     destroy_edge_pair(lcand);
                     lcand = t;
@@ -716,11 +636,9 @@ dt_edge_range delaunay_triangulation::delaunay(int begin, int end)
             }
             auto* rcand = basel->get_org_prev();
             if(dt_valid(rcand, basel)) {
-                while(is_in_range(center, end, rcand->get_org_prev()->get_dest()) && // 删除右侧边要保证在右侧集合中，不做此判断会导致 basel 被误删 
-                    dt_right_of(rcand->get_org_prev()->get_dest_point(), basel) && // 候选边要保证与 basel 夹角小于 180 度，即在 basel 的右侧
-                    dt_in_circle(basel->get_dest_point(), basel->get_org_point(),
-                    rcand->get_dest_point(), rcand->get_org_prev()->get_dest_point()
-                    )) {
+                while(is_in_range(center, end, rcand->get_org_prev()->get_dest()) && dt_right_of(rcand->get_org_prev()->get_dest_point(), basel) &&
+                    dt_in_circle(basel->get_dest_point(), basel->get_org_point(), rcand->get_dest_point(), rcand->get_org_prev()->get_dest_point())
+                    ) {
                     auto* t = rcand->get_org_prev();
                     destroy_edge_pair(rcand);
                     rcand = t;

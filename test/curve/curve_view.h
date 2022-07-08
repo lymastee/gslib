@@ -6,21 +6,7 @@
 __ariel_begin__
 
 typedef classic_style::button my_button;
-//typedef classic_style::menu my_menu;
-
-// 555, 骚不动了，这里的动态虚表dsm取地址时有点问题，以后再调，先这么搞一下
-class curve_view;
-class my_menu:
-    public classic_style::menu
-{
-public:
-    my_menu(wsys_manager* m): classic_style::menu(m) {}
-    void set_host(curve_view* cv) { _host = cv; }
-    virtual bool on_menu_command(classic_style::menu_cmd_item* item) override;
-
-private:
-    curve_view*         _host = nullptr;
-};
+typedef classic_style::menu my_menu;
 
 class curve_view:
     public widget

@@ -277,19 +277,19 @@ public:
             );
         edit1->flush_style();
 
-    //    auto* menu1 = wsys->add_widget<classic_style::menu>(
-    //        bk, _t("menu1"), rect(10, 70, 1, 1), sm_hitable|sm_visible
-    //        );
-    //    assert(menu1);
-    //    menu1->flush_style();
-    //    classic_style::create_menu_from_script(menu1,
-    //        _t("Menu Test 1,Ctrl+A:@MenuTestCmd1;")
-    //        _t("[separator];")
-    //        _t("Menu Test 2, Ctrl+B:{")
-    //        _t("Menu Test 2-1,:@MenuTestCmd2;")
-    //        _t("}")
-    //        );
-    //    menu1->startup();
+//        auto* menu1 = wsys->add_widget<classic_style::menu>(
+//            bk, _t("menu1"), rect(10, 70, 1, 1), sm_hitable|sm_visible
+//            );
+//        assert(menu1);
+//        menu1->flush_style();
+//        classic_style::create_menu_from_script(menu1,
+//            _t("Menu Test 1,Ctrl+A:@MenuTestCmd1;")
+//            _t("[separator];")
+//            _t("Menu Test 2, Ctrl+B:{")
+//            _t("Menu Test 2-1,:@MenuTestCmd2;")
+//            _t("}")
+//            );
+//        menu1->startup();
 
         auto* horihori = wsys->add_widget<classic_style::vertical_scrollbar>(bk, nullptr, rect(300, 300, 18, 100), sm_visible | sm_hitable);
         horihori->flush_style();

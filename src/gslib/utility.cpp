@@ -356,7 +356,11 @@ float get_cubic_curvature(const vec2& p1, const vec2& p2, const vec2& p3, const 
 
 int solve_univariate_quadratic(float t[2], const vec3& coef)
 {
-    assert(coef.x != 0);
+    assert(!(fuzzy_zero(coef.x) && fuzzy_zero(coef.y)));
+    if(fuzzy_zero(coef.x)) {
+        t[0] = -coef.z / coef.y;
+        return 1;
+    }
     float delta = coef.y * coef.y - 4.f * coef.x * coef.z;
     if(delta < 0)
         return 0;
@@ -373,287 +377,118 @@ int solve_univariate_quadratic(float t[2], const vec3& coef)
     }
 }
 
-static float cbrt(float d)
+typedef std::complex<float> complexf;
+
+static float cbrt(float d) { return powf(abs(d), 1.f / 3); }
+static float cmod(const complexf& c) { return _hypotf(c.real(), c.imag()); }
+static float ctheta(const complexf& c) { return atan2f(c.imag(), c.real()); }
+
+static complexf csqrt(const complexf& c)
 {
-    return d >= 0.f ? powf(d, 1.f / 3) :
-        -powf(-d, 1.f / 3);
-}
-
-typedef std::complex<float> fcomplex;
-
-static float cmodulesq(const fcomplex& c) { return c.real() * c.real() + c.imag() * c.imag(); }
-static float cmodule(const fcomplex& c) { return sqrtf(cmodulesq(c)); }
-static float ctheta(const fcomplex& c) { return atan2f(c.imag(), c.real()); }
-
-static void csqrt(fcomplex out[2], const fcomplex& c)
-{
-    float m = sqrtf(cmodule(c));
+    float m = sqrtf(cmod(c));
     float t = ctheta(c) * 0.5f;
-    out[0] = fcomplex(m * cosf(t), m * sinf(t));
-    out[1] = fcomplex(m * cosf(t + PI), m * sinf(t + PI));
+    return complexf(m * cosf(t), m * sinf(t));
 }
 
-static void ccbrt(fcomplex out[3], const fcomplex& c)
+static complexf ccbrt(const complexf& c)
 {
-    float m = cbrt(cmodule(c));
-    float t = ctheta(c) * 0.333333f;
-    out[0] = fcomplex(m * cosf(t), m * sinf(t));
-    t += PI * 0.666667f;
-    out[1] = fcomplex(m * cosf(t), m * sinf(t));
-    t += PI * 0.666667f;
-    out[2] = fcomplex(m * cosf(t), m * sinf(t));
+    float m = cbrt(cmod(c));
+    float t = ctheta(c) / 3.f;
+    return complexf(m * cosf(t), m * sinf(t));
+}
+
+static int calc_real_roots(float t[], const complexf fc[], int c)
+{
+    int cnt = 0;
+    for(int i = 0; i < c; i ++) {
+        if(!isfinite(fc[i].real()) || !isfinite(fc[i].imag()))
+            continue;
+        if(fuzzy_zero(fc[i].imag()))
+            t[cnt ++] = fc[i].real();
+    }
+    return cnt;
 }
 
 int solve_univariate_cubic(float t[3], const vec4& coef)
 {
     assert(!(fuzzy_zero(coef.x) && fuzzy_zero(coef.y) && fuzzy_zero(coef.z)));
-    if(fuzzy_zero(coef.x) && fuzzy_zero(coef.y)) {
-        t[0] = -coef.w /coef.z;
-        return 1;
-    }
-    else if(fuzzy_zero(coef.x)) {
-        float delta = coef.z * coef.z - 4.f * coef.y * coef.w;
-        if(delta < 0)
-            return 0;
-        delta = sqrtf(delta);
-        t[0] = (-coef.z + delta) / coef.y * 0.5f;
-        t[1] = (-coef.z - delta) / coef.y * 0.5f;
-        return fuzzy_zero(delta) ? 1 : 2;
-    }
-    else {
-        float ydx = coef.y / coef.x;
-        float a = -ydx * 0.333333f;
-        float b = (ydx * coef.z * 0.166667f - ydx * ydx * coef.y * 0.037037f - coef.w * 0.5f) / coef.x;
-        float c = (coef.z * 0.333333f - ydx * coef.y * 0.111111f) / coef.x;
-        float delta = b * b + c * c * c;
-        if(fuzzy_zero(delta)) {
-            if(fuzzy_zero(b)) { t[0] = a; return 1; }
-            else {
-                float cb = cbrt(b);
-                t[0] = a + cb + cb;
-                t[1] = a - cb;
-                return 2;
-            }
-        }
-        else if(delta > 0.f) {
-            delta = sqrtf(delta);
-            t[0] = a + cbrt(b - delta) + cbrt(b + delta);
-            return 1;
-        }
-        else {
-            fcomplex ca(a, 0), cb(b, 0), cc(c, 0);
-            fcomplex cdelta = cb * cb + cc * cc * cc;
-            if(abs(cdelta.real()) > 1e18f)
-                return 0;
-            fcomplex sqd[2], cbrt1[3], cbrt2[3];
-            csqrt(sqd, cdelta);
-            ccbrt(cbrt1, cb + sqd[0]);
-            ccbrt(cbrt2, cb + sqd[1]);
-            fcomplex r1 = ca + cbrt1[0] + cbrt2[0],
-                r2 = ca + cbrt1[1] + cbrt2[2],
-                r3 = ca + cbrt1[2] + cbrt2[1];
-            t[0] = r1.real();
-            t[1] = r2.real();
-            t[2] = r3.real();
-            return 3;
-        }
-    }
+    if(fuzzy_zero(coef.x))
+        return solve_univariate_quadratic(t, vec3(coef.y, coef.z, coef.w));
+    complexf a(coef.x), b(coef.y), c(coef.z),d (coef.w);
+    complexf P = 4.f * (b * b - 3.f * a * c);
+    complexf Q = 4.f * (9.f * a * b * c - 27.f * a * a * d - 2.f * b * b * b);
+    complexf D = csqrt(Q * Q - P * P * P);
+    complexf u = ccbrt(Q + D);
+    complexf v = ccbrt(Q - D);
+    if(v.real() * v.real() + v.imag() * v.imag() > u.real() * u.real() + u.imag() * u.imag())
+        u = v;
+    if(fabsf(u.real()) > FLT_MIN || fabsf(u.imag()) > FLT_MIN)
+        v = P / u;
+    else
+        u = v = 0.f;
+    complexf o1(-0.5f, 0.8660254f);
+    complexf o2(-0.5f, -0.8660254f);
+    D = 1.f / 6.f / a;
+    complexf cr[3];
+    cr[0] = (u + v - 2.f * b) * D;
+    cr[1] = (o1 * u + o2 * v - 2.f * b) * D;
+    cr[2] = (o2 * u + o1 * v - 2.f * b) * D;
+    return calc_real_roots(t, cr, 3);
 }
-
-static float det(float a, float b, float c, float d) { return (a * d - b * c) / (a * a); }
 
 int solve_univariate_quartic(float t[4], const float coef[5])
 {
-    int cnt = 0;
-    float k0, l0, m0, n0, p0, q0, r0, discr, x1, x2, x3, u, v;
-    float a = coef[0];
-    float b = coef[1] * 0.25f;
-    float c = coef[2] * 0.1666667f;
-    float d = coef[3] * 0.25f;
-    float e = coef[4];
-    k0 = -b / a;
-    l0 = det(a, b, b, c);
-    m0 = det(a, b, c, d);
-    n0 = det(a, b, d, e);
-    p0 = 6.f * l0;
-    q0 = 8.f * k0 * l0 + 4.f * m0;
-    r0 = 3.f * k0 * k0 * l0 + 3.f * k0 * m0 + n0;
-    if(fuzzy_zero(q0)) {
-        p0 *= 0.5f;
-        discr = p0 * p0 - r0;
-        if(fuzzy_zero(discr)) {
-            if(fuzzy_zero(p0)) {
-                t[0] = k0;
-                cnt = 1;
-            }
-            else if(p0 > 1e-10f) {
-                t[0] = k0;
-                cnt = 1;
-            }
-            else {
-                u = sqrtf(-p0);
-                t[0] = k0 - u;
-                t[1] = k0 + u;
-                cnt = 2;
-            }
-        }
-        else if(discr > 1e-10f) {
-            float sq = sqrtf(discr);
-            x1 = -p0 - sq;
-            x2 = -p0 + sq;
-            if(fuzzy_zero(x2)) {
-                t[0] = k0;
-                cnt = 1;
-            }
-            else if(fuzzy_zero(x1)) {
-                u = sqrtf(x2);
-                t[0] = k0 - u;
-                t[1] = k0 + u;
-                t[2] = k0;
-                cnt = 3;
-            }
-            else if(x2 < -1e-10f) {
-                t[0] = k0;
-                cnt = 1;
-            }
-            else if(x1 > 1e-10f) {
-                u = sqrtf(x1);
-                v = sqrtf(x2);
-                t[0] = k0 - v;
-                t[1] = k0 - u;
-                t[2] = k0 + u;
-                t[3] = k0 + v;
-                cnt = 4;
-            }
-            else {
-                v = sqrtf(x2);
-                t[0] = k0 - v;
-                t[1] = k0 + v;
-                t[2] = k0;
-                cnt = 3;
-            }
-        }
-        else {
-            float pwcf = powf(r0, 0.25f) * cosf(atan2f(sqrtf(-discr), -p0) * 0.5f);
-            t[0] = k0 - pwcf;
-            t[1] = k0 + pwcf;
-            cnt = 2;
+    if(fuzzy_zero(coef[0]))
+        return solve_univariate_cubic(t, vec4(coef[1], coef[2], coef[3], coef[4]));
+    complexf a(coef[0]), b(coef[1]), c(coef[2]), d(coef[3]), e(coef[4]);
+    complexf P = (c * c + 12.f * a * e - 3.f * b * d) / 9.f;
+    complexf Q = (27.f * a * d * d + 2.f * c * c * c + 27.f * b * b * e - 72.f * a * c * e - 9.f * b * c * d) / 54.f;
+    complexf D = csqrt(Q * Q - P * P * P);
+    complexf u = ccbrt(Q + D);
+    complexf v = ccbrt(Q - D);
+    if(v.real() * v.real() + v.imag() * v.imag() > u.real() * u.real() + u.imag() * u.imag())
+        u = v;
+    if(fabsf(u.real()) > FLT_MIN || fabsf(u.imag()) > FLT_MIN)
+        v = P / u;
+    else
+        u = v = 0.f;
+    complexf m;
+    complexf S = b * b - (8.f / 3.f) * a * c;
+    complexf T = 4.f * a;
+    complexf o1(-0.5f, 0.8660254f);
+    complexf o2(-0.5f, -0.8660254f);
+    u *= T, v *= T;
+    complexf r[3] = {
+        u + v,
+        o1 * u + o2 * v,
+        o2 * u + o1 * v
+    };
+    float msq = 0.f, maxmsq = -1.f;
+    int pos = -1;
+    for(int i = 0; i < 3; ++ i) {
+        T = S + r[i];
+        msq = T.real() * T.real() + T.imag() * T.imag();
+        if(maxmsq < msq) {
+            maxmsq = msq;
+            pos = i;
         }
     }
-    else {
-        float p1, q1, r1, i, j, k, m, n, p, q, t1, t2;
-        p1 = (p0 * p0 - 4.f * r0) / (6.f * q0);
-        q1 = -p0 * 0.1666667f;
-        r1 = q0 * 0.125f;
-        k = -p1;
-        i = det(1,p1,p1,q1);
-        j = det(1,p1,q1,r1);
-        p = i;
-        q = k * i + j * 0.5f;
-        discr = q * q + p * p * p;
-        if(fuzzy_zero(discr)) {
-            if(fuzzy_zero(q)) {
-                t[0] = k0 + 3.f * k;
-                t[1] = k0 - k;
-                cnt = 2;
-            }
-            else {
-                float cb = cbrt(-q);
-                x1 = k + cb + cb;
-                x2 = k - cb;
-                if(x1 > 1e-10f && x2 > 1e-10f || x1 < -1e-10f && x2 < -1e-10f) {
-                    float dsq = 2.f * sqrtf(x1 * x2);
-                    t[0] = k0 - dsq + x2;
-                    t[1] = k0 + dsq + x2;
-                    t[2] = k0 - x2;
-                    cnt = 3;
-                }
-                else if(x1 < -1e-10f && x2 > 1e-10f || x1 > 1e-10f && x2 < -1e-10f) {
-                    t[0] = k0 - x2;
-                    t[1] = k0 + x2;
-                    cnt = 2;
-                }
-            }
-        }
-        else if(discr > 1e-10f) {
-            discr = sqrtf(discr);
-            t1 = -q - discr;
-            t2 = -q + discr;
-            t1 = cbrt(t1);
-            t2 = cbrt(t2);
-            x1 = k + t1 + t2;
-            m = k - (t1 + t2) * 0.5f;
-            n = 0.8660254f * (t2 - t1);
-            float r = sqrtf(m * m + n * n);
-            float x = atan2f(n, m);
-            if(x1 > 0.f) {
-                float dsqcf = 2.f * sqrtf(x1 * r) * cosf(x * 0.5f);
-                t[0] = k0 + r - dsqcf;
-                t[1] = k0 + r + dsqcf;
-                t[2] = k0 - r;
-                cnt = 3;
-            }
-            else {
-                float dsqsf = 2.f * sqrtf(-x1 * r) * sinf(x * 0.5f);
-                t[0] = k0 - r - dsqsf;
-                t[1] = k0 - r + dsqsf;
-                t[2] = k0 + r;
-                cnt = 3;
-            }
-        }
-        else {
-            if(fuzzy_zero(q)) {
-                float sq = sqrtf(-3.f * p);
-                x1 = k - sq;
-                x2 = k;
-                x3 = k + sq;
-            }
-            else {
-                discr = sqrtf(-discr);
-                float x = atan2f(discr, -q);
-                t1 = sqrtf(-p) * cosf(x * 0.3333333f);
-                t2 = sqrtf(-3.f * p) * sinf(x * 0.3333333f);
-                x1 = k - t1 - t2;
-                x2 = k - t1 + t2;
-                x3 = k + t1 + t1;
-            }
-            if(x1 > 1e-10f) {
-                float sq12 = sqrtf(x1 * x2);
-                float sq13 = sqrtf(x1 * x3);
-                float sq23 = sqrtf(x2 * x3);
-                t[0] = k0 + sq12 - sq13 - sq23;
-                t[1] = k0 - sq12 + sq13 - sq23;
-                t[2] = k0 - sq12 - sq13 + sq23;
-                t[3] = k0 + sq12 + sq13 + sq23;
-                cnt = 4;
-            }
-            else if(x3 < -1e-10f) {
-                float sq12 = sqrtf(x1 * x2);
-                float sq13 = sqrtf(x1 * x3);
-                float sq23 = sqrtf(x2 * x3);
-                t[0] = k0 - sq12 - sq13 - sq23;
-                t[1] = k0 - sq12 + sq13 + sq23;
-                t[2] = k0 + sq12 - sq13 + sq23;
-                t[3] = k0 + sq12 + sq13 - sq23;
-                cnt = 4;
-            }
-            else {
-                if(x2 > 0.f) {
-                    float sq = sqrtf(x2 * x3);
-                    t[0] = k0 - sq;
-                    t[1] = k0 + sq;
-                    cnt = 2;
-                }
-                else {
-                    float sq = sqrtf(x1 * x2);
-                    t[0] = k0 - sq;
-                    t[1] = k0 + sq;
-                    cnt = 2;
-                }
-            }
-        }
+    if(maxmsq > FLT_MIN) {
+        m = csqrt(S + r[pos]);
+        S = 2.f * b * b - (16.f / 3.f) * a * c - r[pos];
+        T = (8.f * a * b * c - 16.f * a * a * d - 2.f * b * b * b) / m;
     }
-    return cnt;
+    else
+        m = T = 0.f;
+    complexf cr[4];
+    v = 1.f / 4.f / a;
+    u = csqrt(S - T);
+    cr[0] = (-b - m + u) * v;
+    cr[1] = (-b - m - u) * v;
+    u = csqrt(S + T);
+    cr[2] = (-b + m + u) * v;
+    cr[3] = (-b + m - u) * v;
+    return calc_real_roots(t, cr, 4);
 }
 
 int get_cubic_inflection(float t[2], const vec2& p1, const vec2& p2, const vec2& p3, const vec2& p4)
@@ -805,31 +640,63 @@ int intersection_quad_linear(float t[2], const vec3 quad[2], const vec3& linear)
 
 int intersection_quad_quad(float ts[4][2], const vec3 quad1[2], const vec3 quad2[2])
 {
-    vec3 substitu(
-        quad2[0].x * quad1[1].x - quad2[1].x * quad1[0].x,
-        quad2[0].y * quad1[1].x - quad2[1].y * quad1[0].x,
-        quad2[0].z * quad1[1].x - quad2[1].z * quad1[0].x + quad1[0].x * quad1[1].z - quad1[0].z * quad1[1].x
-        );
-    substitu.scale(1.f / (quad1[0].y * quad1[1].x - quad1[0].x * quad1[1].y));
-    float al = quad1[0].x * substitu.x;
-    float am = quad1[0].x * substitu.y;
-    float coef[5] = {
-        al * substitu.x,
-        2.f * al * substitu.y,
-        2.f * al * substitu.z + am * substitu.y + quad1[0].y * substitu.x - quad2[0].x,
-        2.f * am * substitu.z + quad1[0].y * substitu.y - quad2[0].y,
-        quad1[0].x * substitu.z * substitu.z + quad1[0].y * substitu.z + quad1[0].z - quad2[0].z
-    };
-    float s[4];
-    int cap = solve_univariate_quartic(s, coef), cnt = 0;
-    for(int i = 0; i < cap; i ++) {
-        if(fuzzy_between(0.f, s[i], 1.f, 0.001f)) {
-            float t = vec3dot(&substitu, &vec3(s[i] * s[i], s[i], 1.f));
-            if(fuzzy_between(0.f, t, 1.f, 0.001f)) {
-                ts[cnt][0] = t;
-                ts[cnt][1] = s[i];
-                cnt ++;
+    const float a = quad1[0].x, b = quad1[0].y, c = quad1[0].z,
+        d = quad1[1].x, e = quad1[1].y, f = quad1[1].z,
+        g = quad2[0].x, h = quad2[0].y, i = quad2[0].z,
+        j = quad2[1].x, k = quad2[1].y, l = quad2[1].z;
+    /* try to choose a non-zero coef */
+    const vec3* tcoef = quad1;
+    const vec3* scoef = quad2;
+    if(fuzzy_zero(tcoef->x))
+        ++ tcoef, ++ scoef;
+    float tc = d * b - a * e;
+    if(fuzzy_zero(tc)) {
+        float s[2];
+        vec3 coef;
+        coef.x = d * g - a * j;
+        coef.y = d * h - a * k;
+        coef.z = d * i - a * l + a * f - d * c;
+        int n = solve_univariate_quadratic(s, coef);
+        int cnt = 0;
+        for(int m = 0; m < n; m ++) {
+            if(!fuzzy_between(0.f, s[m], 1.f, 1e-4f))
+                continue;
+            float spart = vec3(s[m] * s[m], s[m], 1.f).dot(*scoef);
+            vec3 solvet(tcoef->x, tcoef->y, tcoef->z - spart);
+            float t[2];
+            int ct = solve_univariate_quadratic(t, solvet);
+            for(int o = 0; o < ct; o ++) {
+                if(fuzzy_between(0.f, t[o], 1.f, 1e-5f)) {
+                    ts[cnt][0] = t[o];
+                    ts[cnt][1] = s[m];
+                    ++ cnt;
+                    break;
+                }
             }
+        }
+        return cnt;
+    }
+    /* here comes the non-zero part */
+    /* t = us^2 + vs + w */
+    const float m = tcoef->x, n = tcoef->y, o = tcoef->z,
+        p = scoef->x, q = scoef->y, r = scoef->z;
+    float u = (d * g - a * j) / tc, v = (d * h - a * k) / tc, w = (d * i - a * l + a * f - d * c) / tc;
+    /* mt^2 + nt + o = ps^2 + qs + r */
+    float quartic[5] = { u * u * m, 2.f * u * v * m, (2.f * u * w + v * v) * m, 2.f * v * w * m, w * w * m };
+    quartic[2] += n * u - p;
+    quartic[3] += n * v - q;
+    quartic[4] += n * w + o - r;
+    float s[4];
+    int cnt = 0;
+    int qc = solve_univariate_quartic(s, quartic);
+    for(int id = 0; id < qc; id ++) {
+        if(!fuzzy_between(0.f, s[id], 1.f, 1e-4f))
+            continue;
+        float t = vec3(u, v, w).dot(vec3(s[id] * s[id], s[id], 1.f));
+        if(fuzzy_between(0.f, t, 1.f, 1e-5f)) {
+            ts[cnt][0] = t;
+            ts[cnt][1] = s[id];
+            ++ cnt;
         }
     }
     return cnt;
@@ -840,10 +707,10 @@ int intersection_cubic_linear(float t[3], const vec4 cubic[2], const vec3& linea
     int cnt = 0, cap = 0;
     float tt[3];
     vec4 cf, cf1, cf2;
-    vec4scale(&cf1, &cubic[0], linear.x);
-    vec4scale(&cf2, &cubic[1], linear.y);
+    cf1.scale(cubic[0], linear.x);
+    cf2.scale(cubic[1], linear.y);
     cf2.w += linear.z;
-    vec4add(&cf, &cf1, &cf2);
+    cf.add(cf1, cf2);
     cap = solve_univariate_cubic(tt, cf);
     for(int i = 0; i < cap; i ++) {
         if(tt[i] < 0.f && tt[i] > -0.001f) tt[i] = 0.f;
@@ -901,8 +768,8 @@ static int newton_raphson_iteration(vec2 ip[4], float ts[4][2], int c, const vec
             vec2 d, a, b;
             eval_quad(a, para1, s);
             eval_cubic(b, para2, t);
-            vec2sub(&d, &a, &b);
-            if(vec2length(&d) < tolerance) {
+            d.sub(a, b);
+            if(d.length() < tolerance) {
                 ip[cnt ++] = a;
                 break;
             }
@@ -978,7 +845,7 @@ static int get_noninflection_quad_intersections(vec2 ip[4], const vec2 cp1[4], c
     float ts[4][2];
     int c;
     vec2 center;
-    vec2lerp(&center, &cp2[0], &cp2[2], 0.5f);
+    center.lerp(cp2[0], cp2[2], 0.5f);
     c = initialize_quad_intersection(ts, cp2[0], cp2[1], center, para2, para1);
     c += initialize_quad_intersection(ts + c, cp2[1], cp2[2], center, para2, para1);
     return c ? newton_raphson_iteration(ip, ts, c, para2, para1, tolerance) : 0;
@@ -1022,8 +889,8 @@ static int newton_raphson_iteration(vec2 ip[4], float ts[4][2], int c, const vec
             vec2 d, a, b;
             eval_cubic(a, para1, s);
             eval_cubic(b, para2, t);
-            vec2sub(&d, &a, &b);
-            if(vec2length(&d) < tolerance) {
+            d.sub(a, b);
+            if(d.length() < tolerance) {
                 ip[cnt ++] = a;
                 break;
             }
@@ -1099,7 +966,7 @@ static int get_non_inflection_cubic_intersections(vec2 ip[4], const vec2 cp1[4],
     float ts[4][2];
     int c;
     vec2 center;
-    vec2lerp(&center, &cp1[0], &cp1[3], 0.5f);
+    center.lerp(cp1[0], cp1[3], 0.5f);
     c = initialize_cubic_intersection(ts, cp1[0], cp1[1], center, para1, para2);
     if(c < 4)
         c += initialize_cubic_intersection(ts + c, cp1[1], cp1[2], center, para1, para2);

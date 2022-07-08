@@ -4,13 +4,6 @@
 
 __ariel_begin__
 
-bool my_menu::on_menu_command(classic_style::menu_cmd_item* item)
-{
-    if(_host)
-        return _host->on_menu_cmd(item);
-    return false;
-}
-
 bool curve_view::create(widget* ptr, const gchar* name, const rect& rc, uint style)
 {
     if(__super::create(ptr, name, rc, style)) {
@@ -121,8 +114,7 @@ void curve_view::setup_sub_widgets()
         _t("Show Cubic to quad,:@;")
         _t("Show Intersections,:@;")
         );
-    _popup_menu->set_host(this);
-    //connect_notify(_popup_menu, &my_menu::on_menu_command, this, &curve_view::on_menu_cmd, 4);
+    connect_subnode_notify(classic_style::menu_cmd_notify, _popup_menu, &my_menu::on_menu_command, this, &curve_view::on_menu_cmd, 4);
 }
 
 void curve_view::show_popup_at(const point& p)

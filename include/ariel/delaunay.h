@@ -119,6 +119,18 @@ struct ariel_export dt_traversal_triangle
     bool            is_boundary[3] = { false, false, false };
 };
 
+struct ariel_export dt_ptorder
+{
+    bool operator()(const vec2& p1, const vec2& p2) const
+    {
+        if(p1.x < p2.x)
+            return true;
+        else if(p1.x > p2.x)
+            return false;
+        return p1.y < p2.y;
+    }
+};
+
 typedef list<dt_joint> dt_input_joints;
 typedef list<dt_joint*> dt_joint_ptrs;
 typedef vector<dt_joint*> dt_joints;

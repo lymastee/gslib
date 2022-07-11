@@ -39,7 +39,7 @@
  * linear - quad:       none        available
  * linear - cubic:      none        available
  * quad - quad:         none        available
- * quad - cubic:        available   none
+ * quad - cubic:        none        available
  * cubic - cubic:       available   none
  * To convert from ratio to point was quite simple, this was why I suggest ratio first.
  * other cases limited by the algorithm where the point was the first result, I hope you
@@ -56,8 +56,8 @@ gs_export extern void quadratic_interpolate(vec2 c[], const vec2& p1, const vec2
 gs_export extern void cubic_interpolate(vec2 c[], const vec2& p1, const vec2& p2, const vec2& p3, const vec2& p4, int step);
 gs_export extern void hermite_interpolate(vec2 c[], const vec2& p1, const vec2& p2, const vec2& t1, const vec2& t2, int step);
 gs_export extern float linear_reparameterize(const vec2& p1, const vec2& p2, const vec2& p);
-gs_export extern float quad_reparameterize(const vec3 para[2], const vec2& p);
-gs_export extern float cubic_reparameterize(const vec4 para[2], const vec2& p);
+gs_export extern float quad_reparameterize(const vec3 para[2], const vec2& p, float tol = 0.1f);
+gs_export extern float cubic_reparameterize(const vec4 para[2], const vec2& p, float tol = 0.1f);
 gs_export extern float best_quad_reparameterize(const vec3 para[2], const vec2& p);
 gs_export extern float best_cubic_reparameterize(const vec4 para[2], const vec2& p);
 gs_export extern bool is_concave_angle(const vec2& p1, const vec2& p2, const vec2& p3);
@@ -87,8 +87,8 @@ gs_export extern void get_cubic_bound_box(rectf& rc, const vec2& p1, const vec2&
 gs_export extern int intersection_quad_linear(float t[2], const vec3 quad[2], const vec3& linear);
 gs_export extern int intersection_cubic_linear(float t[3], const vec4 cubic[2], const vec3& linear);
 gs_export extern int intersection_quad_quad(float ts[4][2], const vec3 quad1[2], const vec3 quad2[2]);
+gs_export extern int intersection_cubic_quad(float t[6], const vec2 cp1[4], const vec2 cp2[3], float tolerance);    /* t was for cp2 */
 gs_export extern void intersectp_linear_linear(vec2& ip, const vec2& p1, const vec2& p2, const vec2& d1, const vec2& d2);
-gs_export extern int intersectp_cubic_quad(vec2 ip[6], const vec2 cp1[4], const vec2 cp2[3], float tolerance);
 gs_export extern int intersectp_cubic_cubic(vec2 ip[9], const vec2 cp1[4], const vec2 cp2[4], float tolerance);
 gs_export extern bool get_self_intersection(float ts[2], const vec2& a, const vec2& b, const vec2& c, const vec2& d);
 gs_export extern void split_quad_bezier(vec2 c[5], const vec2 p[3], float t);

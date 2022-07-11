@@ -98,6 +98,7 @@ void cv_surround_dot(painter* paint, const vec2& p, const color& cr)
 void cv_draw_inflections(painter* paint, const vec2 cp[4])
 {
     assert(paint);
+    paint->save();
     vec4 para[2];
     get_cubic_parameter_equation(para, cp[0], cp[1], cp[2], cp[3]);
     vec3 ff[2];
@@ -124,6 +125,7 @@ void cv_draw_inflections(painter* paint, const vec2 cp[4])
         cv_set_no_brush(paint);
         paint->draw_line(p1, p2);
     }
+    paint->restore();
 }
 
 void cv_draw_quad_extrema(painter* paint, const vec2 cp[3])
@@ -314,10 +316,15 @@ static void collect_intersections(vector<vec2>& pts, const cv_quad_node* node1, 
         node2->get_point(2),
         node2->get_point(3)
     };
-    vec2 ip[6];
-    int c = intersectp_cubic_quad(ip, q, p, 0.3f);
-    for(int i = 0; i < c; i ++)
-        pts.push_back(ip[i]);
+    float t[6];
+    int c = intersection_cubic_quad(t, q, p, 0.3f);
+    vec3 para[2];
+    get_quad_parameter_equation(para, p[0], p[1], p[2]);
+    for(int i = 0; i < c; i ++) {
+        vec2 p;
+        eval_quad(p, para, t[i]);
+        pts.push_back(p);
+    }
 }
 
 static void collect_intersections(vector<vec2>& pts, const cv_cubic_node* node1, const cv_cubic_node* node2)

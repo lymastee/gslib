@@ -86,7 +86,7 @@ float linear_reparameterize(const vec2& p1, const vec2& p2, const vec2& p)
     return xspan > yspan ? (p.x - p1.x) / xdis : (p.y - p1.y) / ydis;
 }
 
-float quad_reparameterize(const vec3 para[2], const vec2& p)
+float quad_reparameterize(const vec3 para[2], const vec2& p, float tol)
 {
     vec3 tryreparax = para[0];
     tryreparax.z -= p.x;
@@ -95,7 +95,7 @@ float quad_reparameterize(const vec3 para[2], const vec2& p)
     for(int i = 0; i < c1; i ++) {
         float t = tx[i];
         float y = para[1].dot(vec3(t * t, t, 1.f));
-        if(fuzz_cmp(y, p.y, 0.1f) == 0.f)
+        if(fuzz_cmp(y, p.y, tol) == 0.f)
             return t;
     }
     vec3 tryreparay = para[1];
@@ -105,13 +105,13 @@ float quad_reparameterize(const vec3 para[2], const vec2& p)
     for(int i = 0; i < c2; i ++) {
         float t = ty[i];
         float x = para[0].dot(vec3(t * t, t, 1.f));
-        if(fuzz_cmp(x, p.x, 0.1f) == 0.f)
+        if(fuzz_cmp(x, p.x, tol) == 0.f)
             return t;
     }
     return -1.f;
 }
 
-float cubic_reparameterize(const vec4 para[2], const vec2& p)
+float cubic_reparameterize(const vec4 para[2], const vec2& p, float tol)
 {
     vec4 tryreparax = para[0];
     tryreparax.w -= p.x;
@@ -120,7 +120,7 @@ float cubic_reparameterize(const vec4 para[2], const vec2& p)
     for(int i = 0; i < c1; i ++) {
         float t = tx[i];
         float y = para[1].dot(vec4(t * t * t, t * t, t, 1.f));
-        if(fuzz_cmp(y, p.y, 0.1f) == 0.f)
+        if(fuzz_cmp(y, p.y, tol) == 0.f)
             return t;
     }
     vec4 tryreparay = para[1];
@@ -130,7 +130,7 @@ float cubic_reparameterize(const vec4 para[2], const vec2& p)
     for(int i = 0; i < c2; i ++) {
         float t = ty[i];
         float x = para[0].dot(vec4(t * t * t, t * t, t, 1.f));
-        if(fuzz_cmp(x, p.x, 0.1f) == 0.f)
+        if(fuzz_cmp(x, p.x, tol) == 0.f)
             return t;
     }
     return -1.f;
@@ -569,11 +569,9 @@ int get_cubic_extrema(float t[2], const vec3& ff)
     return r;
 }
 
-void get_quad_bound_box(rectf& rc, const vec2& p1, const vec2& p2, const vec2& p3)
+static void get_quad_bound_box(rectf& rc, const vec2& p1, const vec2& p2, const vec2& p3, const vec3 para[2])
 {
     rc.set_by_pts(p1, p3);
-    vec3 para[2];
-    get_quad_parameter_equation(para, p1, p2, p3);
     vec2 ff[2];
     get_first_derivate_factor(ff, para);
     float tx, ty;
@@ -591,11 +589,16 @@ void get_quad_bound_box(rectf& rc, const vec2& p1, const vec2& p2, const vec2& p
     }
 }
 
-void get_cubic_bound_box(rectf& rc, const vec2& p1, const vec2& p2, const vec2& p3, const vec2& p4)
+void get_quad_bound_box(rectf& rc, const vec2& p1, const vec2& p2, const vec2& p3)
+{
+    vec3 para[2];
+    get_quad_parameter_equation(para, p1, p2, p3);
+    get_quad_bound_box(rc, p1, p2, p3, para);
+}
+
+static void get_cubic_bound_box(rectf& rc, const vec2& p1, const vec2& p2, const vec2& p3, const vec2& p4, const vec4 para[2])
 {
     rc.set_by_pts(p1, p4);
-    vec4 para[2];
-    get_cubic_parameter_equation(para, p1, p2, p3, p4);
     vec3 ff[2];
     get_first_derivate_factor(ff, para);
     float tx[2], ty[2];
@@ -611,6 +614,13 @@ void get_cubic_bound_box(rectf& rc, const vec2& p1, const vec2& p2, const vec2& 
         rc.top = gs_min(rc.top, y);
         rc.bottom = gs_max(rc.bottom, y);
     }
+}
+
+void get_cubic_bound_box(rectf& rc, const vec2& p1, const vec2& p2, const vec2& p3, const vec2& p4)
+{
+    vec4 para[2];
+    get_cubic_parameter_equation(para, p1, p2, p3, p4);
+    get_cubic_bound_box(rc, p1, p2, p3, p4, para);
 }
 
 void intersectp_linear_linear(vec2& ip, const vec2& p1, const vec2& p2, const vec2& d1, const vec2& d2)
@@ -737,281 +747,80 @@ static void trace_cubic_chain(const vec2 p[10], int c)
     }
 }
 
-static const vec2* decide_split_cubic(vec2 sp[10], const vec2 p[4], float t[2], int c)
+int intersection_cubic_quad(float t[6], const vec2 cp1[4], const vec2 cp2[3], float tolerance)
 {
-    switch(c)
-    {
-    case 0:
-        return p;
-    case 1:
-        split_cubic_bezier(sp, p, t[0]);
-        return sp;
-    case 2:
-        t[0] < t[1] ? split_cubic_bezier(sp, p, t[0], t[1]) :
-            split_cubic_bezier(sp, p, t[1], t[0]);
-        return sp;
-    }
-    assert(!"unexpected.");
-    return 0;
-}
-
-static int newton_raphson_iteration(vec2 ip[4], float ts[4][2], int c, const vec3 para1[2], const vec4 para2[2], float tolerance)
-{
-    vec2 fact10(para1[0].x * 3, para1[0].y * 2);
-    vec2 fact20(para2[0].x * 3, para2[0].y * 2);
-    vec2 fact11(para1[1].x * 3, para1[1].y * 2);
-    vec2 fact21(para2[1].x * 3, para2[1].y * 2);
-    int cnt = 0;
-    for(int i = 0; i < c; i ++) {
-        float s = ts[i][0], t = ts[i][1];
-        do {
-            vec2 d, a, b;
-            eval_quad(a, para1, s);
-            eval_cubic(b, para2, t);
-            d.sub(a, b);
-            if(d.length() < tolerance) {
-                ip[cnt ++] = a;
-                break;
-            }
-            float duds = fact10.x * s + fact10.y;
-            float dudt = (fact20.x * t + fact20.y) * t + para2[0].z;
-            float dvds = fact11.x * s + fact11.y;
-            float dvdt = (fact21.x * t + fact21.y) * t + para2[1].z;
-            float div = 1.f / (duds * dvdt - dvds * dudt);
-            s += (dudt * d.y - dvdt * d.x) * div;
-            t -= (dvds * d.x - duds * d.y) * div;
-        }
-        while(!(s < -0.001f || s > 1.001f || t < -0.001f || t > 1.001f));
-    }
-    return cnt;
-}
-
-static int initialize_quad_intersection(float ts[4][2], const vec2& p1, const vec2& p2, const vec2& center, const vec3 para1[2], const vec4 para2[2])
-{
-    vec3 coef;
-    get_linear_coefficient(coef, p1, vec2().sub(p2, p1));
-    vec3 ff[2];
-    get_first_derivate_factor(ff, para2);
-    float t[3];
-    int c = intersection_cubic_linear(t, para2, coef);
-    int cnt = 0;
-    for(int i = 0; i < c; i ++) {
-        vec2 p, d;
-        eval_cubic(p, para2, t[i]);
-        float lt = linear_reparameterize(p1, p2, p);
-        if(lt < -0.0001f || lt > 1.0001f)
-            continue;
-        float s[2];
-        eval_quad(d, ff, t[i]);
-        get_linear_coefficient(coef, p, d);
-        int c1 = intersection_quad_linear(s, para1, coef);
-        if(c1 == 1) {
-            vec2 v;
-            eval_quad(v, para1, s[0]);
-            lt = linear_reparameterize(p, vec2().add(p, d), v);
-            if(lt > 0.f) {
-                ts[cnt][0] = s[0];
-                ts[cnt][1] = t[i];
-                cnt ++;
-                continue;
-            }
-        }
-        else if(c1 == 2) {
-            vec2 v1, v2, ep;
-            eval_quad(v1, para1, s[0]);
-            eval_quad(v2, para1, s[1]);
-            ep.add(p, d);
-            float lt1 = linear_reparameterize(p, ep, v1);
-            float lt2 = linear_reparameterize(p, ep, v2);
-            if(lt1 > 0.f && lt2 > 0.f) {
-                ts[cnt][0] = lt1 < lt2 ? s[0] : s[1];
-                ts[cnt][1] = t[i];
-                cnt ++;
-                continue;
-            }
-        }
-        get_linear_coefficient(coef, p, vec2().sub(center, p));
-        int c2 = intersection_quad_linear(s, para1, coef);
-        assert(c2 == 1);
-        ts[cnt][0] = s[0];
-        ts[cnt][1] = t[i];
-        cnt ++;
-    }
-    return cnt;
-}
-
-static int get_noninflection_quad_intersections(vec2 ip[4], const vec2 cp1[4], const vec2 cp2[3], const vec4 para1[2], const vec3 para2[2], float tolerance)
-{
-    float ts[4][2];
-    int c;
-    vec2 center;
-    center.lerp(cp2[0], cp2[2], 0.5f);
-    c = initialize_quad_intersection(ts, cp2[0], cp2[1], center, para2, para1);
-    c += initialize_quad_intersection(ts + c, cp2[1], cp2[2], center, para2, para1);
-    return c ? newton_raphson_iteration(ip, ts, c, para2, para1, tolerance) : 0;
-}
-
-int intersectp_cubic_quad(vec2 ip[6], const vec2 cp1[4], const vec2 cp2[3], float tolerance)
-{
-    float inf[2];
-    int infc = get_cubic_inflection(inf, cp1[0], cp1[1], cp1[2], cp1[3]);
-    vec2 group[10];
-    const vec2* fg = decide_split_cubic(group, cp1, inf, infc);
-    assert(fg);
-    int c1 = infc + 1;
-    vec4 para1[3][2];
+    vector<vec2> quads;
+    int qc = cubic_to_quad_bezier(quads, cp1, tolerance);
     vec3 para2[2];
-    int i = 0;
-    const vec2* cp = fg;
-    for(i = 0; i < c1; i ++, cp += 3)
-        get_cubic_parameter_equation(para1[i], cp[0], cp[1], cp[2], cp[3]);
     get_quad_parameter_equation(para2, cp2[0], cp2[1], cp2[2]);
-    int c = 0;
-    for(i = 0; i < c1; i ++, fg += 3) {
-        int extc = get_noninflection_quad_intersections(ip, fg, cp2, para1[i], para2, tolerance);
-        ip += extc;
-        c += extc;
+    rectf rc2;
+    get_quad_bound_box(rc2, cp2[0], cp2[1], cp2[2], para2);
+    vector<float> vt;
+    for(int i = 2; i < qc; i += 2) {
+        vec3 para1[2];
+        get_quad_parameter_equation(para1, quads.at(i - 2), quads.at(i - 1), quads.at(i));
+        rectf rc1;
+        get_quad_bound_box(rc1, quads.at(i - 2), quads.at(i - 1), quads.at(i), para1);
+        if(is_rect_intersected(rc1, rc2)) {
+            float ts[4][2];
+            int c = intersection_quad_quad(ts, para1, para2);
+            for(int j = 0; j < c; j ++)
+                vt.push_back(ts[j][1]);
+        }
     }
-    assert(c <= 6);
+    if(vt.empty())
+        return 0;
+    std::sort(vt.begin(), vt.end(), [](float t1, float t2)-> bool { return t1 < t2; });
+    int c = 1;
+    t[0] = vt.front();
+    for(size_t i = 1; i < vt.size() && c < 6; i ++) {
+        if(!fuzzy_zero(t[c - 1] - vt.at(i)))
+            t[c ++] = vt.at(i);
+    }
     return c;
 }
 
-static int newton_raphson_iteration(vec2 ip[4], float ts[4][2], int c, const vec4 para1[2], const vec4 para2[2], float tolerance)
-{
-    vec2 fact10(para1[0].x * 3, para1[0].y * 2);
-    vec2 fact20(para2[0].x * 3, para2[0].y * 2);
-    vec2 fact11(para1[1].x * 3, para1[1].y * 2);
-    vec2 fact21(para2[1].x * 3, para2[1].y * 2);
-    int cnt = 0;
-    for(int i = 0; i < c; i ++) {
-        float s = ts[i][0], t = ts[i][1];
-        do {
-            vec2 d, a, b;
-            eval_cubic(a, para1, s);
-            eval_cubic(b, para2, t);
-            d.sub(a, b);
-            if(d.length() < tolerance) {
-                ip[cnt ++] = a;
-                break;
-            }
-            float duds = (fact10.x * s + fact10.y) * s + para1[0].z;
-            float dudt = (fact20.x * t + fact20.y) * t + para2[0].z;
-            float dvds = (fact11.x * s + fact11.y) * s + para1[1].z;
-            float dvdt = (fact21.x * t + fact21.y) * t + para2[1].z;
-            float div = 1.f / (duds * dvdt - dvds * dudt);
-            s += (dudt * d.y - dvdt * d.x) * div;
-            t -= (dvds * d.x - duds * d.y) * div;
-        }
-        while(!(s < -0.001f || s > 1.001f || t < -0.001f || t > 1.001f));
-    }
-    return cnt;
-}
-
-static int initialize_cubic_intersection(float ts[4][2], const vec2& p1, const vec2& p2, const vec2& center, const vec4 para1[2], const vec4 para2[2])
-{
-    vec3 coef;
-    get_linear_coefficient(coef, p1, vec2().sub(p2, p1));
-    vec3 ff[2];
-    get_first_derivate_factor(ff, para2);
-    float t[3];
-    int c = intersection_cubic_linear(t, para2, coef);
-    int cnt = 0;
-    for(int i = 0; i < c; i ++) {
-        vec2 p, d;
-        eval_cubic(p, para2, t[i]);
-        float lt = linear_reparameterize(p1, p2, p);
-        if(lt < -0.0001f || lt > 1.0001f)
-            continue;
-        float s[3];
-        eval_quad(d, ff, t[i]);
-        get_linear_coefficient(coef, p, d);
-        int c1 = intersection_cubic_linear(s, para1, coef);
-        if(c1 == 1) {
-            vec2 v;
-            eval_cubic(v, para1, s[0]);
-            lt = linear_reparameterize(p, vec2().add(p, d), v);
-            if(lt > 0.f) {
-                ts[cnt][0] = s[0];
-                ts[cnt][1] = t[i];
-                cnt ++;
-                continue;
-            }
-        }
-        else if(c1 == 2) {
-            vec2 v1, v2, ep;
-            eval_cubic(v1, para1, s[0]);
-            eval_cubic(v2, para1, s[1]);
-            ep.add(p, d);
-            float lt1 = linear_reparameterize(p, ep, v1);
-            float lt2 = linear_reparameterize(p, ep, v2);
-            if(lt1 > 0.f && lt2 > 0.f) {
-                ts[cnt][0] = lt1 < lt2 ? s[0] : s[1];
-                ts[cnt][1] = t[i];
-                cnt ++;
-                continue;
-            }
-        }
-        get_linear_coefficient(coef, p, vec2().sub(center, p));
-        int c2 = intersection_cubic_linear(s, para1, coef);
-        assert(c2 == 1);
-        ts[cnt][0] = s[0];
-        ts[cnt][1] = t[i];
-        cnt ++;
-    }
-    return cnt;
-}
-
-static int get_non_inflection_cubic_intersections(vec2 ip[4], const vec2 cp1[4], const vec2 cp2[4], const vec4 para1[2], const vec4 para2[2], float tolerance)
-{
-    float ts[4][2];
-    int c;
-    vec2 center;
-    center.lerp(cp1[0], cp1[3], 0.5f);
-    c = initialize_cubic_intersection(ts, cp1[0], cp1[1], center, para1, para2);
-    if(c < 4)
-        c += initialize_cubic_intersection(ts + c, cp1[1], cp1[2], center, para1, para2);
-    if(c < 4)
-        c += initialize_cubic_intersection(ts + c, cp1[2], cp1[3], center, para1, para2);
-    return c ? newton_raphson_iteration(ip, ts, c, para1, para2, tolerance) : 0;
-}
-
-/*
- * To solve the cubic - cubic intersection, we use the following strategy:
- * 1.split the cubics into 2 groups by inflection, so that each of the intersection count would be no more than 4.
- * 2.assume that b0, b1, b2, b3 was the 4 control points of the cubic bezier, solve b0 - b1, b1 - b2, b2 - b3 line intersections with the other curve.
- * 3.reparametrize the intersection points and get the t-value, treat them as the initial value for the newton-raphson iteration
- * 4.get the t-values of each iterate process, filter the duplicated roots
- * 5.get the point value of each t-value, if you need the original t-value, reparametrize them by the original cubic.
- */
 int intersectp_cubic_cubic(vec2 ip[9], const vec2 cp1[4], const vec2 cp2[4], float tolerance)
 {
-    float inf1[2], inf2[2];
-    int infc1 = get_cubic_inflection(inf1, cp1[0], cp1[1], cp1[2], cp1[3]);
-    int infc2 = get_cubic_inflection(inf2, cp2[0], cp2[1], cp2[2], cp2[3]);
-    vec2 group1[10], group2[10];
-    const vec2* fg1 = decide_split_cubic(group1, cp1, inf1, infc1);
-    const vec2* fg2 = decide_split_cubic(group2, cp2, inf2, infc2);
-    assert(fg1 && fg2);
-    int c1 = infc1 + 1, c2 = infc2 + 1;
-    vec4 para1[3][2], para2[3][2];
-    int i = 0;
-    const vec2* cp = fg1;
-    for(i = 0; i < c1; i ++, cp += 3)
-        get_cubic_parameter_equation(para1[i], cp[0], cp[1], cp[2], cp[3]);
-    for(i = 0, cp = fg2; i < c2; i ++, cp += 3)
-        get_cubic_parameter_equation(para2[i], cp[0], cp[1], cp[2], cp[3]);
-    int c = 0;
-    for(i = 0; i < c1; i ++, fg1 += 3) {
-        vec4* fp1 = para1[i];
-        const vec2* yafg2 = fg2;
-        for(int j = 0; j < c2; j ++, yafg2 += 3) {
-            vec4* fp2 = para2[j];
-            int extc = get_non_inflection_cubic_intersections(ip, fg1, yafg2, fp1, fp2, tolerance);
-            ip += extc;
-            c += extc;
+    vector<vec2> quad1, quad2;
+    int qc1 = cubic_to_quad_bezier(quad1, cp1, tolerance);
+    int qc2 = cubic_to_quad_bezier(quad2, cp2, tolerance);
+    vector<vec2> pts;
+    for(int i = 2; i < qc1; i += 2) {
+        vec3 para1[2];
+        get_quad_parameter_equation(para1, quad1.at(i - 2), quad1.at(i - 1), quad1.at(i));
+        rectf rc1;
+        get_quad_bound_box(rc1, quad1.at(i - 2), quad1.at(i - 1), quad1.at(i), para1);
+        for(int j = 2; j < qc2; j += 2) {
+            vec3 para2[2];
+            get_quad_parameter_equation(para2, quad2.at(j - 2), quad2.at(j - 1), quad2.at(j));
+            rectf rc2;
+            get_quad_bound_box(rc2, quad2.at(j - 2), quad2.at(j - 1), quad2.at(j), para2);
+            if(is_rect_intersected(rc1, rc2)) {
+                float ts[4][2];
+                int c = intersection_quad_quad(ts, para1, para2);
+                for(int k = 0; k < c; k ++) {
+                    vec2 p;
+                    eval_quad(p, para1, ts[k][0]);
+                    pts.push_back(p);
+                }
+            }
         }
     }
-    assert(c <= 9);
+    int c = 0;
+    for(const vec2& p : pts) {
+        if(c >= 9)
+            break;
+        bool has_same_pt = false;
+        for(int i = 0; i < c; i ++) {
+            if(fuzz_cmp(ip[i], p) < tolerance) {
+                has_same_pt = true;
+                break;
+            }
+        }
+        if(!has_same_pt)
+            ip[c ++] = p;
+    }
     return c;
 }
 

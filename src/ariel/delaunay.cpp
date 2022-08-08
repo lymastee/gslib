@@ -72,11 +72,11 @@ static void dt_reset_edge_checked(dt_edges& edges)
 
 static bool dt_on_edge(const vec2& p, const vec2& p1, const vec2& p2)
 {
-    auto t1 = vec2().sub(p, p1).lengthsq();
-    auto t2 = vec2().sub(p, p2).lengthsq();
+    auto t1 = vec2().sub(p, p1).length();
+    auto t2 = vec2().sub(p, p2).length();
     if(t1 < dt_tolerance || t2 < dt_tolerance)
         return true;
-    auto t3 = vec2().sub(p1, p2).lengthsq();
+    auto t3 = vec2().sub(p1, p2).length();
     if(t1 > t3 || t2 > t3)
         return false;
     vec3 coef;

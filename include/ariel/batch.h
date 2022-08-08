@@ -89,15 +89,27 @@ public:
     void trace_reduced_points() const;
 };
 
+enum bat_con_type
+{
+    bct_normal,
+    bct_concave_wedge,
+    bct_concave_notch,
+    bct_convex_wedge,
+    bct_convex_notch,
+};
+
 struct bat_line
 {
     vec2                _points[2];
     vec2                _contourpt[4];      /* calculated contour pts */
+    vec2                _headpt, _tailpt;
     lb_joint*           _srcjs[2];
     vec3                _coef;
     float               _width;
     float               _zorder;
     uint                _tag;               /* pen tag */
+    bat_con_type        _headcon = bct_normal;
+    bat_con_type        _tailcon = bct_normal;
     bool                _half;              /* is half line? */
     bool                _recalc;            /* need recalculation? */
 
@@ -119,12 +131,21 @@ public:
     float get_line_width() const { return _width; }
     void set_half_line(bool hl) { _half = hl; }
     bool is_half_line() const { return _half; }
+    float get_line_length() const;
     bat_type decide() const;
     void get_bound_rect(rectf& rc) const;
     int clip_triangle(bat_line output[2], const bat_triangle* triangle) const;
     void calc_contour_points();
     const vec2& get_contour_point(int i) const { return _contourpt[i]; }
     void set_contour_point(int i, const vec2& p) { _contourpt[i] = p; }
+    const vec2& get_head_point() const { return _headpt; }
+    const vec2& get_tail_point() const { return _tailpt; }
+    void set_head_point(const vec2& p) { _headpt = p; }
+    void set_tail_point(const vec2& p) { _tailpt = p; }
+    bat_con_type get_head_con() const { return _headcon; }
+    bat_con_type get_tail_con() const { return _tailcon; }
+    void set_head_con(bat_con_type ct) { _headcon = ct; }
+    void set_tail_con(bat_con_type ct) { _tailcon = ct; }
     bool set_need_recalc(bool b) { _recalc = b; }
     bool need_recalc() const { return _recalc; }
     void trim_contour(bat_line& line);

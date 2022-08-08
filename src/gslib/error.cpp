@@ -214,7 +214,18 @@ void trace(const gchar* fmt, ...)
     va_start(ptr, fmt);
     string str;
     str.formatv(fmt, ptr);
-    OutputDebugString(str.c_str());
+    static const int max_len = 32766;
+    int len = str.length();
+    gchar* pstr = const_cast<gchar*>(str.c_str());
+    while(len > max_len) {
+        gchar trap = pstr[max_len];
+        pstr[max_len] = 0;
+        OutputDebugString(pstr);
+        pstr[max_len] = trap;
+        pstr += max_len;
+        len -= max_len;
+    }
+    OutputDebugString(pstr);
 }
 
 void trace_all(const gchar* str)

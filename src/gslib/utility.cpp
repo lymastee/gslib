@@ -628,7 +628,7 @@ void intersectp_linear_linear(vec2& ip, const vec2& p1, const vec2& p2, const ve
     assert(!is_parallel(d1, d2) && "won't be parallel");
     float dxy = d1.x * d2.y, dyx = d2.x * d1.y;
     ip.y = (d1.y * d2.y * (p2.x - p1.x) + dxy * p1.y - dyx * p2.y) / (dxy - dyx);
-    ip.x = !fuzzy_zero(d1.y) ? ((ip.y - p1.y) * d1.x / d1.y + p1.x) :
+    ip.x = (abs(d1.y) > abs(d2.y)) ? ((ip.y - p1.y) * d1.x / d1.y + p1.x) :
         ((ip.y - p2.y) * d2.x / d2.y + p2.x);
 }
 

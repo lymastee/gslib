@@ -564,6 +564,10 @@ void rose_stroke_batch_coef_cr::create(bat_batch* bat)
             { p[1], coef, cr2 },
             { p[2], coef, cr1 },
             { p[3], coef, cr2 },
+            { line->get_head_point(), coef, cr1 },
+            { line->get_tail_point(), coef, cr2 },
+            { line->get_start_point(), coef, cr1 },
+            { line->get_end_point(), coef, cr2 },
         };
         _vertices.push_back(pt[0]);
         _vertices.push_back(pt[1]);
@@ -571,6 +575,48 @@ void rose_stroke_batch_coef_cr::create(bat_batch* bat)
         _vertices.push_back(pt[2]);
         _vertices.push_back(pt[1]);
         _vertices.push_back(pt[3]);
+        switch(line->get_head_con())
+        {
+        case bct_convex_wedge:
+        case bct_concave_wedge:
+            _vertices.push_back(pt[4]);
+            _vertices.push_back(pt[0]);
+            _vertices.push_back(pt[2]);
+            break;
+        case bct_convex_notch:
+            _vertices.push_back(pt[4]);
+            _vertices.push_back(pt[0]);
+            _vertices.push_back(pt[6]);
+            break;
+        case bct_concave_notch:
+            _vertices.push_back(pt[4]);
+            _vertices.push_back(pt[6]);
+            _vertices.push_back(pt[2]);
+            break;
+        default:
+            break;
+        }
+        switch(line->get_tail_con())
+        {
+        case bct_convex_wedge:
+        case bct_concave_wedge:
+            _vertices.push_back(pt[3]);
+            _vertices.push_back(pt[1]);
+            _vertices.push_back(pt[5]);
+            break;
+        case bct_convex_notch:
+            _vertices.push_back(pt[7]);
+            _vertices.push_back(pt[1]);
+            _vertices.push_back(pt[5]);
+            break;
+        case bct_concave_notch:
+            _vertices.push_back(pt[3]);
+            _vertices.push_back(pt[7]);
+            _vertices.push_back(pt[5]);
+            break;
+        default:
+            break;
+        }
     }
 }
 
@@ -649,6 +695,10 @@ void rose_stroke_batch_coef_tex::create_vertices(bat_lines& lines, const tex_bat
             { p[1], coef, tex2 },
             { p[2], coef, tex1 },
             { p[3], coef, tex2 },
+            { line->get_head_point(), coef, tex1 },
+            { line->get_tail_point(), coef, tex2 },
+            { line->get_start_point(), coef, tex1 },
+            { line->get_end_point(), coef, tex2 },
         };
         _vertices.push_back(pt[0]);
         _vertices.push_back(pt[1]);
@@ -656,6 +706,48 @@ void rose_stroke_batch_coef_tex::create_vertices(bat_lines& lines, const tex_bat
         _vertices.push_back(pt[2]);
         _vertices.push_back(pt[1]);
         _vertices.push_back(pt[3]);
+        switch(line->get_head_con())
+        {
+        case bct_convex_wedge:
+        case bct_concave_wedge:
+            _vertices.push_back(pt[4]);
+            _vertices.push_back(pt[0]);
+            _vertices.push_back(pt[2]);
+            break;
+        case bct_convex_notch:
+            _vertices.push_back(pt[4]);
+            _vertices.push_back(pt[0]);
+            _vertices.push_back(pt[6]);
+            break;
+        case bct_concave_notch:
+            _vertices.push_back(pt[4]);
+            _vertices.push_back(pt[6]);
+            _vertices.push_back(pt[2]);
+            break;
+        default:
+            break;
+        }
+        switch(line->get_tail_con())
+        {
+        case bct_convex_wedge:
+        case bct_concave_wedge:
+            _vertices.push_back(pt[3]);
+            _vertices.push_back(pt[1]);
+            _vertices.push_back(pt[5]);
+            break;
+        case bct_convex_notch:
+            _vertices.push_back(pt[7]);
+            _vertices.push_back(pt[1]);
+            _vertices.push_back(pt[5]);
+            break;
+        case bct_concave_notch:
+            _vertices.push_back(pt[3]);
+            _vertices.push_back(pt[7]);
+            _vertices.push_back(pt[5]);
+            break;
+        default:
+            break;
+        }
     }
 }
 
